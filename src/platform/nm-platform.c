@@ -3806,6 +3806,7 @@ nm_platform_ip4_address_sync (NMPlatform *self,
 	ifa_flags =   nm_platform_check_kernel_support (self, NM_PLATFORM_KERNEL_SUPPORT_EXTENDED_IFA_FLAGS)
 	            ? IFA_F_NOPREFIXROUTE
 	            : 0;
+	ifa_flags = 0;
 
 	/* Add missing addresses */
 	for (i = 0; i < known_addresses->len; i++) {
