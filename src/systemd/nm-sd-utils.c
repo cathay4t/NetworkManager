@@ -28,7 +28,7 @@
 /*****************************************************************************/
 
 gboolean
-nm_sd_utils_path_equals (const char *a, const char *b)
+nm_sd_utils_path_equal (const char *a, const char *b)
 {
 	return path_equal (a, b);
 }

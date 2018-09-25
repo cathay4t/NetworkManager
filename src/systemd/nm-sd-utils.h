@@ -22,7 +22,7 @@
 
 /*****************************************************************************/
 
-gboolean nm_sd_utils_path_equals (const char *a, const char *b);
+gboolean nm_sd_utils_path_equal (const char *a, const char *b);
 
 /*****************************************************************************/
 

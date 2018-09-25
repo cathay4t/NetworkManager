@@ -32,8 +32,6 @@
 #include "nm-setting-wireless-security.h"
 #include "nm-config.h"
 
-#define NM_CONFIG_KEYFILE_PATH_DEFAULT NMCONFDIR "/system-connections"
-
 /*****************************************************************************/
 
 static const char temp_letters[] =
@@ -84,8 +82,8 @@ check_suffix (const char *base, const char *tag)
 #define PEM_TAG ".pem"
 #define DER_TAG ".der"
 
-gboolean
-nms_keyfile_utils_should_ignore_file (const char *filename)
+static gboolean
+_should_ignore_file (const char *filename)
 {
 	gs_free char *base = NULL;
 
@@ -134,6 +132,34 @@ nms_keyfile_loaded_uuid_filename (const char *dirname,
 	return g_build_filename (dirname, filename, NULL);
 }
 
+
+gboolean
+nms_keyfile_storage_type_should_ignore_file (NMSKeyfileStorageType storage_type,
+                                             const char *filename)
+{
+	nm_assert (NM_IN_SET (storage_type, NMS_KEYFILE_STORAGE_TYPE_LIB,
+	                                    NMS_KEYFILE_STORAGE_TYPE_ETC,
+	                                    NMS_KEYFILE_STORAGE_TYPE_RUN));
+	nm_assert (filename && filename[0] && !strchr (filename, '/'));
+
+	if (_should_ignore_file (filename))
+		return FALSE;
+
+	if (storage_type == NMS_KEYFILE_STORAGE_TYPE_ETC) {
+		/* For legacy reasons, we perform a more relexed check for /etc.
+		 * This file name is good already. */
+		return TRUE;
+	}
+
+	if (!g_str_has_suffix (filename, NMS_KEYFILE_PATH_SUFFIX_KEYFILE)) {
+		/* filename must end in .keyfile */
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/*****************************************************************************/
 
 gboolean
 nms_keyfile_loaded_uuid_read (const char *dirname,
@@ -401,22 +427,3 @@ nms_keyfile_utils_escape_filename (const char *filename)
 
 	return g_string_free (str, FALSE);;
 }
-
-/*****************************************************************************/
-
-const char *
-nms_keyfile_utils_get_path (void)
-{
-	static char *path = NULL;
-
-	if (G_UNLIKELY (!path)) {
-		path = nm_config_data_get_value (NM_CONFIG_GET_DATA_ORIG,
-		                                 NM_CONFIG_KEYFILE_GROUP_KEYFILE,
-		                                 NM_CONFIG_KEYFILE_KEY_KEYFILE_PATH,
-		                                 NM_CONFIG_GET_VALUE_STRIP | NM_CONFIG_GET_VALUE_NO_EMPTY);
-		if (!path)
-			path = g_strdup (""NM_CONFIG_KEYFILE_PATH_DEFAULT"");
-	}
-	return path;
-}
-

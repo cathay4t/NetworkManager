@@ -23,13 +23,9 @@
 
 #include "NetworkManagerUtils.h"
 
-#define NM_CONFIG_KEYFILE_PATH_IN_MEMORY NMRUNDIR "/system-connections"
-
-#define NMS_KEYFILE_CONNECTION_LOG_PATH(path)  ((path) ?: "in-memory")
-#define NMS_KEYFILE_CONNECTION_LOG_FMT         "%s (%s,\"%s\")"
-#define NMS_KEYFILE_CONNECTION_LOG_ARG(con)    NMS_KEYFILE_CONNECTION_LOG_PATH (nm_settings_connection_get_filename ((NMSettingsConnection *) (con))), nm_settings_connection_get_uuid ((NMSettingsConnection *) (con)), nm_settings_connection_get_id ((NMSettingsConnection *) (con))
-#define NMS_KEYFILE_CONNECTION_LOG_FMTD        "%s (%s,\"%s\",%p)"
-#define NMS_KEYFILE_CONNECTION_LOG_ARGD(con)   NMS_KEYFILE_CONNECTION_LOG_PATH (nm_settings_connection_get_filename ((NMSettingsConnection *) (con))), nm_settings_connection_get_uuid ((NMSettingsConnection *) (con)), nm_settings_connection_get_id ((NMSettingsConnection *) (con)), (con)
+#define NMS_KEYFILE_PATH_NAME_LIB             NMLIBDIR "/profiles"
+#define NMS_KEYFILE_PATH_NAME_ETC_DEFAULT     NMCONFDIR "/system-connections"
+#define NMS_KEYFILE_PATH_NAME_RUN             NMRUNDIR "/profiles"
 
 #define NMS_KEYFILE_PATH_SUFFIX_NMKEYFILE     ".nmkeyfile"
 #define NMS_KEYFILE_PATH_PREFIX_NMLOADED      ".loaded-"
@@ -41,11 +37,21 @@ typedef enum {
 	NMS_KEYFILE_FILETYPE_NMLOADED,
 } NMSKeyfileFiletype;
 
-gboolean nms_keyfile_utils_should_ignore_file (const char *filename);
+typedef enum {
+	/* the order here matters. Higher numbers are more important. E.g. /etc shadows
+	 * connections from /usr/lib. */
+	NMS_KEYFILE_STORAGE_TYPE_LIB, /* from /usr/lib */
+	NMS_KEYFILE_STORAGE_TYPE_ETC, /* from /etc */
+	NMS_KEYFILE_STORAGE_TYPE_RUN, /* from /var/run */
+	NMS_KEYFILE_STORAGE_TYPE_MEM, /* in-memory */
+} NMSKeyfileStorageType;
 
-char *nms_keyfile_utils_escape_filename (const char *filename);
 
-const char *nms_keyfile_utils_get_path (void);
+void nms_keyfile_storage_type_get_info (NMSKeyfileStorageType storage_type,
+                                        const char **out_dir_name);
+
+gboolean nms_keyfile_storage_type_should_ignore_file (NMSKeyfileStorageType storage_type,
+                                                      const char *filename);
 
 /*****************************************************************************/
 
@@ -82,5 +88,10 @@ gboolean nms_keyfile_utils_check_file_permissions (NMSKeyfileFiletype filetype,
                                                    const char *filename,
                                                    struct stat *out_st,
                                                    GError **error);
+
+/*****************************************************************************/
+
+char *nms_keyfile_utils_escape_filename (const char *filename);
+
 
 #endif /* __NMS_KEYFILE_UTILS_H__ */
