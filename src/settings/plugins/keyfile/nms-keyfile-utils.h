@@ -31,17 +31,55 @@
 #define NMS_KEYFILE_CONNECTION_LOG_FMTD        "%s (%s,\"%s\",%p)"
 #define NMS_KEYFILE_CONNECTION_LOG_ARGD(con)   NMS_KEYFILE_CONNECTION_LOG_PATH (nm_settings_connection_get_filename ((NMSettingsConnection *) (con))), nm_settings_connection_get_uuid ((NMSettingsConnection *) (con)), nm_settings_connection_get_id ((NMSettingsConnection *) (con)), (con)
 
+#define NMS_KEYFILE_PATH_SUFFIX_NMKEYFILE     ".nmkeyfile"
+#define NMS_KEYFILE_PATH_PREFIX_NMLOADED      ".loaded-"
+
+#define NMS_KEYFILE_ACTIVE_UUID_NULL          "/dev/null"
+
+typedef enum {
+	NMS_KEYFILE_FILETYPE_KEYFILE,
+	NMS_KEYFILE_FILETYPE_NMLOADED,
+} NMSKeyfileFiletype;
+
 gboolean nms_keyfile_utils_should_ignore_file (const char *filename);
 
 char *nms_keyfile_utils_escape_filename (const char *filename);
 
 const char *nms_keyfile_utils_get_path (void);
 
+/*****************************************************************************/
+
+char *nms_keyfile_loaded_uuid_filename (const char *dirname,
+                                        const char *uuid,
+                                        gboolean temporary);
+
+gboolean nms_keyfile_loaded_uuid_read (const char *dirname,
+                                       const char *filename,
+                                       char **out_full_filename,
+                                       char **out_uuid,
+                                       char **out_loaded_path);
+
+gboolean nms_keyfile_loaded_uuid_read_from_file (const char *full_filename,
+                                                 char **out_dirname,
+                                                 char **out_filename,
+                                                 char **out_uuid,
+                                                 char **out_loaded_path);
+
+gboolean nms_keyfile_loaded_uuid_write (const char *dirname,
+                                        const char *uuid,
+                                        const char *loaded_path,
+                                        gboolean allow_relative,
+                                        char **out_full_filename);
+
+/*****************************************************************************/
+
 struct stat;
-gboolean nms_keyfile_utils_check_file_permissions_stat (const struct stat *st,
+gboolean nms_keyfile_utils_check_file_permissions_stat (NMSKeyfileFiletype filetype,
+                                                        const struct stat *st,
                                                         GError **error);
 
-gboolean nms_keyfile_utils_check_file_permissions (const char *filename,
+gboolean nms_keyfile_utils_check_file_permissions (NMSKeyfileFiletype filetype,
+                                                   const char *filename,
                                                    struct stat *out_st,
                                                    GError **error);
 
