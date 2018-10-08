@@ -7445,6 +7445,7 @@ dhcp4_state_changed (NMDhcpClient *client,
 		/* fall through */
 	case NM_DHCP_STATE_DONE:
 	case NM_DHCP_STATE_FAIL:
+	case NM_DHCP_STATE_TERMINATED:
 		dhcp4_fail (self);
 		break;
 	default:
@@ -8202,7 +8203,7 @@ dhcp6_state_changed (NMDhcpClient *client,
 		if (priv->ip6_state != IP_CONF)
 			dhcp6_fail (self);
 		break;
-	case NM_DHCP_STATE_DONE:
+	case NM_DHCP_STATE_TERMINATED:
 		/* In IPv6 info-only mode, the client doesn't handle leases so it
 		 * may exit right after getting a response from the server.  That's
 		 * normal.  In that case we just ignore the exit.
@@ -8210,6 +8211,7 @@ dhcp6_state_changed (NMDhcpClient *client,
 		if (priv->dhcp6.mode == NM_NDISC_DHCP_LEVEL_OTHERCONF)
 			break;
 		/* fall through */
+	case NM_DHCP_STATE_DONE:
 	case NM_DHCP_STATE_FAIL:
 		dhcp6_fail (self);
 		break;
