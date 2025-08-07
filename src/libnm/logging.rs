@@ -1,0 +1,147 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use serde::{Deserialize, Serialize};
+
+use crate::{ErrorKind, NmError};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize,
+)]
+#[repr(usize)]
+#[serde(rename_all = "lowercase")]
+pub enum NmLogLevel {
+    Off = 0,
+    Error = 1,
+    Warn = 2,
+    Info = 3,
+    Debug = 4,
+    Trace = 5,
+}
+
+impl NmLogLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Error => "error",
+            Self::Warn => "warn",
+            Self::Info => "info",
+            Self::Debug => "debug",
+            Self::Trace => "trace",
+        }
+    }
+}
+
+impl From<log::Level> for NmLogLevel {
+    fn from(d: log::Level) -> Self {
+        match d {
+            log::Level::Error => Self::Error,
+            log::Level::Warn => Self::Warn,
+            log::Level::Info => Self::Info,
+            log::Level::Debug => Self::Debug,
+            log::Level::Trace => Self::Trace,
+        }
+    }
+}
+
+impl From<NmLogLevel> for log::Level {
+    fn from(v: NmLogLevel) -> Self {
+        match v {
+            NmLogLevel::Off => Self::Error,
+            NmLogLevel::Error => Self::Error,
+            NmLogLevel::Warn => Self::Warn,
+            NmLogLevel::Info => Self::Info,
+            NmLogLevel::Debug => Self::Debug,
+            NmLogLevel::Trace => Self::Trace,
+        }
+    }
+}
+
+impl From<log::LevelFilter> for NmLogLevel {
+    fn from(d: log::LevelFilter) -> Self {
+        match d {
+            log::LevelFilter::Off => Self::Off,
+            log::LevelFilter::Error => Self::Error,
+            log::LevelFilter::Warn => Self::Warn,
+            log::LevelFilter::Info => Self::Info,
+            log::LevelFilter::Debug => Self::Debug,
+            log::LevelFilter::Trace => Self::Trace,
+        }
+    }
+}
+
+impl From<NmLogLevel> for log::LevelFilter {
+    fn from(v: NmLogLevel) -> Self {
+        match v {
+            NmLogLevel::Off => Self::Off,
+            NmLogLevel::Error => Self::Error,
+            NmLogLevel::Warn => Self::Warn,
+            NmLogLevel::Info => Self::Info,
+            NmLogLevel::Debug => Self::Debug,
+            NmLogLevel::Trace => Self::Trace,
+        }
+    }
+}
+
+impl std::fmt::Display for NmLogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for NmLogLevel {
+    type Err = NmError;
+
+    fn from_str(s: &str) -> Result<Self, NmError> {
+        match s {
+            "off" => Ok(Self::Off),
+            "error" => Ok(Self::Error),
+            "warn" => Ok(Self::Warn),
+            "info" => Ok(Self::Info),
+            "debug" => Ok(Self::Debug),
+            "trace" => Ok(Self::Trace),
+            _ => Err(NmError::new(
+                ErrorKind::InvalidLogLevel,
+                format!("Invalid logging level {s}"),
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub struct NmLogEntry {
+    pub source: String,
+    pub level: NmLogLevel,
+    pub message: String,
+}
+
+impl NmLogEntry {
+    pub fn new(source: String, level: NmLogLevel, message: String) -> Self {
+        Self {
+            source,
+            level,
+            message,
+        }
+    }
+
+    pub fn emit(&self) {
+        match self.level {
+            NmLogLevel::Off => (),
+            NmLogLevel::Error => {
+                log::error!(target: &self.source, "{}", self.message)
+            }
+            NmLogLevel::Warn => {
+                log::warn!(target: &self.source, "{}", self.message)
+            }
+            NmLogLevel::Info => {
+                log::info!(target: &self.source, "{}", self.message)
+            }
+            NmLogLevel::Debug => {
+                log::debug!(target: &self.source, "{}", self.message)
+            }
+            NmLogLevel::Trace => {
+                log::trace!(target: &self.source, "{}", self.message)
+            }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+[package]
+name = "nmcli"
+version.workspace = true
+authors.workspace = true
+description = "Command line tool for communicating with NetworkManager daemon"
+documentation.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+nm = { path = "../libnm" }
+futures = { workspace = true }
+uuid = { workspace = true }
+
+[[bin]]
+name = "nmcli"
+path = "main.rs"
