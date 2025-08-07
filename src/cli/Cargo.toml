@@ -17,6 +17,7 @@ tokio = { workspace = true }
 nm = { path = "../libnm" }
 futures = { workspace = true }
 uuid = { workspace = true }
+clap = { workspace = true }
 
 [[bin]]
 name = "nmcli"
