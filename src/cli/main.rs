@@ -49,7 +49,7 @@ async fn main() -> Result<(), NmError> {
 
     log::info!("nmcli version: {}", clap::crate_version!());
 
-    if let Some(_) = matches.subcommand_matches("ping") {
+    if matches.subcommand_matches("ping").is_some() {
         let mut cli = NmClient::new().await?;
         println!("{}", cli.ping().await?);
     }
