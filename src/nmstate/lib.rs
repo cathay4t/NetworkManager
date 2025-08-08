@@ -12,6 +12,7 @@ mod net_state;
 mod revert;
 mod state_options;
 mod value;
+mod version;
 
 #[allow(dead_code)]
 pub(crate) mod deserializer;
@@ -34,3 +35,4 @@ pub use self::net_state::NetworkState;
 pub use self::state_options::{
     NmstateApplyOption, NmstateQueryOption, NmstateStateKind,
 };
+pub use self::version::CUR_SCHEMA_VERSION;

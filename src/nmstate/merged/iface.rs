@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Interface, NmstateError, NmInterface};
+use crate::{Interface, NmInterface, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -28,8 +28,8 @@ impl MergedInterface {
             (Some(state), None) | (None, Some(state)) => state.clone(),
             _ => {
                 log::warn!(
-                    "BUG: MergedInterface:new() got both desired \
-                    and current set to None"
+                    "BUG: MergedInterface:new() got both desired and current \
+                     set to None"
                 );
                 Interface::default()
             }

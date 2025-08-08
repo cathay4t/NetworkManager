@@ -2,6 +2,7 @@
 
 mod api;
 mod listener;
+mod net_state;
 
 use nm::{NmClient, NmError};
 

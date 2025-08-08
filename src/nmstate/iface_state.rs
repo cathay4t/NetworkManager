@@ -42,7 +42,7 @@ pub enum InterfaceState {
     /// state is equal to [InterfaceState::Ignore].
     /// Deserialize and serialize from/to 'down-ignore'.
     DownIgnore,
-    /// Unknown state to nipart. This state also been treated as
+    /// Unknown state to nmstate. This state also been treated as
     /// [InterfaceState::Ignore] when applying.
     Unknown,
 }

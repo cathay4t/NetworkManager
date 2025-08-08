@@ -18,6 +18,8 @@ serde_yaml = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+nmstate = { "path" = "../nmstate" }
+nispor = { workspace = true }
 
 [lib]
 name = "nm"

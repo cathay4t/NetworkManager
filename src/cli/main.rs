@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmClient, NmError};
+mod error;
+mod show;
+
+pub(crate) use self::error::CliError;
+
+use nm::NmClient;
+
+use self::show::CommandShow;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), NmError> {
+async fn main() -> Result<(), CliError> {
     let mut cli_cmd = clap::Command::new("nipc")
         .about("NetworkManager CLI")
         .arg_required_else_help(true)
@@ -22,9 +29,8 @@ async fn main() -> Result<(), NmError> {
                 .help("Increase verbose level")
                 .global(true),
         )
-        .subcommand(
-            clap::Command::new("ping").about("Check daemon connection"),
-        );
+        .subcommand(clap::Command::new("ping").about("Check daemon connection"))
+        .subcommand(CommandShow::new_cmd());
 
     let matches = cli_cmd.get_matches_mut();
 
@@ -52,6 +58,8 @@ async fn main() -> Result<(), NmError> {
     if matches.subcommand_matches("ping").is_some() {
         let mut cli = NmClient::new().await?;
         println!("{}", cli.ping().await?);
+    } else if let Some(matches) = matches.subcommand_matches(CommandShow::CMD) {
+        CommandShow::handle(matches).await?;
     }
 
     Ok(())

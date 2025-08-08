@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    NmstateError, NmInterface, UnknownInterface,
+    NmInterface, NmstateError, UnknownInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -142,7 +142,7 @@ impl NmInterface for Interface {
             _ => {
                 log::error!(
                     "BUG: Interface::include_diff_context_iface_specific() \
-                    Unexpected input desired {desired:?} current {current:?}",
+                     Unexpected input desired {desired:?} current {current:?}",
                 );
             }
         }
@@ -167,8 +167,8 @@ impl NmInterface for Interface {
             _ => {
                 log::error!(
                     "BUG: Interface::include_revert_context_iface_specific() \
-                    Unexpected input desired {desired:?} \
-                    pre_apply {pre_apply:?}"
+                     Unexpected input desired {desired:?} pre_apply \
+                     {pre_apply:?}"
                 );
             }
         }
@@ -218,7 +218,7 @@ impl Interface {
                 ErrorKind::VerificationError,
                 format!(
                     "Verification failure: {reference} desire '{desire}', \
-                    current '{current}'"
+                     current '{current}'"
                 ),
             ))
         } else {

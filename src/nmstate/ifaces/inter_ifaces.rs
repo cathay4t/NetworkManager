@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq,
 };
 
-use crate::{Interface, InterfaceType, NmstateError, NmInterface};
+use crate::{Interface, InterfaceType, NmInterface, NmstateError};
 
 /// Represent a list of [Interface].
 ///

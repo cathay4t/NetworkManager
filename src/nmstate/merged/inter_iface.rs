@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    NmstateError, NmInterface,
+    NmInterface, NmstateError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

@@ -4,71 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ErrorKind, Interfaces, NmstateError};
 
-/// Network state
-///
-/// [NetworkState] is idempotent meaning it could be applied multiple times and
-/// generate the same final network state.
-///
-/// Example yaml(many lines omitted) serialized NetworkState would be:
-///
-/// ```yaml
-/// version: 1
-/// hostname:
-///   running: host.example.org
-///   config: host.example.org
-/// dns-resolver:
-///   config:
-///     server:
-///     - 2001:db8:1::
-///     - 192.0.2.1
-///     search: []
-/// route-rules:
-///   config:
-///   - ip-from: 2001:db8:b::/64
-///     priority: 30000
-///     route-table: 200
-///   - ip-from: 192.0.2.2/32
-///     priority: 30000
-///     route-table: 200
-/// routes:
-///   config:
-///   - destination: 2001:db8:a::/64
-///     next-hop-interface: eth1
-///     next-hop-address: 2001:db8:1::2
-///     metric: 108
-///     table-id: 200
-///   - destination: 192.168.2.0/24
-///     next-hop-interface: eth1
-///     next-hop-address: 192.168.1.3
-///     metric: 108
-///     table-id: 200
-/// interfaces:
-/// - name: eth1
-///   type: ethernet
-///   state: up
-///   mac-address: 0E:F9:2B:28:42:D9
-///   mtu: 1500
-///   ipv4:
-///     enabled: true
-///     dhcp: false
-///     address:
-///     - ip: 192.168.1.3
-///       prefix-length: 24
-///   ipv6:
-///     enabled: true
-///     dhcp: false
-///     autoconf: false
-///     address:
-///     - ip: 2001:db8:1::1
-///       prefix-length: 64
-/// ovs-db:
-///   external_ids:
-///     hostname: host.example.org
-///     rundir: /var/run/openvswitch
-///     system-id: 176866c7-6dc8-400f-98ac-c658509ec09f
-///   other_config: {}
-/// ```
-#[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
@@ -87,8 +23,18 @@ pub struct NetworkState {
     pub ifaces: Interfaces,
 }
 
+impl Default for NetworkState {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            description: String::new(),
+            ifaces: Default::default(),
+        }
+    }
+}
+
 impl NetworkState {
-    pub const HIDE_PASSWORD_STR: &str = "<_password_hidden_by_nipart>";
+    pub const HIDE_PASSWORD_STR: &str = "<_password_hidden_by_nmstate>";
 
     pub fn hide_secrets(&mut self) {
         log::debug!("Replacing secrets with {}", Self::HIDE_PASSWORD_STR);

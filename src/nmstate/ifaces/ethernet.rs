@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType, NmstateError, NmInterface};
+use crate::{BaseInterface, InterfaceType, NmInterface, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -12,6 +12,12 @@ pub struct EthernetInterface {
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ethernet: Option<EthernetConfig>,
+}
+
+impl EthernetInterface {
+    pub fn new(base: BaseInterface, ethernet: Option<EthernetConfig>) -> Self {
+        Self { base, ethernet }
+    }
 }
 
 impl Default for EthernetInterface {

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, NmError};
+use crate::{ErrorKind, NmCanIpc, NmError, NmIpcConnection};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize,
@@ -116,6 +116,8 @@ pub struct NmLogEntry {
 }
 
 impl NmLogEntry {
+    pub const IPC_KIND: &'static str = "log";
+
     pub fn new(source: String, level: NmLogLevel, message: String) -> Self {
         Self {
             source,
@@ -143,5 +145,78 @@ impl NmLogEntry {
                 log::trace!(target: &self.source, "{}", self.message)
             }
         }
+    }
+}
+
+impl NmCanIpc for NmLogEntry {
+    fn ipc_kind(&self) -> String {
+        Self::IPC_KIND.to_string()
+    }
+}
+
+impl NmIpcConnection {
+    /// Emit trace log and also send this log via [NmIpcConnection] to remote
+    /// end(ignore failure of transmission).
+    pub async fn log_trace(&mut self, msg: String) {
+        log::trace!(target: &self.log_target, "{msg}");
+        self.send(Ok(NmLogEntry {
+            source: self.log_target.to_string(),
+            level: NmLogLevel::Trace,
+            message: msg,
+        }))
+        .await
+        .ok();
+    }
+
+    /// Emit debug log and also send this log via [NmIpcConnection] to remote
+    /// end(ignore failure of transmission).
+    pub async fn log_debug(&mut self, msg: String) {
+        log::debug!(target: &self.log_target, "{msg}");
+        self.send(Ok(NmLogEntry {
+            source: self.log_target.to_string(),
+            level: NmLogLevel::Debug,
+            message: msg,
+        }))
+        .await
+        .ok();
+    }
+
+    /// Emit info log and also send this log via [NmIpcConnection] to remote
+    /// end(ignore failure of transmission).
+    pub async fn log_info(&mut self, msg: String) {
+        log::info!(target: &self.log_target, "{msg}");
+        self.send(Ok(NmLogEntry {
+            source: self.log_target.to_string(),
+            level: NmLogLevel::Info,
+            message: msg,
+        }))
+        .await
+        .ok();
+    }
+
+    /// Emit warn log and also send this log via [NmIpcConnection] to remote
+    /// end(ignore failure of transmission).
+    pub async fn log_warn(&mut self, msg: String) {
+        log::warn!(target: &self.log_target, "{msg}");
+        self.send(Ok(NmLogEntry {
+            source: self.log_target.to_string(),
+            level: NmLogLevel::Warn,
+            message: msg,
+        }))
+        .await
+        .ok();
+    }
+
+    /// Emit warn log and also send this log via [NmIpcConnection] to remote
+    /// end(ignore failure of transmission).
+    pub async fn log_error(&mut self, msg: String) {
+        log::error!(target: &self.log_target, "{msg}");
+        self.send(Ok(NmLogEntry {
+            source: self.log_target.to_string(),
+            level: NmLogLevel::Error,
+            message: msg,
+        }))
+        .await
+        .ok();
     }
 }

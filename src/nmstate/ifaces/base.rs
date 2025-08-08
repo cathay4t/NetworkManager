@@ -16,15 +16,15 @@ pub struct BaseInterface {
     pub state: InterfaceState,
     /// In which order should this interface been activated. The smallest
     /// number will be activated first.
-    /// Undefined or set to 0 when applying desire state means let
-    /// nipart code to decide the correct value.
+    /// Undefined or set to 0 when applying desire state means automatically
+    /// decide the correct value.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub up_priority: u32,
     /// Controller interface name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller: Option<String>,
     /// Controller interface type.
-    /// Optional to define when applying as nipart.
+    /// Optional to define when applying.
     /// Serialize and deserialize to/from `controller-type`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller_type: Option<InterfaceType>,

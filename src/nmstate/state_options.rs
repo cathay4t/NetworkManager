@@ -2,30 +2,40 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+use crate::CUR_SCHEMA_VERSION;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct NmstateQueryOption {
+    #[serde(default)]
+    /// Schema version for output
+    pub version: u32,
     /// Which kind of NetworkState to query
     #[serde(default)]
     pub kind: NmstateStateKind,
+}
+
+impl Default for NmstateQueryOption {
+    fn default() -> Self {
+        Self {
+            version: CUR_SCHEMA_VERSION,
+            kind: NmstateStateKind::default(),
+        }
+    }
 }
 
 impl NmstateQueryOption {
     pub fn running() -> Self {
         Self {
             kind: NmstateStateKind::RunningNetworkState,
+            ..Default::default()
         }
     }
 
     pub fn saved() -> Self {
         Self {
             kind: NmstateStateKind::SavedNetworkState,
-        }
-    }
-
-    pub fn post_last_commit() -> Self {
-        Self {
-            kind: NmstateStateKind::PostLastCommitNetworkState,
+            ..Default::default()
         }
     }
 }
@@ -36,10 +46,8 @@ pub enum NmstateStateKind {
     /// The current running network state
     #[default]
     RunningNetworkState,
-    /// Network state stored in commits
+    /// Network state stored in daemon
     SavedNetworkState,
-    /// The running network state after last commit
-    PostLastCommitNetworkState,
 }
 
 impl std::fmt::Display for NmstateStateKind {
@@ -50,8 +58,6 @@ impl std::fmt::Display for NmstateStateKind {
             match self {
                 Self::RunningNetworkState => "running_network_state",
                 Self::SavedNetworkState => "saved_network_state",
-                Self::PostLastCommitNetworkState =>
-                    "post_last_commit_network_state",
             }
         )
     }

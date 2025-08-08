@@ -2,9 +2,7 @@
 
 use std::time::Duration;
 
-use serde::{
-    Deserialize, Serialize, Serializer, de::DeserializeOwned, ser::SerializeMap,
-};
+use serde::{Serialize, Serializer, de::DeserializeOwned, ser::SerializeMap};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 
@@ -21,8 +19,8 @@ pub struct NmIpcConnection {
     /// Timeout in milliseconds.
     pub(crate) timeout_ms: u32,
     pub(crate) socket: UnixStream,
-    /// Pre-build log prefix to prevent repeated generation
     pub(crate) log_prefix: String,
+    pub(crate) log_target: String,
 }
 
 impl NmIpcConnection {
@@ -61,7 +59,8 @@ impl NmIpcConnection {
         Self {
             socket: stream,
             timeout_ms: Self::DEFAULT_TIMEOUT_MS,
-            log_prefix: format!("ipc-{}:{}: ", src_name, dst_name),
+            log_prefix: format!("{src_name}<->{dst_name}: "),
+            log_target: format!("nm.{src_name}"),
         }
     }
 
@@ -115,11 +114,14 @@ impl NmIpcConnection {
     }
     */
 
-    pub async fn send<T>(&mut self, data: T) -> Result<(), NmError>
+    pub async fn send<T>(
+        &mut self,
+        data: Result<T, NmError>,
+    ) -> Result<(), NmError>
     where
-        T: CanIpc,
+        T: NmCanIpc,
     {
-        let msg = NmMessage::from(data);
+        let msg = NmMessage::<T>::from(data);
         let json_str = serde_json::to_string(&msg).map_err(|e| {
             NmError::new(
                 ErrorKind::Bug,
@@ -173,7 +175,7 @@ impl NmIpcConnection {
 
     pub async fn recv<T>(&mut self) -> Result<T, NmError>
     where
-        T: CanIpc + std::fmt::Debug,
+        T: NmCanIpc + std::fmt::Debug,
     {
         let mut remain_time = Duration::from_millis(self.timeout_ms.into());
         while remain_time > Duration::ZERO {
@@ -208,7 +210,7 @@ impl NmIpcConnection {
 
     async fn _recv<T>(&mut self) -> Result<NmMessage<T>, NmError>
     where
-        T: CanIpc + std::fmt::Debug,
+        T: NmCanIpc + std::fmt::Debug,
     {
         let mut message_size_bytes = 0u32.to_be_bytes();
         self.socket
@@ -288,7 +290,7 @@ pub(crate) enum NmMessage<T> {
 impl<T> NmMessage<T> {
     pub(crate) fn from_json(json_str: &str) -> Result<Self, NmError>
     where
-        T: CanIpc,
+        T: NmCanIpc,
     {
         let value = serde_json::from_str::<serde_json::Value>(json_str)?;
         let map = if let Some(m) = value.as_object() {
@@ -306,20 +308,22 @@ impl<T> NmMessage<T> {
             (map.get("kind").and_then(|k| k.as_str()), map.get("data"))
         {
             match kind {
-                "error" => Err(NmError::deserialize(data_value)?),
-                "log" => {
-                    Ok(NmMessage::Log(NmLogEntry::deserialize(data_value)?))
+                NmError::IPC_KIND => {
+                    Err(serde_json::from_value(data_value.clone())?)
                 }
+                NmLogEntry::IPC_KIND => Ok(NmMessage::Log(
+                    serde_json::from_value(data_value.clone())?,
+                )),
                 _ => {
                     let data = T::deserialize(data_value)?;
-                    if kind == data.kind() {
+                    if kind == data.ipc_kind() {
                         Ok(NmMessage::Data(T::deserialize(data_value)?))
                     } else {
                         Err(NmError::new(
                             ErrorKind::Bug,
                             format!(
                                 "Expecting 'kind' set to {} but got {}",
-                                data.kind(),
+                                data.ipc_kind(),
                                 kind
                             ),
                         ))
@@ -337,7 +341,7 @@ impl<T> NmMessage<T> {
     }
 }
 
-impl<T: CanIpc> Serialize for NmMessage<T> {
+impl<T: NmCanIpc> Serialize for NmMessage<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -345,15 +349,15 @@ impl<T: CanIpc> Serialize for NmMessage<T> {
         let mut map = serializer.serialize_map(Some(2))?;
         match self {
             Self::Error(e) => {
-                map.serialize_entry("kind", "error")?;
+                map.serialize_entry("kind", &e.ipc_kind())?;
                 map.serialize_entry("data", e)?;
             }
             Self::Log(l) => {
-                map.serialize_entry("kind", "log")?;
+                map.serialize_entry("kind", &l.ipc_kind())?;
                 map.serialize_entry("data", l)?;
             }
             Self::Data(d) => {
-                map.serialize_entry("kind", &d.kind())?;
+                map.serialize_entry("kind", &d.ipc_kind())?;
                 map.serialize_entry("data", d)?;
             }
         }
@@ -361,28 +365,33 @@ impl<T: CanIpc> Serialize for NmMessage<T> {
     }
 }
 
-pub trait CanIpc:
+pub trait NmCanIpc:
     Serialize + DeserializeOwned + std::fmt::Debug + Clone
 {
-    fn kind(&self) -> String;
+    fn ipc_kind(&self) -> String;
 }
 
-impl<T> CanIpc for T
-where
-    T: std::fmt::Display
-        + Serialize
-        + DeserializeOwned
-        + Clone
-        + std::fmt::Debug,
-{
-    fn kind(&self) -> String {
+impl NmCanIpc for String {
+    fn ipc_kind(&self) -> String {
         self.to_string()
+    }
+}
+
+impl<T> NmCanIpc for Result<T, NmError>
+where
+    T: NmCanIpc,
+{
+    fn ipc_kind(&self) -> String {
+        match self {
+            Ok(o) => o.ipc_kind(),
+            Err(e) => e.ipc_kind(),
+        }
     }
 }
 
 impl<T> From<T> for NmMessage<T>
 where
-    T: CanIpc,
+    T: NmCanIpc,
 {
     fn from(v: T) -> Self {
         Self::Data(v)
@@ -391,7 +400,7 @@ where
 
 impl<T> From<Result<T, NmError>> for NmMessage<T>
 where
-    T: CanIpc,
+    T: NmCanIpc,
 {
     fn from(result: Result<T, NmError>) -> Self {
         match result {

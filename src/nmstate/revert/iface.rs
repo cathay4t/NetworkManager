@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Interface, InterfaceState, MergedInterface, NmstateError, NmInterface,
+    Interface, InterfaceState, MergedInterface, NmInterface, NmstateError,
 };
 
 use super::value::gen_revert_state;

@@ -69,7 +69,7 @@ pub enum InterfaceType {
     /// IPVLAN kernel interface
     #[serde(rename = "ipvlan")]
     IpVlan,
-    /// Interface unknown to Nm
+    /// Interface unknown
     #[serde(untagged)]
     Unknown(String),
 }

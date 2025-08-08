@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{BaseInterface, NmstateError, NmInterface};
+use crate::{BaseInterface, NmInterface, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[non_exhaustive]
@@ -14,6 +14,15 @@ pub struct UnknownInterface {
     pub base: BaseInterface,
     #[serde(flatten)]
     pub(crate) other: serde_json::Value,
+}
+
+impl UnknownInterface {
+    pub fn new(base: BaseInterface) -> Self {
+        Self {
+            base,
+            ..Default::default()
+        }
+    }
 }
 
 impl NmInterface for UnknownInterface {

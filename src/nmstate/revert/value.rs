@@ -26,9 +26,8 @@ pub(crate) fn gen_revert_state(
                     c
                 } else {
                     log::debug!(
-                        "Current does not have key {key}, \
-                        desired value {des_value} full current: \
-                        {current:?}"
+                        "Current does not have key {key}, desired value \
+                         {des_value} full current: {current:?}"
                     );
                     continue;
                 };
