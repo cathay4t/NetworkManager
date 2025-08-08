@@ -13,3 +13,17 @@
  * Daemon Free Mode
  * Backward Compatibility with NM2 CLI and keyfiles.
  * Simpler Plugin Design
+
+## Run Server
+
+```bash
+env CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER='sudo' \
+    cargo run --bin NetworkManager
+```
+
+## Run Client
+
+```bash
+env CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER='sudo' \
+    cargo run --bin nmcli
+```
