@@ -377,6 +377,12 @@ impl NmCanIpc for String {
     }
 }
 
+impl NmCanIpc for () {
+    fn ipc_kind(&self) -> String {
+        "null".to_string()
+    }
+}
+
 impl<T> NmCanIpc for Result<T, NmError>
 where
     T: NmCanIpc,
