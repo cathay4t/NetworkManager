@@ -17,7 +17,7 @@ pub struct NmClient {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NmClientCmd {
     Ping,
@@ -28,7 +28,7 @@ impl NmCanIpc for NmClientCmd {
     fn ipc_kind(&self) -> String {
         match self {
             Self::Ping => "ping".to_string(),
-            Self::QueryNetworkState(_) => "query_network_state".to_string(),
+            Self::QueryNetworkState(_) => "query-network-state".to_string(),
         }
     }
 }

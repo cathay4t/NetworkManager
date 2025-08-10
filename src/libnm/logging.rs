@@ -8,7 +8,7 @@ use crate::{ErrorKind, NmCanIpc, NmError, NmIpcConnection};
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize,
 )]
 #[repr(usize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum NmLogLevel {
     Off = 0,
     Error = 1,
@@ -108,7 +108,7 @@ impl std::str::FromStr for NmLogLevel {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub struct NmLogEntry {
     pub source: String,
     pub level: NmLogLevel,

@@ -42,6 +42,7 @@ impl NmstateQueryOption {
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 pub enum NmstateStateKind {
     /// The current running network state
     #[default]

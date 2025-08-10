@@ -2,14 +2,31 @@
 
 import json
 
+from .nmstate import NmstateQueryOption
 
-class NmClientCmdPing:
+
+class NmCmdPing:
     IPC_KIND = "ping"
 
     def to_json(self):
         return json.dumps(
             {
-                "kind": NmClientCmdPing.IPC_KIND,
-                "data": NmClientCmdPing.IPC_KIND,
+                "kind": NmCmdPing.IPC_KIND,
+                "data": NmCmdPing.IPC_KIND,
+            }
+        )
+
+
+class NmCmdQueryNetworkState:
+    IPC_KIND = "query-network-state"
+
+    def __init__(self, opt: NmstateQueryOption):
+        self.opt = opt
+
+    def to_json(self):
+        return json.dumps(
+            {
+                "kind": NmCmdQueryNetworkState.IPC_KIND,
+                "data": {NmCmdQueryNetworkState.IPC_KIND: self.opt.to_dict()},
             }
         )

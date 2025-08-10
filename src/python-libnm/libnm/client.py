@@ -6,7 +6,9 @@ import socket
 
 from .error import NmError
 from .log import NmLogEntry
-from .cmd import NmClientCmdPing
+from .cmd import NmCmdPing
+from .cmd import NmCmdQueryNetworkState
+from .nmstate import NmstateQueryOption
 
 U32_MAX = 0xFFFFFFFF
 
@@ -26,6 +28,8 @@ class NmIpcConnection:
         # TODO(Gris Ge): handle timeout here
         while True:
             length_raw = self.socket.recv(4)
+            if not length_raw:
+                raise NmError("BUG", "Got empty reply from daemon")
             length = struct.unpack(">I", length_raw)[0]
             reply = json.loads(self.socket.recv(length).decode("utf-8"))
             match reply["kind"]:
@@ -50,4 +54,9 @@ class NmClient:
         self._conn = NmIpcConnection(DAEMON_SOCKET_PATH)
 
     def ping(self):
-        return self._conn.exec(NmClientCmdPing())
+        return self._conn.exec(NmCmdPing())
+
+    def query_network_state(self, opt=None):
+        if not opt:
+            opt = NmstateQueryOption()
+        return self._conn.exec(NmCmdQueryNetworkState(opt))
