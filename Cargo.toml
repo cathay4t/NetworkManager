@@ -4,7 +4,9 @@ members = [
     "src/cli",
     "src/daemon",
     "src/libnm",
+    "src/libnm-plugin",
     "src/nmstate",
+    "src/plugin-ovs",
 ]
 
 [workspace.package]

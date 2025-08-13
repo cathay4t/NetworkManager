@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Interface, Interfaces, MergedInterfaces, NmInterface, NmstateError,
+    Interface, Interfaces, MergedInterfaces, NmstateError, NmstateInterface,
 };
 
 use super::super::value::{copy_undefined_value, gen_diff_json_value};

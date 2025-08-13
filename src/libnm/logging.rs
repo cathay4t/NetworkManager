@@ -126,23 +126,68 @@ impl NmLogEntry {
         }
     }
 
+    pub fn new_trace(source: String, message: String) -> Self {
+        Self {
+            level: NmLogLevel::Trace,
+            source,
+            message,
+        }
+    }
+
+    pub fn new_debug(source: String, message: String) -> Self {
+        Self {
+            level: NmLogLevel::Debug,
+            source,
+            message,
+        }
+    }
+
+    pub fn new_info(source: String, message: String) -> Self {
+        Self {
+            level: NmLogLevel::Info,
+            source,
+            message,
+        }
+    }
+
+    pub fn new_warn(source: String, message: String) -> Self {
+        Self {
+            level: NmLogLevel::Warn,
+            source,
+            message,
+        }
+    }
+
+    pub fn new_error(source: String, message: String) -> Self {
+        Self {
+            level: NmLogLevel::Error,
+            source,
+            message,
+        }
+    }
+
     pub fn emit(&self) {
         match self.level {
             NmLogLevel::Off => (),
             NmLogLevel::Error => {
-                log::error!(target: &self.source, "{}", self.message)
+                log::error!(
+                    target: &format!("nm.{}", self.source), "{}", self.message)
             }
             NmLogLevel::Warn => {
-                log::warn!(target: &self.source, "{}", self.message)
+                log::warn!(
+                    target: &format!("nm.{}", self.source), "{}", self.message)
             }
             NmLogLevel::Info => {
-                log::info!(target: &self.source, "{}", self.message)
+                log::info!(
+                    target: &format!("nm.{}", self.source), "{}", self.message)
             }
             NmLogLevel::Debug => {
-                log::debug!(target: &self.source, "{}", self.message)
+                log::debug!(
+                    target: &format!("nm.{}", self.source), "{}", self.message)
             }
             NmLogLevel::Trace => {
-                log::trace!(target: &self.source, "{}", self.message)
+                log::trace!(
+                    target: &format!("nm.{}", self.source), "{}", self.message)
             }
         }
     }

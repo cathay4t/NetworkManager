@@ -23,12 +23,14 @@ pub use self::error::{ErrorKind, NmstateError};
 pub use self::iface::Interface;
 pub use self::iface_state::InterfaceState;
 pub use self::iface_trait::{
-    NmChildInterface, NmControllerInterface, NmInterface,
+    NmstateChild, NmstateChildInterface, NmstateController,
+    NmstateControllerInterface, NmstateInterface,
 };
 pub use self::iface_type::InterfaceType;
 pub use self::ifaces::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    Interfaces, UnknownInterface,
+    Interfaces, OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
+    OvsInterface, UnknownInterface,
 };
 pub use self::merged::{MergedInterface, MergedInterfaces, MergedNetworkState};
 pub use self::net_state::NetworkState;

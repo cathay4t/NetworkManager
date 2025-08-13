@@ -34,7 +34,7 @@ impl NmIpcConnection {
         self.timeout_ms = timeout_ms;
     }
 
-    pub(crate) async fn new_with_path(
+    pub async fn new_with_path(
         socket_path: &str,
         src_name: &str,
         dst_name: &str,
@@ -63,56 +63,6 @@ impl NmIpcConnection {
             log_target: format!("nm.{src_name}"),
         }
     }
-
-    /*
-    pub(crate) fn new_abstract(
-        name: &str,
-        src_name: &str,
-        dst_name: &str,
-    ) -> Result<Self, NmError> {
-        let addr =
-            std::os::unix::net::SocketAddr::from_abstract_name(name.as_bytes())
-                .map_err(|e| {
-                    NmError::new(
-                        ErrorKind::IpcFailure,
-                        format!(
-                            "Invalid name for abstract UNIX socket {name}: {e}"
-                        ),
-                    )
-                })?;
-        let socket = std::os::unix::net::UnixStream::connect_addr(&addr)
-            .map_err(|e| {
-                NmError::new(
-                    ErrorKind::IpcFailure,
-                    format!(
-                        "Failed to connect abstract UNIX socket {name}: {e}"
-                    ),
-                )
-            })?;
-        socket.set_nonblocking(true).map_err(|e| {
-            NmError::new(
-                ErrorKind::IpcFailure,
-                format!(
-                    "Failed to set abstract UNIX socket {name} as \
-                     non_blocking: {e}"
-                ),
-            )
-        })?;
-        Ok(Self::new_with_stream(
-            UnixStream::from_std(socket).map_err(|e| {
-                NmError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "Failed to convert std UnixStream {name} to tokio \
-                         UnixStream {e}"
-                    ),
-                )
-            })?,
-            src_name,
-            dst_name,
-        ))
-    }
-    */
 
     pub async fn send<T>(
         &mut self,
@@ -173,9 +123,14 @@ impl NmIpcConnection {
         Ok(())
     }
 
+    pub async fn log(&mut self, log: NmLogEntry) -> Result<(), NmError> {
+        self.send(Ok(log)).await
+    }
+
+    // TODO (Gris Ge): Support redirecting plugin log to user
     pub async fn recv<T>(&mut self) -> Result<T, NmError>
     where
-        T: NmCanIpc + std::fmt::Debug,
+        T: NmCanIpc,
     {
         let mut remain_time = Duration::from_millis(self.timeout_ms.into());
         while remain_time > Duration::ZERO {
@@ -217,13 +172,20 @@ impl NmIpcConnection {
             .read_exact(&mut message_size_bytes)
             .await
             .map_err(|e| {
-                NmError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "{}Failed to read socket message length: {e}",
-                        self.log_prefix
-                    ),
-                )
+                if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                    NmError::new(
+                        ErrorKind::IpcClosed,
+                        format!("{} closed", self.log_prefix),
+                    )
+                } else {
+                    NmError::new(
+                        ErrorKind::Bug,
+                        format!(
+                            "{}Failed to read socket message length: {e}",
+                            self.log_prefix
+                        ),
+                    )
+                }
             })?;
         let message_size = u32::from_be_bytes(message_size_bytes) as usize;
         if message_size == 0 {

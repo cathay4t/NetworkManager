@@ -2,9 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType, NmInterface, NmstateError};
+use crate::{BaseInterface, InterfaceType, NmstateError, NmstateInterface};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// Ethernet(IEEE 802.3) interface.
 pub struct EthernetInterface {
@@ -32,7 +33,7 @@ impl Default for EthernetInterface {
     }
 }
 
-impl NmInterface for EthernetInterface {
+impl NmstateInterface for EthernetInterface {
     fn base_iface(&self) -> &BaseInterface {
         &self.base
     }
@@ -47,10 +48,6 @@ impl NmInterface for EthernetInterface {
     }
 
     fn is_userspace(&self) -> bool {
-        false
-    }
-
-    fn is_controller(&self) -> bool {
         false
     }
 

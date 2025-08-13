@@ -6,13 +6,13 @@ use nm::{ErrorKind, NmError, NmIpcConnection};
 use tokio::net::UnixListener;
 
 #[derive(Debug)]
-pub(crate) struct NmIpcListener {
+pub struct NmIpcListener {
     path: String,
     socket: UnixListener,
 }
 
 impl NmIpcListener {
-    pub(crate) fn new(path: &str) -> Result<Self, NmError> {
+    pub fn new(path: &str) -> Result<Self, NmError> {
         remove_file(path).ok();
 
         let dir_path = match std::path::Path::new(path).parent() {
@@ -45,7 +45,7 @@ impl NmIpcListener {
         })
     }
 
-    pub(crate) async fn accept(&self) -> Result<NmIpcConnection, NmError> {
+    pub async fn accept(&self) -> Result<NmIpcConnection, NmError> {
         let (stream, _) = self.socket.accept().await.map_err(|e| {
             NmError::new(
                 ErrorKind::IpcFailure,

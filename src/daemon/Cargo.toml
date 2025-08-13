@@ -10,6 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 nm = { path = "../libnm" }
+nm_plugin = { path = "../libnm-plugin" }
 nmstate = { path = "../nmstate" }
 serde = { workspace = true }
 env_logger = { workspace = true }

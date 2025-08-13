@@ -5,7 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    NmInterface, NmstateError, UnknownInterface,
+    NmstateController, NmstateError, NmstateInterface, OvsBridgeInterface,
+    OvsInterface, UnknownInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -15,6 +16,10 @@ use crate::{
 pub enum Interface {
     /// Ethernet interface.
     Ethernet(Box<EthernetInterface>),
+    /// OVS Bridge
+    OvsBridge(Box<OvsBridgeInterface>),
+    /// OVS System Interface
+    OvsInterface(Box<OvsInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -61,6 +66,16 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Ethernet(Box::new(inner)))
             }
+            Some(InterfaceType::OvsBridge) => {
+                let inner = OvsBridgeInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::OvsBridge(Box::new(inner)))
+            }
+            Some(InterfaceType::OvsInterface) => {
+                let inner = OvsInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::OvsInterface(Box::new(inner)))
+            }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
@@ -70,10 +85,12 @@ impl<'de> Deserialize<'de> for Interface {
     }
 }
 
-impl NmInterface for Interface {
+impl NmstateInterface for Interface {
     fn is_virtual(&self) -> bool {
         match self {
             Self::Ethernet(i) => i.is_virtual(),
+            Self::OvsBridge(i) => i.is_virtual(),
+            Self::OvsInterface(i) => i.is_virtual(),
             Self::Unknown(i) => i.is_virtual(),
         }
     }
@@ -81,20 +98,17 @@ impl NmInterface for Interface {
     fn is_userspace(&self) -> bool {
         match self {
             Self::Ethernet(i) => i.is_userspace(),
+            Self::OvsBridge(i) => i.is_userspace(),
+            Self::OvsInterface(i) => i.is_userspace(),
             Self::Unknown(i) => i.is_userspace(),
-        }
-    }
-
-    fn is_controller(&self) -> bool {
-        match self {
-            Self::Ethernet(i) => i.is_controller(),
-            Self::Unknown(i) => i.is_controller(),
         }
     }
 
     fn base_iface(&self) -> &BaseInterface {
         match self {
             Self::Ethernet(i) => (*i).base_iface(),
+            Self::OvsBridge(i) => (*i).base_iface(),
+            Self::OvsInterface(i) => (*i).base_iface(),
             Self::Unknown(i) => (*i).base_iface(),
         }
     }
@@ -102,6 +116,8 @@ impl NmInterface for Interface {
     fn base_iface_mut(&mut self) -> &mut BaseInterface {
         match self {
             Self::Ethernet(i) => i.base_iface_mut(),
+            Self::OvsBridge(i) => i.base_iface_mut(),
+            Self::OvsInterface(i) => i.base_iface_mut(),
             Self::Unknown(i) => i.base_iface_mut(),
         }
     }
@@ -109,6 +125,8 @@ impl NmInterface for Interface {
     fn hide_secrets_iface_specific(&mut self) {
         match self {
             Self::Ethernet(i) => i.hide_secrets_iface_specific(),
+            Self::OvsBridge(i) => i.hide_secrets_iface_specific(),
+            Self::OvsInterface(i) => i.hide_secrets_iface_specific(),
             Self::Unknown(i) => i.hide_secrets_iface_specific(),
         }
     }
@@ -119,6 +137,8 @@ impl NmInterface for Interface {
     ) -> Result<(), NmstateError> {
         match self {
             Self::Ethernet(i) => i.sanitize_iface_specfic(is_desired),
+            Self::OvsBridge(i) => i.sanitize_iface_specfic(is_desired),
+            Self::OvsInterface(i) => i.sanitize_iface_specfic(is_desired),
             Self::Unknown(i) => i.sanitize_iface_specfic(is_desired),
         }
     }
@@ -133,6 +153,16 @@ impl NmInterface for Interface {
                 Self::Ethernet(i),
                 Self::Ethernet(desired),
                 Self::Ethernet(current),
+            ) => i.include_diff_context_iface_specific(desired, current),
+            (
+                Self::OvsBridge(i),
+                Self::OvsBridge(desired),
+                Self::OvsBridge(current),
+            ) => i.include_diff_context_iface_specific(desired, current),
+            (
+                Self::OvsInterface(i),
+                Self::OvsInterface(desired),
+                Self::OvsInterface(current),
             ) => i.include_diff_context_iface_specific(desired, current),
             (
                 Self::Unknown(i),
@@ -160,6 +190,16 @@ impl NmInterface for Interface {
                 Self::Ethernet(pre_apply),
             ) => i.include_revert_context_iface_specific(desired, pre_apply),
             (
+                Self::OvsBridge(i),
+                Self::OvsBridge(desired),
+                Self::OvsBridge(pre_apply),
+            ) => i.include_revert_context_iface_specific(desired, pre_apply),
+            (
+                Self::OvsInterface(i),
+                Self::OvsInterface(desired),
+                Self::OvsInterface(pre_apply),
+            ) => i.include_revert_context_iface_specific(desired, pre_apply),
+            (
                 Self::Unknown(i),
                 Self::Unknown(desired),
                 Self::Unknown(pre_apply),
@@ -175,6 +215,22 @@ impl NmInterface for Interface {
     }
 }
 
+impl NmstateController for Interface {
+    fn is_controller(&self) -> bool {
+        match self {
+            Self::OvsBridge(i) => i.is_controller(),
+            _ => false,
+        }
+    }
+
+    fn ports(&self) -> Option<Vec<&str>> {
+        match self {
+            Self::OvsBridge(i) => i.ports(),
+            _ => None,
+        }
+    }
+}
+
 impl From<BaseInterface> for Interface {
     fn from(base_iface: BaseInterface) -> Self {
         match base_iface.iface_type {
@@ -183,6 +239,12 @@ impl From<BaseInterface> for Interface {
                     base_iface,
                 )))
             }
+            InterfaceType::OvsBridge => Interface::OvsBridge(Box::new(
+                OvsBridgeInterface::from_base(base_iface),
+            )),
+            InterfaceType::OvsInterface => Interface::OvsInterface(Box::new(
+                OvsInterface::from_base(base_iface),
+            )),
             InterfaceType::Unknown(_) => Interface::Unknown(Box::new(
                 UnknownInterface::from_base(base_iface),
             )),

@@ -35,7 +35,7 @@ impl NmCanIpc for NmClientCmd {
 
 impl NmClient {
     pub const DEFAULT_SOCKET_PATH: &'static str =
-        "/var/run/NetworkManager/daemon_socket";
+        "/var/run/NetworkManager/sockets/daemon";
 
     /// Create IPC connect to NetworkManager daemon
     pub async fn new() -> Result<Self, NmError> {

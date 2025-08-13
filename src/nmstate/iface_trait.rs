@@ -6,7 +6,7 @@ use super::value::copy_undefined_value;
 use crate::{BaseInterface, InterfaceType, NmstateError};
 
 /// Trait implemented by all type of interfaces.
-pub trait NmInterface:
+pub trait NmstateInterface:
     std::fmt::Debug + for<'a> Deserialize<'a> + Serialize + Default
 {
     fn base_iface(&self) -> &BaseInterface;
@@ -16,8 +16,6 @@ pub trait NmInterface:
     fn is_virtual(&self) -> bool;
 
     fn is_userspace(&self) -> bool;
-
-    fn is_controller(&self) -> bool;
 
     fn name(&self) -> &str {
         self.base_iface().name.as_str()
@@ -145,12 +143,53 @@ pub trait NmInterface:
     );
 }
 
+pub trait NmstateController {
+    fn is_controller(&self) -> bool;
+    fn ports(&self) -> Option<Vec<&str>>;
+}
+
+impl<T> NmstateController for T
+where
+    T: NmstateControllerInterface,
+{
+    fn is_controller(&self) -> bool {
+        true
+    }
+
+    fn ports(&self) -> Option<Vec<&str>> {
+        self.ports()
+    }
+}
+
 /// Controller Interface
 ///
 /// E.g. Bond, Linux bridge, OVS bridge, VRF
-pub trait NmControllerInterface: NmInterface {}
+pub trait NmstateControllerInterface: NmstateInterface {
+    fn ports(&self) -> Option<Vec<&str>>;
+}
+
+pub trait NmstateChild {
+    fn is_child(&self) -> bool;
+
+    fn parent(&self) -> Option<&str>;
+}
 
 /// Interface depend on its parent interface
 ///
 /// E.g VLAN, VxLAN, MacVlan
-pub trait NmChildInterface: NmInterface {}
+pub trait NmstateChildInterface: NmstateInterface {
+    fn parent(&self) -> Option<&str>;
+}
+
+impl<T> NmstateChild for T
+where
+    T: NmstateChildInterface,
+{
+    fn is_child(&self) -> bool {
+        true
+    }
+
+    fn parent(&self) -> Option<&str> {
+        self.parent()
+    }
+}

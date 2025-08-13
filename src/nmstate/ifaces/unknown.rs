@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{BaseInterface, NmInterface, NmstateError};
+use crate::{BaseInterface, NmstateError, NmstateInterface};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[non_exhaustive]
@@ -25,7 +25,7 @@ impl UnknownInterface {
     }
 }
 
-impl NmInterface for UnknownInterface {
+impl NmstateInterface for UnknownInterface {
     fn base_iface(&self) -> &BaseInterface {
         &self.base
     }
@@ -44,11 +44,6 @@ impl NmInterface for UnknownInterface {
     /// always.
     fn is_virtual(&self) -> bool {
         true
-    }
-
-    /// Unknown interface cannot be controller
-    fn is_controller(&self) -> bool {
-        false
     }
 
     fn hide_secrets_iface_specific(&mut self) {}

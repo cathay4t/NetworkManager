@@ -53,6 +53,7 @@ pub struct BaseInterface {
 
 impl BaseInterface {
     pub fn hide_secrets(&mut self) {}
+
     pub fn merge(&mut self, other: &Self) {
         // Do not allow unknown interface type overriding existing
         // Do not allow ethernet interface type overriding veth
@@ -98,6 +99,17 @@ impl BaseInterface {
         Self {
             name: self.name.clone(),
             iface_type: self.iface_type.clone(),
+            state: InterfaceState::Up,
+            ..Default::default()
+        }
+    }
+}
+
+impl BaseInterface {
+    pub fn new(name: String, iface_type: InterfaceType) -> Self {
+        Self {
+            name,
+            iface_type,
             state: InterfaceState::Up,
             ..Default::default()
         }
