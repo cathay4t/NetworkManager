@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{InterfaceState, InterfaceType, NmstateError};
+use crate::{
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -49,6 +51,16 @@ pub struct BaseInterface {
     /// Maximum MTU allowed. Ignored during apply.
     /// Serialize and deserialize to/from `max-mtu`.
     pub max_mtu: Option<u64>,
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv4: Option<InterfaceIpv4>,
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv6: Option<InterfaceIpv6>,
 }
 
 impl BaseInterface {
@@ -88,10 +100,26 @@ impl BaseInterface {
         if other.max_mtu.is_some() {
             self.max_mtu = other.max_mtu;
         }
+        match (self.ipv4.as_mut(), other.ipv4.as_ref()) {
+            (None, Some(other_ipv4)) => self.ipv4 = Some(other_ipv4.clone()),
+            (Some(self_ipv4), Some(other_ipv4)) => self_ipv4.merge(other_ipv4),
+            _ => (),
+        }
+
+        match (self.ipv6.as_mut(), other.ipv6.as_ref()) {
+            (None, Some(other_ipv6)) => self.ipv6 = Some(other_ipv6.clone()),
+            (Some(self_ipv6), Some(other_ipv6)) => self_ipv6.merge(other_ipv6),
+            _ => (),
+        }
     }
 
-    pub fn sanitize(&mut self, _is_desired: bool) -> Result<(), NmstateError> {
-        // TODO
+    pub fn sanitize(&mut self, is_desired: bool) -> Result<(), NmstateError> {
+        if let Some(ipv4) = self.ipv4.as_mut() {
+            ipv4.sanitize(is_desired)?;
+        }
+        if let Some(ipv6) = self.ipv6.as_mut() {
+            ipv6.sanitize(is_desired)?;
+        }
         Ok(())
     }
 

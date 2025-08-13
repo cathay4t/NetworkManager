@@ -2,6 +2,7 @@
 
 mod base_iface;
 mod error;
+mod ip;
 mod query;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

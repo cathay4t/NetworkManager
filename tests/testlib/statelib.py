@@ -2,6 +2,7 @@
 
 from libnm import NmClient
 
+
 def show_only(iface_name):
     client = NmClient()
     state = client.query_network_state()

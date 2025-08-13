@@ -2,6 +2,8 @@
 
 use nmstate::{BaseInterface, InterfaceState, InterfaceType};
 
+use super::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate};
+
 const SUPPORTED_LIST: [InterfaceType; 1] = [InterfaceType::Ethernet];
 
 fn np_iface_type_to_nmstate(
@@ -86,6 +88,8 @@ pub(crate) fn np_iface_to_base_iface(
         );
         base_iface.state = InterfaceState::Ignore;
     }
+    base_iface.ipv4 = np_ipv4_to_nmstate(np_iface);
+    base_iface.ipv6 = np_ipv6_to_nmstate(np_iface);
 
     base_iface
 }

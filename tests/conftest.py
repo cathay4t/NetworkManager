@@ -3,7 +3,6 @@
 import pathlib
 import subprocess
 import sys
-import threading
 import time
 
 import pytest

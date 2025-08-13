@@ -46,7 +46,7 @@ class NmIpcConnection:
         return self.recv()
 
 
-DAEMON_SOCKET_PATH = "/var/run/NetworkManager/daemon_socket"
+DAEMON_SOCKET_PATH = "/var/run/NetworkManager/sockets/daemon"
 
 
 class NmClient:

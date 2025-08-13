@@ -7,6 +7,7 @@ mod iface_state;
 mod iface_trait;
 mod iface_type;
 mod ifaces;
+mod ip;
 mod merged;
 mod net_state;
 mod revert;
@@ -32,6 +33,7 @@ pub use self::ifaces::{
     Interfaces, OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
     OvsInterface, UnknownInterface,
 };
+pub use self::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use self::merged::{MergedInterface, MergedInterfaces, MergedNetworkState};
 pub use self::net_state::NetworkState;
 pub use self::state_options::{
