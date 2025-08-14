@@ -11,8 +11,7 @@
 
 ## Features
  * Daemon Free Mode
- * Backward Compatibility with NM2 CLI and keyfiles.
- * Simpler Plugin Design
+ * Simply Plugin Design
 
 ## Run Server
 
