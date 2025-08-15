@@ -4,10 +4,12 @@ import json
 import struct
 import socket
 
-from .error import NmError
-from .log import NmLogEntry
+from .cmd import NmCmdApplyNetworkState
 from .cmd import NmCmdPing
 from .cmd import NmCmdQueryNetworkState
+from .error import NmError
+from .log import NmLogEntry
+from .nmstate import NmstateApplyOption
 from .nmstate import NmstateQueryOption
 
 U32_MAX = 0xFFFFFFFF
@@ -60,3 +62,8 @@ class NmClient:
         if not opt:
             opt = NmstateQueryOption()
         return self._conn.exec(NmCmdQueryNetworkState(opt))
+
+    def apply_network_state(self, desired_state, opt=None):
+        if not opt:
+            opt = NmstateApplyOption()
+        return self._conn.exec(NmCmdApplyNetworkState(desired_state, opt))

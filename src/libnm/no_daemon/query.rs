@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nmstate::{
-    EthernetInterface, Interface, InterfaceType, NetworkState,
-    NmstateQueryOption, UnknownInterface,
+    EthernetInterface, Interface, InterfaceType, LoopbackInterface,
+    NetworkState, NmstateQueryOption, UnknownInterface,
 };
 
 use super::{base_iface::np_iface_to_base_iface, error::np_error_to_nmstate};
@@ -48,8 +48,13 @@ impl NmNoDaemon {
 
             let base_iface = np_iface_to_base_iface(np_iface);
             let iface = match &base_iface.iface_type {
-                InterfaceType::Ethernet => Interface::Ethernet(Box::new(
-                    EthernetInterface::new(base_iface, None),
+                InterfaceType::Ethernet | InterfaceType::Veth => {
+                    Interface::Ethernet(Box::new(EthernetInterface::new(
+                        base_iface, None,
+                    )))
+                }
+                InterfaceType::Loopback => Interface::Loopback(Box::new(
+                    LoopbackInterface::new(base_iface),
                 )),
                 _ => {
                     log::debug!(

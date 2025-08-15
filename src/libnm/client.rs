@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::{NetworkState, NmstateQueryOption};
+use nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption};
 use serde::{Deserialize, Serialize};
 
 use crate::{JsonDisplay, NmCanIpc, NmError, NmIpcConnection};
@@ -22,6 +22,7 @@ pub struct NmClient {
 pub enum NmClientCmd {
     Ping,
     QueryNetworkState(Box<NmstateQueryOption>),
+    ApplyNetworkState(Box<(NetworkState, NmstateApplyOption)>),
 }
 
 impl NmCanIpc for NmClientCmd {
@@ -29,6 +30,7 @@ impl NmCanIpc for NmClientCmd {
         match self {
             Self::Ping => "ping".to_string(),
             Self::QueryNetworkState(_) => "query-network-state".to_string(),
+            Self::ApplyNetworkState(_) => "apply-network-state".to_string(),
         }
     }
 }
@@ -60,6 +62,20 @@ impl NmClient {
     ) -> Result<NetworkState, NmError> {
         self.ipc
             .send(Ok(NmClientCmd::QueryNetworkState(Box::new(option))))
+            .await?;
+        self.ipc.recv::<NetworkState>().await
+    }
+
+    pub async fn apply_network_state(
+        &mut self,
+        desired_state: NetworkState,
+        option: NmstateApplyOption,
+    ) -> Result<NetworkState, NmError> {
+        self.ipc
+            .send(Ok(NmClientCmd::ApplyNetworkState(Box::new((
+                desired_state,
+                option,
+            )))))
             .await?;
         self.ipc.recv::<NetworkState>().await
     }

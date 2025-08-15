@@ -2,7 +2,10 @@
 
 use std::str::FromStr;
 
-use nmstate::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
+use crate::{
+    NmError,
+    nmstate::{BaseInterface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
+};
 
 pub(crate) fn np_ipv4_to_nmstate(
     np_iface: &nispor::Iface,
@@ -46,6 +49,9 @@ pub(crate) fn np_ipv4_to_nmstate(
             }
         }
         ip.addresses = Some(addresses);
+        if ip.dhcp.is_none() {
+            ip.dhcp = Some(false);
+        }
         Some(ip)
     } else {
         // IP might just disabled
@@ -67,7 +73,11 @@ pub(crate) fn np_ipv6_to_nmstate(
         let mut addresses = Vec::new();
         for np_addr in &np_ip.addresses {
             if np_addr.valid_lft != "forever" {
-                ip.autoconf = Some(true);
+                if np_addr.prefix_len == 128 {
+                    ip.dhcp = Some(true);
+                } else {
+                    ip.autoconf = Some(true);
+                }
             }
             match std::net::IpAddr::from_str(np_addr.address.as_str()) {
                 Ok(i) => {
@@ -97,9 +107,133 @@ pub(crate) fn np_ipv6_to_nmstate(
             }
         }
         ip.addresses = Some(addresses);
+        if ip.autoconf.is_none() && ip.dhcp.is_none() {
+            ip.dhcp = Some(false);
+            ip.autoconf = Some(false);
+        }
         Some(ip)
     } else {
         // IP might just disabled
         Some(InterfaceIpv6::default())
     }
+}
+
+pub(crate) fn apply_iface_ip_changes(
+    np_iface: &mut nispor::IfaceConf,
+    des_iface: &BaseInterface,
+    cur_iface: &BaseInterface,
+) -> Result<(), NmError> {
+    if des_iface.ipv4.as_ref() != cur_iface.ipv4.as_ref()
+        && let Some(des_ipv4) = des_iface.ipv4.as_ref()
+    {
+        let mut des_addrs: &[InterfaceIpAddr] = &[];
+        if des_ipv4.is_enabled()
+            && let Some(d) = des_ipv4.addresses.as_ref()
+        {
+            des_addrs = d;
+        }
+
+        let mut cur_addrs: &[InterfaceIpAddr] = &[];
+        if let Some(cur_ipv4) = cur_iface.ipv4.as_ref() {
+            if cur_ipv4.is_enabled()
+                && let Some(c) = cur_ipv4.addresses.as_ref()
+            {
+                cur_addrs = c;
+            }
+        }
+        let np_addrs = nmstate_ip_addrs_to_nispor(des_addrs, cur_addrs);
+
+        if !np_addrs.is_empty() {
+            let mut np_ip_conf = nispor::IpConf::default();
+            np_ip_conf.addresses = np_addrs;
+            np_iface.ipv4 = Some(np_ip_conf);
+        }
+    }
+
+    if des_iface.ipv6.as_ref() != cur_iface.ipv6.as_ref()
+        && let Some(des_ipv6) = des_iface.ipv6.as_ref()
+    {
+        let mut des_addrs: &[InterfaceIpAddr] = &[];
+        if des_ipv6.is_enabled()
+            && let Some(d) = des_ipv6.addresses.as_ref()
+        {
+            des_addrs = d;
+        }
+
+        let mut cur_addrs: &[InterfaceIpAddr] = &[];
+        if let Some(cur_ipv6) = cur_iface.ipv6.as_ref() {
+            if cur_ipv6.is_enabled()
+                && let Some(c) = cur_ipv6.addresses.as_ref()
+            {
+                cur_addrs = c;
+            }
+        }
+        let np_addrs = nmstate_ip_addrs_to_nispor(des_addrs, cur_addrs);
+
+        if !np_addrs.is_empty() {
+            let mut np_ip_conf = nispor::IpConf::default();
+            np_ip_conf.addresses = np_addrs;
+            np_iface.ipv6 = Some(np_ip_conf);
+        }
+    }
+
+    Ok(())
+}
+
+fn nmstate_ip_addr_to_nispor(
+    ip_addr: &InterfaceIpAddr,
+    remove: bool,
+) -> nispor::IpAddrConf {
+    let mut np_ip_addr = nispor::IpAddrConf::default();
+    np_ip_addr.address = ip_addr.ip.to_string();
+    np_ip_addr.prefix_len = ip_addr.prefix_length;
+    np_ip_addr.preferred_lft = ip_addr
+        .preferred_life_time
+        .clone()
+        .unwrap_or("forever".to_string());
+    np_ip_addr.valid_lft = ip_addr
+        .valid_life_time
+        .clone()
+        .unwrap_or("forever".to_string());
+    np_ip_addr.remove = remove;
+
+    np_ip_addr
+}
+
+fn nmstate_ip_addrs_to_nispor(
+    des_addrs: &[InterfaceIpAddr],
+    cur_addrs: &[InterfaceIpAddr],
+) -> Vec<nispor::IpAddrConf> {
+    let mut ret: Vec<nispor::IpAddrConf> = Vec::new();
+
+    if is_appending(des_addrs, cur_addrs) {
+        for cur_addr in cur_addrs {
+            if !des_addrs.contains(cur_addr) {
+                ret.push(nmstate_ip_addr_to_nispor(cur_addr, true));
+            }
+        }
+        for des_addr in des_addrs {
+            if !cur_addrs.contains(des_addr) {
+                ret.push(nmstate_ip_addr_to_nispor(des_addr, false));
+            }
+        }
+    } else {
+        // Purge all current IP address, so we get expected IP address order.
+        for cur_addr in cur_addrs {
+            ret.push(nmstate_ip_addr_to_nispor(cur_addr, true));
+        }
+        for des_addr in des_addrs {
+            ret.push(nmstate_ip_addr_to_nispor(des_addr, false));
+        }
+    }
+
+    ret
+}
+
+fn is_appending(
+    des_addrs: &[InterfaceIpAddr],
+    cur_addrs: &[InterfaceIpAddr],
+) -> bool {
+    cur_addrs.len() < des_addrs.len()
+        && &des_addrs[..cur_addrs.len()] == cur_addrs
 }

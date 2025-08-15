@@ -35,7 +35,7 @@ pub trait NmstateInterface:
         self.hide_secrets_iface_specific();
     }
 
-    fn hide_secrets_iface_specific(&mut self);
+    fn hide_secrets_iface_specific(&mut self) {}
 
     fn is_ignore(&self) -> bool {
         self.base_iface().state.is_ignore()
@@ -89,12 +89,26 @@ pub trait NmstateInterface:
         self.sanitize_iface_specfic(is_desired)
     }
 
-    /// Please implemented this function if special sanitize action required
-    /// for certain interface type. Do not need to worry about [BaseInterface].
+    /// Invoke sanitize current for verify on the [BaseInterface] and
+    /// `sanitize_iface_specfic()`
+    fn sanitize_for_verify(&mut self) {
+        self.base_iface_mut().sanitize_for_verify();
+        self.sanitize_for_verify_iface_specfic();
+    }
+
+    /// Please implement this function if special sanitize action required
+    /// for certain interface type. Do not include action for [BaseInterface].
     fn sanitize_iface_specfic(
         &mut self,
-        is_desired: bool,
-    ) -> Result<(), NmstateError>;
+        _is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        Ok(())
+    }
+
+    /// Please implement this function if special sanitize action required
+    /// for certain interface type during verification. Do not include action
+    /// for [BaseInterface]. Default implementation is empty.
+    fn sanitize_for_verify_iface_specfic(&mut self) {}
 
     /// When generating difference between desired and current, certain value
     /// should be included as context in the output. For example, when
@@ -111,9 +125,10 @@ pub trait NmstateInterface:
 
     fn include_diff_context_iface_specific(
         &mut self,
-        desired: &Self,
-        current: &Self,
-    );
+        _desired: &Self,
+        _current: &Self,
+    ) {
+    }
 
     fn from_base(base_iface: BaseInterface) -> Self {
         let mut new = Self::default();
@@ -138,9 +153,10 @@ pub trait NmstateInterface:
 
     fn include_revert_context_iface_specific(
         &mut self,
-        desired: &Self,
-        pre_apply: &Self,
-    );
+        _desired: &Self,
+        _pre_apply: &Self,
+    ) {
+    }
 }
 
 pub trait NmstateController {

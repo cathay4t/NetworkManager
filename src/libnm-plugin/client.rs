@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nm::{NmCanIpc, NmError, NmIpcConnection};
-use nmstate::{NetworkState, NmstateQueryOption};
+use nmstate::{
+    JsonDisplay, NetworkState, NmstateApplyOption, NmstateQueryOption,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::NmPluginInfo;
@@ -12,7 +14,7 @@ pub struct NmPluginClient {
 }
 
 /// Command send from daemon to plugin
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonDisplay)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NmPluginCmd {
@@ -20,6 +22,7 @@ pub enum NmPluginCmd {
     QueryPluginInfo,
     /// Query network state, should reply with [NetworkState]
     QueryNetworkState(Box<NmstateQueryOption>),
+    ApplyNetworkState(Box<(NetworkState, NmstateApplyOption)>),
     Quit,
 }
 
@@ -28,6 +31,7 @@ impl NmCanIpc for NmPluginCmd {
         match self {
             Self::QueryPluginInfo => "query-plugin-info".to_string(),
             Self::QueryNetworkState(_) => "query-network-state".to_string(),
+            Self::ApplyNetworkState(_) => "apply-network-state".to_string(),
             Self::Quit => "quit".to_string(),
         }
     }
@@ -66,6 +70,20 @@ impl NmPluginClient {
             .send(Ok(NmPluginCmd::QueryNetworkState(Box::new(opt))))
             .await?;
         self.ipc.recv::<NetworkState>().await
+    }
+
+    pub async fn apply_network_state(
+        &mut self,
+        desired_state: NetworkState,
+        opt: NmstateApplyOption,
+    ) -> Result<(), NmError> {
+        self.ipc
+            .send(Ok(NmPluginCmd::ApplyNetworkState(Box::new((
+                desired_state,
+                opt,
+            )))))
+            .await?;
+        self.ipc.recv::<()>().await
     }
 
     pub async fn send<T>(

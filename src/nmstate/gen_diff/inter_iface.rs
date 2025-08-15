@@ -51,3 +51,12 @@ impl MergedInterfaces {
         Ok(ret)
     }
 }
+
+impl Interfaces {
+    pub(crate) fn sanitize_for_diff(&mut self) {
+        // Just use sanitize_for_verify() is enough
+        for iface in self.iter_mut() {
+            iface.sanitize_for_verify();
+        }
+    }
+}

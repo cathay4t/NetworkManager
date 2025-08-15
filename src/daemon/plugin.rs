@@ -5,9 +5,9 @@ use std::env::current_exe;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 
-use nm::{NmError, NmIpcConnection, NmLogEntry};
+use nm::{NmError, NmIpcConnection};
 use nm_plugin::{NmPluginClient, NmPluginInfo};
-use nmstate::{NetworkState, NmstateQueryOption};
+use nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption};
 
 const NM_PLUGIN_PREFIX: &str = "NetworkManager-plugin-";
 const NM_PLUGIN_CONN_RETRY: i8 = 50;
@@ -124,35 +124,62 @@ impl NmDaemonPlugins {
             match plugin.query_network_state(&opt).await {
                 Ok(net_state) => ret.push(net_state),
                 Err(e) => {
-                    conn.log(NmLogEntry::new_warn(
-                        plugin.name.to_string(),
-                        e.to_string(),
-                    ))
-                    .await
-                    .ok();
+                    conn.log_info(e.msg.to_string()).await;
                 }
             }
         }
 
         Ok(ret)
     }
+
+    pub(crate) async fn apply_network_state(
+        &self,
+        apply_state: &NetworkState,
+        opt: &NmstateApplyOption,
+        conn: &mut NmIpcConnection,
+    ) -> Result<(), NmError> {
+        // TODO(Gris Ge): Should request all plugin at the same time instead
+        // of one by one.
+        for plugin in self.plugins.values() {
+            if let Err(e) = plugin.apply_network_state(apply_state, opt).await {
+                conn.log_info(e.msg.to_string()).await;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmDaemonPlugin {
-    name: String,
+    _name: String,
     _plugin_info: NmPluginInfo,
     socket_path: String,
 }
 
 impl NmDaemonPlugin {
-    // TODO(Gris Ge): Timeout
+    // TODO(Gris Ge):
+    // * Timeout
+    // * Ignore failure of plugins
     pub(crate) async fn query_network_state(
         &self,
         opt: &NmstateQueryOption,
     ) -> Result<NetworkState, NmError> {
         let mut cli = NmPluginClient::new(&self.socket_path).await?;
         cli.query_network_state(opt.clone()).await
+    }
+
+    // TODO(Gris Ge):
+    // * Timeout
+    // * Ignore failure of plugins
+    pub(crate) async fn apply_network_state(
+        &self,
+        apply_state: &NetworkState,
+        opt: &NmstateApplyOption,
+    ) -> Result<(), NmError> {
+        let mut cli = NmPluginClient::new(&self.socket_path).await?;
+        cli.apply_network_state(apply_state.clone(), opt.clone())
+            .await
     }
 }
 
@@ -171,7 +198,7 @@ async fn connect_plugins(plugins: &mut HashMap<String, NmDaemonPlugin>) {
                         plugins.insert(
                             info.name.to_string(),
                             NmDaemonPlugin {
-                                name: info.name.to_string(),
+                                _name: info.name.to_string(),
                                 _plugin_info: info,
                                 socket_path: file_path,
                             },

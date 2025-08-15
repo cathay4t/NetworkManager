@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::{BaseInterface, InterfaceState, InterfaceType};
+use crate::{
+    NmError,
+    nmstate::{
+        BaseInterface, Interface, InterfaceState, InterfaceType,
+        NmstateInterface,
+    },
+};
 
-use super::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate};
+use super::{
+    iface::nmstate_iface_state_to_nispor,
+    ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
+};
 
-const SUPPORTED_LIST: [InterfaceType; 1] = [InterfaceType::Ethernet];
+const SUPPORTED_LIST: [InterfaceType; 3] = [
+    InterfaceType::Ethernet,
+    InterfaceType::Veth,
+    InterfaceType::Loopback,
+];
 
 fn np_iface_type_to_nmstate(
     np_iface_type: &nispor::IfaceType,
@@ -110,4 +123,17 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
     } else {
         Some(iface.permanent_mac_address.as_str().to_uppercase())
     }
+}
+
+/// Apply changes to [BaseInterface] except the IP layer stuff.
+pub(crate) fn apply_base_iface_link_changes(
+    np_iface: &mut nispor::IfaceConf,
+    apply_iface: &Interface,
+    cur_iface: &Interface,
+) -> Result<(), NmError> {
+    if apply_iface.base_iface().state != cur_iface.base_iface().state {
+        np_iface.state =
+            nmstate_iface_state_to_nispor(apply_iface.base_iface().state);
+    }
+    Ok(())
 }

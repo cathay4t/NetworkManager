@@ -13,4 +13,6 @@ pub use self::ipc::{NmCanIpc, NmIpcConnection};
 pub use self::logging::{NmLogEntry, NmLogLevel};
 pub use self::no_daemon::NmNoDaemon;
 pub use self::uuid::NmUuid;
-pub(crate) use nmstate_derive::JsonDisplay;
+pub(crate) use nmstate::JsonDisplay;
+
+pub use nmstate;

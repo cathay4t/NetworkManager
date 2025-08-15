@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
+mod apply;
 mod error;
 mod show;
+mod state;
 
 pub(crate) use self::error::CliError;
 
 use nm::NmClient;
 
+use self::apply::CommandApply;
 use self::show::CommandShow;
 
 #[tokio::main(flavor = "current_thread")]
@@ -30,7 +33,8 @@ async fn main() -> Result<(), CliError> {
                 .global(true),
         )
         .subcommand(clap::Command::new("ping").about("Check daemon connection"))
-        .subcommand(CommandShow::new_cmd());
+        .subcommand(CommandShow::new_cmd())
+        .subcommand(CommandApply::new_cmd());
 
     let matches = cli_cmd.get_matches_mut();
 
@@ -55,12 +59,27 @@ async fn main() -> Result<(), CliError> {
 
     log::info!("nmcli version: {}", clap::crate_version!());
 
-    if matches.subcommand_matches("ping").is_some() {
-        let mut cli = NmClient::new().await?;
-        println!("{}", cli.ping().await?);
-    } else if let Some(matches) = matches.subcommand_matches(CommandShow::CMD) {
-        CommandShow::handle(matches).await?;
+    if let Err(e) = call_subcommand(&matches).await {
+        eprintln!("{e}");
+        std::process::exit(1);
     }
 
     Ok(())
+}
+
+async fn call_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    if matches.subcommand_matches("ping").is_some() {
+        let mut cli = NmClient::new().await?;
+        println!("{}", cli.ping().await?);
+        Ok(())
+    } else if let Some(matches) = matches.subcommand_matches(CommandShow::CMD) {
+        CommandShow::handle(matches).await?;
+        Ok(())
+    } else if let Some(matches) = matches.subcommand_matches(CommandApply::CMD)
+    {
+        CommandApply::handle(matches).await?;
+        Ok(())
+    } else {
+        Err(CliError::from("Unknown command"))
+    }
 }

@@ -2,18 +2,20 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, Interfaces, JsonDisplay, NmstateError};
+use crate::{
+    CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplay, NmstateError,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonDisplay)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
     /// Please set it to 1 explicitly
-    #[serde(default)]
-    pub version: u32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Description for the whole desire state.
-    pub description: String,
+    pub description: Option<String>,
     /// Network interfaces
     #[serde(
         default,
@@ -26,8 +28,8 @@ pub struct NetworkState {
 impl Default for NetworkState {
     fn default() -> Self {
         Self {
-            version: 1,
-            description: String::new(),
+            version: Some(CUR_SCHEMA_VERSION),
+            description: None,
             ifaces: Default::default(),
         }
     }

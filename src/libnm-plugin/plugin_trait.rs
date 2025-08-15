@@ -2,7 +2,10 @@
 
 use std::sync::Arc;
 
-use nm::{NmError, NmIpcConnection};
+use nm::{
+    ErrorKind, NmError, NmIpcConnection,
+    nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption},
+};
 
 use crate::{NmIpcListener, NmPluginClient, NmPluginCmd, NmPluginInfo};
 
@@ -22,13 +25,6 @@ pub trait NmPlugin: Send + Sync + Sized + 'static {
         plugin: &Arc<Self>,
     ) -> impl Future<Output = Result<NmPluginInfo, NmError>> + Send;
 
-    /// Process the command from Daemon.
-    fn process(
-        plugin: &Arc<Self>,
-        cmd: NmPluginCmd,
-        conn: &mut NmIpcConnection,
-    ) -> impl Future<Output = Result<(), NmError>> + Send;
-
     /// The `&self` will cloned and move to forked thread for each connection.
     fn run() -> impl Future<Output = Result<(), NmError>> + Send {
         let mut log_builder = env_logger::Builder::new();
@@ -40,6 +36,8 @@ pub trait NmPlugin: Send + Sync + Sized + 'static {
         );
         log_builder.init();
 
+        // TODO(Gris Ge): Do we need to ping daemon to make sure daemon is
+        // still alive?
         async {
             let plugin = Arc::new(Self::init().await?);
 
@@ -53,7 +51,7 @@ pub trait NmPlugin: Send + Sync + Sized + 'static {
 
             loop {
                 if let Ok(conn) = ipc.accept().await {
-                    log::debug!("Got daemon connection {conn:?}");
+                    log::debug!("Got daemon connection");
                     let plugin_clone = plugin.clone();
                     tokio::spawn(async move {
                         Self::process_connection(plugin_clone, conn).await
@@ -70,7 +68,7 @@ pub trait NmPlugin: Send + Sync + Sized + 'static {
         async move {
             loop {
                 let cmd = conn.recv::<NmPluginCmd>().await?;
-                log::debug!("Got {cmd:?} from daemon");
+                log::debug!("Got {cmd} from daemon");
                 match cmd {
                     NmPluginCmd::QueryPluginInfo => {
                         conn.send(Self::plugin_info(&plugin).await).await?
@@ -78,9 +76,63 @@ pub trait NmPlugin: Send + Sync + Sized + 'static {
                     NmPluginCmd::Quit => {
                         Self::quit(&plugin).await;
                     }
-                    cmd => Self::process(&plugin, cmd, &mut conn).await?,
+                    NmPluginCmd::QueryNetworkState(opt) => {
+                        let result =
+                            Self::query_network_state(&plugin, *opt, &mut conn)
+                                .await;
+                        conn.send(result).await?
+                    }
+                    NmPluginCmd::ApplyNetworkState(opt) => {
+                        let (desired_state, opt) = *opt;
+                        let result = Self::apply_network_state(
+                            &plugin,
+                            desired_state,
+                            opt,
+                            &mut conn,
+                        )
+                        .await;
+                        conn.send(result).await?
+                    }
                 }
             }
+        }
+    }
+
+    /// Return network state managed by this plugin only.
+    /// Optionally, you may send log via `conn::log_debug()` and etc.
+    /// Default implementation is return no support error.
+    fn query_network_state(
+        _plugin: &Arc<Self>,
+        _opt: NmstateQueryOption,
+        _conn: &mut NmIpcConnection,
+    ) -> impl Future<Output = Result<NetworkState, NmError>> + Send {
+        async {
+            Err(NmError::new(
+                ErrorKind::NoSupport,
+                format!(
+                    "Plugin {} has not implemented query_network_state()",
+                    Self::PLUGIN_NAME
+                ),
+            ))
+        }
+    }
+
+    /// Apply network state managed by this plugin only.
+    /// Optionally, you may send log via `conn::log_debug()` and etc.
+    fn apply_network_state(
+        _plugin: &Arc<Self>,
+        _desired_state: NetworkState,
+        _opt: NmstateApplyOption,
+        _conn: &mut NmIpcConnection,
+    ) -> impl Future<Output = Result<(), NmError>> + Send {
+        async {
+            Err(NmError::new(
+                ErrorKind::NoSupport,
+                format!(
+                    "Plugin {} has not implemented apply_network_state()",
+                    Self::PLUGIN_NAME
+                ),
+            ))
         }
     }
 }

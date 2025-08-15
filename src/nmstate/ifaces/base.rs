@@ -126,6 +126,15 @@ impl BaseInterface {
         Ok(())
     }
 
+    pub fn sanitize_for_verify(&mut self) {
+        if let Some(ipv4) = self.ipv4.as_mut() {
+            ipv4.sanitize_for_verify();
+        }
+        if let Some(ipv6) = self.ipv6.as_mut() {
+            ipv6.sanitize_for_verify();
+        }
+    }
+
     pub(crate) fn clone_name_type_only(&self) -> Self {
         Self {
             name: self.name.clone(),

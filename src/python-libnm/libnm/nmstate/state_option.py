@@ -20,3 +20,12 @@ class NmstateQueryOption:
 
     def to_dict(self):
         return {"version": self.version, "kind": self.kind}
+
+
+class NmstateApplyOption:
+    def __init__(self, version=LATEST_SCHEMA_VERSION, no_verify=False):
+        self.version = version
+        self.no_verify = no_verify
+
+    def to_dict(self):
+        return {"version": self.version, "no-verify": self.no_verify}

@@ -7,8 +7,8 @@ use crate::{CUR_SCHEMA_VERSION, JsonDisplay};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
 #[non_exhaustive]
 pub struct NmstateQueryOption {
-    #[serde(default)]
     /// Schema version for output
+    #[serde(default)]
     pub version: u32,
     /// Which kind of NetworkState to query
     #[serde(default)]
@@ -53,15 +53,22 @@ pub enum NmstateStateKind {
     SavedNetworkState,
 }
 
-#[derive(
-    Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonDisplay,
-)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 pub struct NmstateApplyOption {
-    // Seconds to rollback desired state after applied.
-    //pub revert_after: u32,
-    /// Do not store desired state to persistent
-    pub memory_only: bool,
+    /// Schema version for output
+    #[serde(default)]
+    pub version: u32,
     /// Do not verify whether post applied state matches with desired state.
     pub no_verify: bool,
+}
+
+impl Default for NmstateApplyOption {
+    fn default() -> Self {
+        Self {
+            version: CUR_SCHEMA_VERSION,
+            no_verify: false,
+        }
+    }
 }

@@ -2,6 +2,7 @@
 
 mod iface;
 mod inter_iface;
+mod ip;
 mod net_state;
 
 pub use self::iface::MergedInterface;

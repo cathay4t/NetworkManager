@@ -3,6 +3,7 @@
 mod base;
 mod ethernet;
 mod inter_ifaces;
+mod loopback;
 mod ovs_bridge;
 mod ovs_iface;
 mod unknown;
@@ -10,6 +11,7 @@ mod unknown;
 pub use self::base::BaseInterface;
 pub use self::ethernet::{EthernetConfig, EthernetDuplex, EthernetInterface};
 pub use self::inter_ifaces::Interfaces;
+pub use self::loopback::LoopbackInterface;
 pub use self::ovs_bridge::{
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
 };

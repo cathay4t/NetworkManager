@@ -6,7 +6,8 @@ use nm::{ErrorKind, NmClientCmd, NmError, NmIpcConnection};
 use nmstate::NetworkState;
 
 use super::{
-    net_state::query_network_state, plugin::NmDaemonPlugins,
+    net_state::{apply_network_state, query_network_state},
+    plugin::NmDaemonPlugins,
     share_data::NmDaemonShareData,
 };
 
@@ -19,7 +20,20 @@ pub(crate) async fn process_api_connection(
         match conn.recv::<NmClientCmd>().await {
             Ok(NmClientCmd::Ping) => conn.send(Ok("pong".to_string())).await?,
             Ok(NmClientCmd::QueryNetworkState(opt)) => {
-                query_network_state(&mut conn, &plugins, *opt).await?
+                let result =
+                    query_network_state(&mut conn, &plugins, *opt).await;
+                conn.send(result).await?;
+            }
+            Ok(NmClientCmd::ApplyNetworkState(opt)) => {
+                let (desired_state, opt) = *opt;
+                let result = apply_network_state(
+                    &mut conn,
+                    &plugins,
+                    desired_state,
+                    opt,
+                )
+                .await;
+                conn.send(result).await?;
             }
             Ok(cmd) => {
                 conn.send::<Result<NetworkState, NmError>>(Err(NmError::new(

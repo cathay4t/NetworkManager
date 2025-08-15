@@ -12,6 +12,8 @@ use crate::{
 )]
 #[non_exhaustive]
 pub struct MergedNetworkState {
+    pub version: Option<u32>,
+    pub description: Option<String>,
     pub ifaces: MergedInterfaces,
     pub option: NmstateApplyOption,
 }
@@ -23,6 +25,8 @@ impl MergedNetworkState {
         option: NmstateApplyOption,
     ) -> Result<Self, NmstateError> {
         Ok(Self {
+            version: desired.version,
+            description: desired.description.clone(),
             ifaces: MergedInterfaces::new(desired.ifaces, current.ifaces)?,
             option,
         })
@@ -30,5 +34,13 @@ impl MergedNetworkState {
 
     pub fn verify(&self, current: &NetworkState) -> Result<(), NmstateError> {
         self.ifaces.verify(&current.ifaces)
+    }
+
+    pub fn gen_state_for_apply(&self) -> NetworkState {
+        NetworkState {
+            ifaces: self.ifaces.gen_state_for_apply(),
+            version: self.version,
+            description: self.description.clone(),
+        }
     }
 }

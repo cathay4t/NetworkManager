@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::net::{IpAddr, Ipv6Addr};
+use std::net::IpAddr;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -92,33 +92,6 @@ impl InterfaceIpv4 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
-    pub(crate) fn merge(&mut self, new: &Self) {
-        if new.enabled.is_some() {
-            self.enabled = new.enabled;
-        }
-        if self.dhcp.is_none() && self.is_enabled() {
-            self.dhcp = new.dhcp;
-        }
-        // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire or all auto ip address, but when DHCP switch from
-        // ON to OFF, the design of nmstate is expecting dynamic IP address goes
-        // static. This should be done by top level code.
-        if new.is_auto()
-            && new.addresses.is_some()
-            && self.is_enabled()
-            && !self.is_auto()
-            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
-        {
-            self.addresses.clone_from(&new.addresses);
-            if let Some(addrs) = self.addresses.as_mut() {
-                addrs.as_mut_slice().iter_mut().for_each(|a| {
-                    a.valid_life_time = None;
-                    a.preferred_life_time = None;
-                });
-            }
-        }
-    }
-
     // * Remove auto IP address.
     // * Disable DHCP and remove address if enabled: false
     pub(crate) fn sanitize(
@@ -179,6 +152,15 @@ impl InterfaceIpv4 {
             self.addresses = None;
         }
         Ok(())
+    }
+
+    pub fn sanitize_for_verify(&mut self) {
+        if self.dhcp.is_none() {
+            self.dhcp = Some(false);
+        }
+        if self.addresses.is_none() {
+            self.addresses = Some(Vec::new());
+        }
     }
 }
 
@@ -329,7 +311,7 @@ impl InterfaceIpv6 {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
-                    if is_ipv6_unicast_link_local(&ip_addr) {
+                    if ip_addr.is_unicast_link_local() {
                         if is_desired {
                             log::warn!(
                                 "Ignoring IPv6 link local address {}/{}",
@@ -356,33 +338,12 @@ impl InterfaceIpv6 {
         Ok(())
     }
 
-    pub(crate) fn merge(&mut self, new: &Self) {
-        if new.enabled.is_some() {
-            self.enabled = new.enabled;
+    pub fn sanitize_for_verify(&mut self) {
+        if self.dhcp.is_none() {
+            self.dhcp = Some(false);
         }
-        if self.dhcp.is_none() && self.is_enabled() {
-            self.dhcp = new.dhcp;
-        }
-        if self.autoconf.is_none() && self.is_enabled() {
-            self.autoconf = new.autoconf;
-        }
-        // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire, but when DHCP switch from ON to OFF, the design
-        // of nmstate is expecting dynamic IP address goes static. This should
-        // be done by top level code.
-        if new.is_auto()
-            && new.addresses.is_some()
-            && self.is_enabled()
-            && !self.is_auto()
-            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
-        {
-            self.addresses.clone_from(&new.addresses);
-            if let Some(addrs) = self.addresses.as_mut() {
-                addrs.as_mut_slice().iter_mut().for_each(|a| {
-                    a.valid_life_time = None;
-                    a.preferred_life_time = None;
-                });
-            }
+        if self.addresses.is_none() {
+            self.addresses = Some(Vec::new());
         }
     }
 }
@@ -450,12 +411,6 @@ impl InterfaceIpAddr {
     }
 }
 
-// Copy from Rust official std::net::Ipv6Addr::is_unicast_link_local() which
-// is experimental.
-pub(crate) fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
-    (ip.segments()[0] & 0xffc0) == 0xfe80
-}
-
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {
     type Error = NmstateError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -489,16 +444,4 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             preferred_life_time: None,
         })
     }
-}
-
-fn is_ip_addrs_none_or_all_auto(addrs: Option<&[InterfaceIpAddr]>) -> bool {
-    addrs.is_none_or(|addrs| {
-        addrs.iter().all(|a| {
-            if let IpAddr::V6(ip_addr) = a.ip {
-                is_ipv6_unicast_link_local(&ip_addr) || a.is_auto()
-            } else {
-                a.is_auto()
-            }
-        })
-    })
 }

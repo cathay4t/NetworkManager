@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
 //! Derive for Nmstate Internal use
 //! [JsonDisplay]: Implement `std::fmt::Display` trait using JSON output and
 //! fallback to Debug display.

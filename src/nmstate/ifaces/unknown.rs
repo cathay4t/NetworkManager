@@ -2,9 +2,10 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{BaseInterface, JsonDisplay, NmstateError, NmstateInterface};
+use crate::{BaseInterface, JsonDisplay, NmstateInterface};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, JsonDisplay)]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// Holder for interface with unknown interface type defined.
 /// During apply action, nmstate can resolve unknown interface to first
@@ -44,29 +45,6 @@ impl NmstateInterface for UnknownInterface {
     /// always.
     fn is_virtual(&self) -> bool {
         true
-    }
-
-    fn hide_secrets_iface_specific(&mut self) {}
-
-    fn sanitize_iface_specfic(
-        &mut self,
-        _is_desired: bool,
-    ) -> Result<(), NmstateError> {
-        Ok(())
-    }
-
-    fn include_diff_context_iface_specific(
-        &mut self,
-        _desired: &Self,
-        _current: &Self,
-    ) {
-    }
-
-    fn include_revert_context_iface_specific(
-        &mut self,
-        _desired: &Self,
-        _pre_apply: &Self,
-    ) {
     }
 }
 

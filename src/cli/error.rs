@@ -38,7 +38,7 @@ impl From<std::io::Error> for CliError {
 impl From<NmError> for CliError {
     fn from(e: NmError) -> Self {
         Self {
-            msg: format!("NmError: {}", e),
+            msg: format!("NmError: {}: {}", e.kind, e.msg),
         }
     }
 }

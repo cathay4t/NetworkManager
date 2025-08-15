@@ -5,8 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    JsonDisplay, NmstateController, NmstateError, NmstateInterface,
-    OvsBridgeInterface, OvsInterface, UnknownInterface,
+    JsonDisplay, LoopbackInterface, NmstateController, NmstateError,
+    NmstateInterface, OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplay)]
@@ -20,6 +20,8 @@ pub enum Interface {
     OvsBridge(Box<OvsBridgeInterface>),
     /// OVS System Interface
     OvsInterface(Box<OvsInterface>),
+    /// Loopback Interface
+    Loopback(Box<LoopbackInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -76,6 +78,11 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::OvsInterface(Box::new(inner)))
             }
+            Some(InterfaceType::Loopback) => {
+                let inner = LoopbackInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Loopback(Box::new(inner)))
+            }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
@@ -91,6 +98,7 @@ impl NmstateInterface for Interface {
             Self::Ethernet(i) => i.is_virtual(),
             Self::OvsBridge(i) => i.is_virtual(),
             Self::OvsInterface(i) => i.is_virtual(),
+            Self::Loopback(i) => i.is_virtual(),
             Self::Unknown(i) => i.is_virtual(),
         }
     }
@@ -100,16 +108,18 @@ impl NmstateInterface for Interface {
             Self::Ethernet(i) => i.is_userspace(),
             Self::OvsBridge(i) => i.is_userspace(),
             Self::OvsInterface(i) => i.is_userspace(),
+            Self::Loopback(i) => i.is_userspace(),
             Self::Unknown(i) => i.is_userspace(),
         }
     }
 
     fn base_iface(&self) -> &BaseInterface {
         match self {
-            Self::Ethernet(i) => (*i).base_iface(),
-            Self::OvsBridge(i) => (*i).base_iface(),
-            Self::OvsInterface(i) => (*i).base_iface(),
-            Self::Unknown(i) => (*i).base_iface(),
+            Self::Ethernet(i) => i.base_iface(),
+            Self::OvsBridge(i) => i.base_iface(),
+            Self::OvsInterface(i) => i.base_iface(),
+            Self::Loopback(i) => i.base_iface(),
+            Self::Unknown(i) => i.base_iface(),
         }
     }
 
@@ -118,6 +128,7 @@ impl NmstateInterface for Interface {
             Self::Ethernet(i) => i.base_iface_mut(),
             Self::OvsBridge(i) => i.base_iface_mut(),
             Self::OvsInterface(i) => i.base_iface_mut(),
+            Self::Loopback(i) => i.base_iface_mut(),
             Self::Unknown(i) => i.base_iface_mut(),
         }
     }
@@ -127,6 +138,7 @@ impl NmstateInterface for Interface {
             Self::Ethernet(i) => i.hide_secrets_iface_specific(),
             Self::OvsBridge(i) => i.hide_secrets_iface_specific(),
             Self::OvsInterface(i) => i.hide_secrets_iface_specific(),
+            Self::Loopback(i) => i.hide_secrets_iface_specific(),
             Self::Unknown(i) => i.hide_secrets_iface_specific(),
         }
     }
@@ -139,7 +151,18 @@ impl NmstateInterface for Interface {
             Self::Ethernet(i) => i.sanitize_iface_specfic(is_desired),
             Self::OvsBridge(i) => i.sanitize_iface_specfic(is_desired),
             Self::OvsInterface(i) => i.sanitize_iface_specfic(is_desired),
+            Self::Loopback(i) => i.sanitize_iface_specfic(is_desired),
             Self::Unknown(i) => i.sanitize_iface_specfic(is_desired),
+        }
+    }
+
+    fn sanitize_for_verify_iface_specfic(&mut self) {
+        match self {
+            Self::Ethernet(i) => i.sanitize_for_verify_iface_specfic(),
+            Self::OvsBridge(i) => i.sanitize_for_verify_iface_specfic(),
+            Self::OvsInterface(i) => i.sanitize_for_verify_iface_specfic(),
+            Self::Loopback(i) => i.sanitize_for_verify_iface_specfic(),
+            Self::Unknown(i) => i.sanitize_for_verify_iface_specfic(),
         }
     }
 
@@ -163,6 +186,11 @@ impl NmstateInterface for Interface {
                 Self::OvsInterface(i),
                 Self::OvsInterface(desired),
                 Self::OvsInterface(current),
+            ) => i.include_diff_context_iface_specific(desired, current),
+            (
+                Self::Loopback(i),
+                Self::Loopback(desired),
+                Self::Loopback(current),
             ) => i.include_diff_context_iface_specific(desired, current),
             (
                 Self::Unknown(i),
@@ -198,6 +226,11 @@ impl NmstateInterface for Interface {
                 Self::OvsInterface(i),
                 Self::OvsInterface(desired),
                 Self::OvsInterface(pre_apply),
+            ) => i.include_revert_context_iface_specific(desired, pre_apply),
+            (
+                Self::Loopback(i),
+                Self::Loopback(desired),
+                Self::Loopback(pre_apply),
             ) => i.include_revert_context_iface_specific(desired, pre_apply),
             (
                 Self::Unknown(i),

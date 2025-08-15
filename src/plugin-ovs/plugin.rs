@@ -2,10 +2,11 @@
 
 use std::sync::Arc;
 
-use nm::{ErrorKind, NmError, NmIpcConnection};
-use nm_plugin::{NmPlugin, NmPluginCmd, NmPluginInfo};
-
-use super::show::query_network_state;
+use nm::{
+    NmError, NmIpcConnection,
+    nmstate::{NetworkState, NmstateQueryOption},
+};
+use nm_plugin::{NmPlugin, NmPluginInfo};
 
 pub(crate) struct NmPluginOvs {}
 
@@ -24,23 +25,11 @@ impl NmPlugin for NmPluginOvs {
         ))
     }
 
-    async fn process(
+    async fn query_network_state(
         _plugin: &Arc<Self>,
-        cmd: NmPluginCmd,
+        _opt: NmstateQueryOption,
         conn: &mut NmIpcConnection,
-    ) -> Result<(), NmError> {
-        match cmd {
-            NmPluginCmd::QueryNetworkState(opt) => {
-                query_network_state(*opt, conn).await?;
-            }
-            _ => {
-                conn.send::<Result<(), NmError>>(Err(NmError::new(
-                    ErrorKind::NoSupport,
-                    format!("Unsupported NmPluginCmd {cmd:?}"),
-                )))
-                .await?;
-            }
-        }
-        Ok(())
+    ) -> Result<NetworkState, NmError> {
+        Self::query(conn).await
     }
 }

@@ -30,8 +30,8 @@ pub use self::iface_trait::{
 pub use self::iface_type::InterfaceType;
 pub use self::ifaces::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    Interfaces, OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
-    OvsInterface, UnknownInterface,
+    Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
+    OvsBridgePortConfig, OvsInterface, UnknownInterface,
 };
 pub use self::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use self::merged::{MergedInterface, MergedInterfaces, MergedNetworkState};
@@ -41,3 +41,6 @@ pub use self::state_options::{
 };
 pub use self::version::CUR_SCHEMA_VERSION;
 pub use nmstate_derive::JsonDisplay;
+
+#[cfg(test)]
+mod unit_tests;

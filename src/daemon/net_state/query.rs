@@ -9,8 +9,8 @@ pub(crate) async fn query_network_state(
     conn: &mut NmIpcConnection,
     plugins: &NmDaemonPlugins,
     opt: NmstateQueryOption,
-) -> Result<(), NmError> {
-    conn.log_debug(format!("querying network state with option {opt:?}"))
+) -> Result<NetworkState, NmError> {
+    conn.log_debug(format!("querying network state with option {opt}"))
         .await;
     match opt.kind {
         NmstateStateKind::RunningNetworkState => {
@@ -23,16 +23,11 @@ pub(crate) async fn query_network_state(
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;
             }
-
-            conn.send(Ok(net_state)).await?;
+            Ok(net_state)
         }
-        _ => {
-            let e = NmError::new(
-                ErrorKind::NoSupport,
-                format!("Unsupported query option: {}", opt.kind),
-            );
-            conn.send::<Result<NetworkState, NmError>>(Err(e)).await?;
-        }
+        _ => Err(NmError::new(
+            ErrorKind::NoSupport,
+            format!("Unsupported query option: {}", opt.kind),
+        )),
     }
-    Ok(())
 }

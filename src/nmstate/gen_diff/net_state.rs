@@ -7,14 +7,25 @@ impl NetworkState {
     /// to `old_state`.
     pub fn gen_diff(&self, old: &Self) -> Result<Self, NmstateError> {
         let mut ret = Self::default();
-        let merged_state = MergedNetworkState::new(
-            self.clone(),
-            old.clone(),
-            Default::default(),
-        )?;
+        let old_version = old.version;
+        let old_description = old.description.clone();
 
-        if self.description != old.description {
+        let mut old = old.clone();
+        old.ifaces.sanitize_for_diff();
+
+        let mut desired = self.clone();
+        desired.ifaces.sanitize_for_diff();
+
+        let merged_state =
+            MergedNetworkState::new(desired, old, Default::default())?;
+
+        if self.description != old_description {
             ret.description.clone_from(&self.description);
+        }
+        if self.version != old_version {
+            ret.version.clone_from(&self.version);
+        } else {
+            ret.version = None;
         }
 
         ret.ifaces = merged_state.ifaces.gen_diff()?;

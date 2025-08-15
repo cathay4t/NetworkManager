@@ -25,15 +25,23 @@ impl MergedInterfaces {
     ) -> Result<Self, NmstateError> {
         let mut desired = desired;
         let mut current = current;
+
+        desired.unify_veth_and_ethernet();
+        current.unify_veth_and_ethernet();
+
         let mut kernel_ifaces: HashMap<String, MergedInterface> =
             HashMap::new();
         let mut user_ifaces: HashMap<(String, InterfaceType), MergedInterface> =
             HashMap::new();
         // TODO: Remove ignore interface
         // TODO: Resolve `type: unknown` in desired based on current state
-        for des_iface in desired.drain() {
-            let cur_iface =
+        for mut des_iface in desired.drain() {
+            des_iface.sanitize(true)?;
+            let mut cur_iface =
                 current.remove(des_iface.name(), Some(des_iface.iface_type()));
+            if let Some(cur_iface) = cur_iface.as_mut() {
+                cur_iface.sanitize(false)?;
+            }
             if des_iface.is_userspace() {
                 user_ifaces.insert(
                     (
@@ -77,6 +85,35 @@ impl MergedInterfaces {
         self.user_ifaces.values().chain(self.kernel_ifaces.values())
     }
 
+    pub fn gen_state_for_apply(&self) -> Interfaces {
+        let kernel_ifaces: HashMap<String, Interface> = self
+            .kernel_ifaces
+            .iter()
+            .filter_map(|(name, iface)| {
+                iface
+                    .for_apply
+                    .as_ref()
+                    .map(|i| (name.to_string(), i.clone()))
+            })
+            .collect();
+
+        let user_ifaces: HashMap<(String, InterfaceType), Interface> = self
+            .user_ifaces
+            .iter()
+            .filter_map(|((name, iface_type), iface)| {
+                iface.for_apply.as_ref().map(|i| {
+                    ((name.to_string(), iface_type.clone()), i.clone())
+                })
+            })
+            .collect();
+
+        Interfaces {
+            kernel_ifaces,
+            user_ifaces,
+            ..Default::default()
+        }
+    }
+
     pub(crate) fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut MergedInterface> {
@@ -92,6 +129,8 @@ impl MergedInterfaces {
         let mut merged = self.clone();
         let mut current = current.clone();
 
+        current.unify_veth_and_ethernet();
+
         for iface in current
             .kernel_ifaces
             .values_mut()
@@ -99,6 +138,7 @@ impl MergedInterfaces {
         {
             iface.sanitize(false).ok();
         }
+        current.sanitize_for_verify();
 
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
             let iface = if let Some(i) = des_iface.for_verify.as_mut() {
@@ -106,7 +146,7 @@ impl MergedInterfaces {
             } else {
                 continue;
             };
-            iface.sanitize(false).ok();
+            iface.sanitize(true).ok();
         }
 
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
@@ -163,5 +203,23 @@ fn verify_desire_absent_but_found_in_current(
     } else {
         // Hard to predict real hardware state due to backend variety.
         Ok(())
+    }
+}
+
+impl Interfaces {
+    pub(crate) fn unify_veth_and_ethernet(&mut self) {
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .filter(|i| i.iface_type() == &InterfaceType::Veth)
+        {
+            iface.base_iface_mut().iface_type = InterfaceType::Ethernet;
+        }
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        for iface in self.iter_mut() {
+            iface.sanitize_for_verify();
+        }
     }
 }
