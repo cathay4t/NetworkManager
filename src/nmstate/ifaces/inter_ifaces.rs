@@ -6,7 +6,9 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq,
 };
 
-use crate::{Interface, InterfaceType, NmstateError, NmstateInterface};
+use crate::{
+    Interface, InterfaceType, JsonDisplay, NmstateError, NmstateInterface,
+};
 
 /// Represent a list of [Interface].
 ///
@@ -14,7 +16,7 @@ use crate::{Interface, InterfaceType, NmstateError, NmstateInterface};
 /// complex nested interface(e.g. bridge over bond over vlan of eth1), the
 /// supported maximum nest level is 4.  For 5+ nested
 /// level, you need to place controller interface before its ports.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, JsonDisplay)]
 #[non_exhaustive]
 pub struct Interfaces {
     /// Holding all interfaces with kernel representative. E.g. ethernet, bond.

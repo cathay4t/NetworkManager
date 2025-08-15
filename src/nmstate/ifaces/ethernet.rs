@@ -2,9 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType, NmstateError, NmstateInterface};
+use crate::{
+    BaseInterface, InterfaceType, JsonDisplay, NmstateError, NmstateInterface,
+};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// Ethernet(IEEE 802.3) interface.
@@ -90,7 +92,9 @@ impl NmstateInterface for EthernetInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthernetConfig {
@@ -112,7 +116,9 @@ pub struct EthernetConfig {
     pub duplex: Option<EthernetDuplex>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum EthernetDuplex {
@@ -120,17 +126,4 @@ pub enum EthernetDuplex {
     Full,
     /// Deserialize and serialize from/to `half`.
     Half,
-}
-
-impl std::fmt::Display for EthernetDuplex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Full => "full",
-                Self::Half => "half",
-            }
-        )
-    }
 }

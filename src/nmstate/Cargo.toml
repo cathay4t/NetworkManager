@@ -17,6 +17,7 @@ serde_yaml = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+nmstate_derive = { path = "../nmstate-derive" }
 
 [lib]
 name = "nmstate"

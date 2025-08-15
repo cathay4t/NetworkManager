@@ -2,9 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType, NmstateError, NmstateInterface};
+use crate::{
+    BaseInterface, InterfaceType, JsonDisplay, NmstateError, NmstateInterface,
+};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// OpenvSwitch Internal Interface

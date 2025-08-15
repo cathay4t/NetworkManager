@@ -5,11 +5,11 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    NmstateController, NmstateError, NmstateInterface, OvsBridgeInterface,
-    OvsInterface, UnknownInterface,
+    JsonDisplay, NmstateController, NmstateError, NmstateInterface,
+    OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case", untagged)]
 #[non_exhaustive]
 /// Represent a kernel or user space network interface.

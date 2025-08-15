@@ -2,9 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, Interfaces, NmstateError};
+use crate::{ErrorKind, Interfaces, JsonDisplay, NmstateError};
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonDisplay)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
@@ -67,20 +67,5 @@ impl NetworkState {
                 format!("Invalid YAML string: {e}"),
             )),
         }
-    }
-}
-
-impl std::fmt::Display for NetworkState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut dup_self = self.clone();
-        dup_self.hide_secrets();
-        write!(
-            f,
-            "{}",
-            match serde_yaml::to_string(&dup_self) {
-                Ok(s) => s,
-                Err(e) => e.to_string(),
-            }
-        )
     }
 }

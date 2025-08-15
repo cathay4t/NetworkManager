@@ -2,9 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Interface, NmstateError, NmstateInterface};
+use crate::{Interface, JsonDisplay, NmstateError, NmstateInterface};
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
 pub struct MergedInterface {
     pub desired: Option<Interface>,

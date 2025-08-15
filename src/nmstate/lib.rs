@@ -40,3 +40,4 @@ pub use self::state_options::{
     NmstateApplyOption, NmstateQueryOption, NmstateStateKind,
 };
 pub use self::version::CUR_SCHEMA_VERSION;
+pub use nmstate_derive::JsonDisplay;

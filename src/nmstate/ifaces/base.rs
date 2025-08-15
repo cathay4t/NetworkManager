@@ -3,10 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, NmstateError,
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, JsonDisplay,
+    NmstateError,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// Information shared among all interface types

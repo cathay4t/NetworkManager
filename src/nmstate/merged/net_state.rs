@@ -2,9 +2,14 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{MergedInterfaces, NetworkState, NmstateApplyOption, NmstateError};
+use crate::{
+    JsonDisplay, MergedInterfaces, NetworkState, NmstateApplyOption,
+    NmstateError,
+};
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Deserialize, Serialize, JsonDisplay,
+)]
 #[non_exhaustive]
 pub struct MergedNetworkState {
     pub ifaces: MergedInterfaces,

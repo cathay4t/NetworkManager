@@ -1,0 +1,18 @@
+[package]
+name = "nmstate_derive"
+version.workspace = true
+authors.workspace = true
+description = "derives of nmstate"
+documentation.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+syn = { workspace = true }
+quote = { workspace = true }
+
+[lib]
+name = "nmstate_derive"
+path = "lib.rs"
+proc-macro = true

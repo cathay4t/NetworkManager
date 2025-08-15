@@ -3,7 +3,7 @@
 use nmstate::{NetworkState, NmstateQueryOption};
 use serde::{Deserialize, Serialize};
 
-use crate::{NmCanIpc, NmError, NmIpcConnection};
+use crate::{JsonDisplay, NmCanIpc, NmError, NmIpcConnection};
 
 impl NmCanIpc for NetworkState {
     fn ipc_kind(&self) -> String {
@@ -16,7 +16,7 @@ pub struct NmClient {
     pub(crate) ipc: NmIpcConnection,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NmClientCmd {

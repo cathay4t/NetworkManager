@@ -2,8 +2,14 @@
 
 use std::error::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use crate::JsonDisplay;
+use serde::{Deserialize, Serialize};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 pub enum ErrorKind {
     InvalidArgument,
     PluginFailure,
@@ -24,36 +30,19 @@ impl Default for ErrorKind {
     }
 }
 
-impl std::fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::fmt::Display for NmstateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.kind == ErrorKind::PolicyError {
-            write!(
-                f,
-                "{}: {}\n| {}\n| {:.<4$}^",
-                self.kind, self.msg, self.line, "", self.position
-            )
-        } else {
-            write!(f, "{}: {}", self.kind, self.msg)
-        }
-    }
-}
-
-impl Error for NmstateError {}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 pub struct NmstateError {
     kind: ErrorKind,
     msg: String,
     line: String,
     position: usize,
 }
+
+impl Error for NmstateError {}
 
 impl NmstateError {
     pub fn new(kind: ErrorKind, msg: String) -> Self {

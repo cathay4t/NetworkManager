@@ -2,9 +2,9 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{BaseInterface, NmstateError, NmstateInterface};
+use crate::{BaseInterface, JsonDisplay, NmstateError, NmstateInterface};
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, JsonDisplay)]
 #[non_exhaustive]
 /// Holder for interface with unknown interface type defined.
 /// During apply action, nmstate can resolve unknown interface to first

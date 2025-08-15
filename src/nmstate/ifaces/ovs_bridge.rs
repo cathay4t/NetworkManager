@@ -3,11 +3,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, NmstateControllerInterface, NmstateError,
-    NmstateInterface,
+    BaseInterface, InterfaceType, JsonDisplay, NmstateControllerInterface,
+    NmstateError, NmstateInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// OpenvSwitch Bridge
@@ -94,7 +94,9 @@ impl NmstateControllerInterface for OvsBridgeInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeConfig {
@@ -102,7 +104,9 @@ pub struct OvsBridgeConfig {
     pub ports: Option<Vec<OvsBridgePortConfig>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, PartialEq, Default, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgePortConfig {

@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, NmstateError};
+use crate::{ErrorKind, JsonDisplay, NmstateError};
 
 const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
@@ -388,7 +388,15 @@ impl InterfaceIpv6 {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    JsonDisplay,
 )]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
@@ -431,23 +439,6 @@ impl Default for InterfaceIpAddr {
             prefix_length: 128,
             valid_life_time: None,
             preferred_life_time: None,
-        }
-    }
-}
-
-impl std::fmt::Display for InterfaceIpAddr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.is_auto() {
-            write!(
-                f,
-                "{}/{} valid_life_time {} preferred_lft {}",
-                self.ip,
-                self.prefix_length,
-                self.valid_life_time.as_deref().unwrap_or(FOREVER),
-                self.preferred_life_time.as_deref().unwrap_or(FOREVER)
-            )
-        } else {
-            write!(f, "{}/{}", self.ip, self.prefix_length)
         }
     }
 }

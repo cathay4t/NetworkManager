@@ -3,9 +3,11 @@
 use nmstate::NmstateError;
 use serde::{Deserialize, Serialize};
 
-use crate::NmCanIpc;
+use crate::{JsonDisplay, NmCanIpc};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ErrorKind {
@@ -21,16 +23,9 @@ pub enum ErrorKind {
     PluginFailure,
 }
 
-impl std::fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: Should be kebab-case
-        write!(f, "{:?}", self)
-    }
-}
-
 // Try not implement From for NmError here unless you are sure this
 // error should always convert to certain type of ErrorKind.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 #[non_exhaustive]
 pub struct NmError {
     pub kind: ErrorKind,
@@ -46,12 +41,6 @@ impl NmError {
 }
 
 impl std::error::Error for NmError {}
-
-impl std::fmt::Display for NmError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.kind, self.msg)
-    }
-}
 
 impl From<serde_json::Error> for NmError {
     fn from(e: serde_json::Error) -> Self {

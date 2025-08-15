@@ -5,11 +5,13 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    NmstateError, NmstateInterface,
+    ErrorKind, Interface, InterfaceType, Interfaces, JsonDisplay,
+    MergedInterface, NmstateError, NmstateInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
 pub struct MergedInterfaces {
     pub kernel_ifaces: HashMap<String, MergedInterface>,

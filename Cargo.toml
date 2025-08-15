@@ -6,6 +6,7 @@ members = [
     "src/libnm",
     "src/libnm-plugin",
     "src/nmstate",
+    "src/nmstate-derive",
     "src/plugin-ovs",
 ]
 
@@ -31,7 +32,8 @@ clap = { version = "4.5", features = [ "cargo"] }
 nispor = { version = "1.2" }
 chrono = { version = "0.4" , features = ["serde"] }
 rand = { version = "0.9" }
-
+syn = { version = "2.0", default-features = false, features = [ "derive" ] }
+quote = "1.0"
 
 [workspace.dependencies.tokio]
 version ="1.35.0"

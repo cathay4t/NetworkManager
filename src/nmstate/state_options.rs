@@ -2,9 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::CUR_SCHEMA_VERSION;
+use crate::{CUR_SCHEMA_VERSION, JsonDisplay};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
 #[non_exhaustive]
 pub struct NmstateQueryOption {
     #[serde(default)]
@@ -40,7 +40,9 @@ impl NmstateQueryOption {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 pub enum NmstateStateKind {
@@ -51,20 +53,9 @@ pub enum NmstateStateKind {
     SavedNetworkState,
 }
 
-impl std::fmt::Display for NmstateStateKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::RunningNetworkState => "running_network_state",
-                Self::SavedNetworkState => "saved_network_state",
-            }
-        )
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
 pub struct NmstateApplyOption {
     // Seconds to rollback desired state after applied.
@@ -73,8 +64,4 @@ pub struct NmstateApplyOption {
     pub memory_only: bool,
     /// Do not verify whether post applied state matches with desired state.
     pub no_verify: bool,
-    /// Indicate desire state is generate by diff between running state and
-    /// saved state, when creating commit, the `pre_apply_state` should
-    /// be post state after last commit
-    pub is_diff: bool,
 }

@@ -2,8 +2,19 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::JsonDisplay;
+
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    JsonDisplay,
 )]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
@@ -77,38 +88,6 @@ pub enum InterfaceType {
 impl Default for InterfaceType {
     fn default() -> Self {
         Self::Unknown("unknown".to_string())
-    }
-}
-
-impl std::fmt::Display for InterfaceType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                InterfaceType::Bond => "bond",
-                InterfaceType::LinuxBridge => "linux-bridge",
-                InterfaceType::Dummy => "dummy",
-                InterfaceType::Ethernet => "ethernet",
-                InterfaceType::Hsr => "hsr",
-                InterfaceType::Loopback => "loopback",
-                InterfaceType::MacVlan => "mac-vlan",
-                InterfaceType::MacVtap => "mac-vtap",
-                InterfaceType::OvsBridge => "ovs-bridge",
-                InterfaceType::OvsInterface => "ovs-interface",
-                InterfaceType::Veth => "veth",
-                InterfaceType::Vlan => "vlan",
-                InterfaceType::Vrf => "vrf",
-                InterfaceType::Vxlan => "vxlan",
-                InterfaceType::InfiniBand => "infiniband",
-                InterfaceType::Tun => "tun",
-                InterfaceType::MacSec => "macsec",
-                InterfaceType::Ipsec => "ipsec",
-                InterfaceType::Xfrm => "xfrm",
-                InterfaceType::IpVlan => "ipvlan",
-                InterfaceType::Unknown(s) => s,
-            }
-        )
     }
 }
 

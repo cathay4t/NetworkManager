@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{NmError, NmLogEntry};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 pub struct NmMessage {
     #[serde(rename = "type")]
     pub kind: String,

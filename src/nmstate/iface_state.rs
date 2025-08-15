@@ -2,7 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+use crate::JsonDisplay;
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonDisplay,
+)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The state of interface
