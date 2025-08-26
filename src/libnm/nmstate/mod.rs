@@ -29,7 +29,7 @@ pub use self::iface_type::InterfaceType;
 pub use self::ifaces::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
     Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgePortConfig, OvsInterface, UnknownInterface,
+    OvsBridgePortConfig, OvsInterface, UnknownInterface, VethConfig,
 };
 pub use self::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use self::merged::{MergedInterface, MergedInterfaces, MergedNetworkState};

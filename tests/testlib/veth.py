@@ -2,15 +2,34 @@
 
 from contextlib import contextmanager
 
+from libnm import NmClient
+
 from .cmdlib import exec_cmd
+from .apply import libnm_apply
 
 
 @contextmanager
 def veth_interface(ifname, peer):
+    libnm_apply(
+        f"""---
+        interfaces:
+        - name: {ifname}
+          type: veth
+          veth:
+            peer: {peer}
+        """
+    )
     try:
-        exec_cmd(f"ip link add {ifname} type veth peer {peer}".split())
-        exec_cmd(f"ip link set {ifname} up".split())
-        exec_cmd(f"ip link set {peer} up".split())
         yield
     finally:
-        exec_cmd(f"ip link del {ifname}".split(), check=False)
+        libnm_apply(
+            f"""---
+            interfaces:
+            - name: {ifname}
+              type: veth
+              state: absent
+            - name: {peer}
+              type: veth
+              state: absent
+            """
+        )

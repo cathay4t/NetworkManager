@@ -71,11 +71,14 @@ impl MergedInterfaces {
                 );
             }
         }
-
-        Ok(Self {
+        let mut ret = Self {
             kernel_ifaces,
             user_ifaces,
-        })
+        };
+
+        ret.post_merge_sanitize()?;
+
+        Ok(ret)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &MergedInterface> {
@@ -159,6 +162,11 @@ impl MergedInterfaces {
                 ));
             }
         }
+        Ok(())
+    }
+
+    fn post_merge_sanitize(&mut self) -> Result<(), NmError> {
+        // Place holder
         Ok(())
     }
 }

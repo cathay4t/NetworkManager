@@ -47,9 +47,11 @@ impl NmNoDaemon {
             let base_iface = np_iface_to_base_iface(np_iface);
             let iface = match &base_iface.iface_type {
                 InterfaceType::Ethernet | InterfaceType::Veth => {
-                    Interface::Ethernet(Box::new(EthernetInterface::new(
-                        base_iface, None,
-                    )))
+                    Interface::Ethernet(Box::new(
+                        EthernetInterface::new_from_nispor(
+                            base_iface, np_iface,
+                        ),
+                    ))
                 }
                 InterfaceType::Loopback => Interface::Loopback(Box::new(
                     LoopbackInterface::new(base_iface),

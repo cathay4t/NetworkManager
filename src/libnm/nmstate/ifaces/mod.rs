@@ -9,7 +9,9 @@ mod ovs_iface;
 mod unknown;
 
 pub use self::base::BaseInterface;
-pub use self::ethernet::{EthernetConfig, EthernetDuplex, EthernetInterface};
+pub use self::ethernet::{
+    EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig,
+};
 pub use self::inter_ifaces::Interfaces;
 pub use self::loopback::LoopbackInterface;
 pub use self::ovs_bridge::{

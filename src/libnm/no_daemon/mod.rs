@@ -3,6 +3,7 @@
 mod apply;
 mod base_iface;
 mod error;
+mod ethernet;
 mod iface;
 mod inter_ifaces;
 mod ip;

@@ -133,11 +133,9 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
 pub(crate) fn apply_base_iface_link_changes(
     np_iface: &mut nispor::IfaceConf,
     apply_iface: &Interface,
-    cur_iface: &Interface,
+    _cur_iface: Option<&Interface>,
 ) -> Result<(), NmError> {
-    if apply_iface.base_iface().state != cur_iface.base_iface().state {
-        np_iface.state =
-            nmstate_iface_state_to_nispor(apply_iface.base_iface().state);
-    }
+    np_iface.state =
+        nmstate_iface_state_to_nispor(apply_iface.base_iface().state);
     Ok(())
 }

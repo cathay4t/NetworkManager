@@ -3,7 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, JsonDisplay, NmError, NmstateInterface,
+    BaseInterface, ErrorKind, InterfaceType, JsonDisplay, NmError,
+    NmstateInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
@@ -15,11 +16,27 @@ pub struct EthernetInterface {
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ethernet: Option<EthernetConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub veth: Option<VethConfig>,
 }
 
 impl EthernetInterface {
     pub fn new(base: BaseInterface, ethernet: Option<EthernetConfig>) -> Self {
-        Self { base, ethernet }
+        Self {
+            base,
+            ethernet,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_veth(base: BaseInterface, veth_peer: &str) -> Self {
+        Self {
+            base,
+            veth: Some(VethConfig {
+                peer: veth_peer.to_string(),
+            }),
+            ..Default::default()
+        }
     }
 }
 
@@ -31,6 +48,7 @@ impl Default for EthernetInterface {
                 ..Default::default()
             },
             ethernet: None,
+            veth: None,
         }
     }
 }
@@ -57,8 +75,18 @@ impl NmstateInterface for EthernetInterface {
 
     fn sanitize_iface_specfic(
         &mut self,
-        _current: Option<&Self>,
+        current: Option<&Self>,
     ) -> Result<(), NmError> {
+        if self.is_up() && current.is_none() && self.veth.is_none() {
+            return Err(NmError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Interface {} does not exist and veth section is not \
+                     defined to create it",
+                    self.base.name
+                ),
+            ));
+        }
         Ok(())
     }
 
@@ -126,4 +154,11 @@ pub enum EthernetDuplex {
     Full,
     /// Deserialize and serialize from/to `half`.
     Half,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub struct VethConfig {
+    pub peer: String,
 }

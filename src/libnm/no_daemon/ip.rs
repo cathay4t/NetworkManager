@@ -2,6 +2,7 @@
 
 use std::str::FromStr;
 
+use super::iface::init_np_iface;
 use crate::{
     NmError,
     nmstate::{BaseInterface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
@@ -128,10 +129,25 @@ pub(crate) fn np_ipv6_to_nmstate(
 }
 
 pub(crate) fn apply_iface_ip_changes(
-    np_iface: &mut nispor::IfaceConf,
     des_iface: &BaseInterface,
-    cur_iface: &BaseInterface,
-) -> Result<(), NmError> {
+    cur_iface: Option<&BaseInterface>,
+) -> Result<Option<nispor::IfaceConf>, NmError> {
+    if des_iface.is_absent() {
+        return Ok(None);
+    }
+
+    let mut np_iface = if let Some(cur_iface) = cur_iface {
+        init_np_iface(cur_iface)
+    } else {
+        init_np_iface(des_iface)
+    };
+
+    let init_np_iface = np_iface.clone();
+
+    let empty_iface = des_iface.clone_name_type_only();
+
+    let cur_iface = cur_iface.unwrap_or(&empty_iface);
+
     if des_iface.ipv4.as_ref() != cur_iface.ipv4.as_ref()
         && let Some(des_ipv4) = des_iface.ipv4.as_ref()
     {
@@ -186,7 +202,11 @@ pub(crate) fn apply_iface_ip_changes(
         }
     }
 
-    Ok(())
+    if np_iface != init_np_iface {
+        Ok(Some(np_iface))
+    } else {
+        Ok(None)
+    }
 }
 
 fn nmstate_ip_addr_to_nispor(

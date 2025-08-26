@@ -173,6 +173,10 @@ impl BaseInterface {
             ..Default::default()
         }
     }
+
+    pub(crate) fn is_absent(&self) -> bool {
+        self.state == InterfaceState::Absent
+    }
 }
 
 impl BaseInterface {

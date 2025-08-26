@@ -19,7 +19,7 @@ def test_veth_exceeded_max_mtu():
                         interfaces:
                         - name: veth-test1
                           type: ethernet
-                          mtu: 99999999999
+                          mtu: 99999999
                      """
                 )
             )
