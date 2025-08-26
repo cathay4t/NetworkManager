@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, JsonDisplay,
-    NmError,
+    ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
+    JsonDisplay, NmError,
 };
 
 #[derive(
@@ -122,6 +122,36 @@ impl BaseInterface {
         }
         if let Some(ipv6) = self.ipv6.as_mut() {
             ipv6.sanitize(current.and_then(|c| c.ipv6.as_ref()))?;
+        }
+        self.validate_mtu(current)?;
+        Ok(())
+    }
+
+    fn validate_mtu(&self, current: Option<&Self>) -> Result<(), NmError> {
+        if let Some(current) = current {
+            if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) =
+                (self.mtu, current.min_mtu, current.max_mtu)
+            {
+                if desire_mtu > max_mtu {
+                    return Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired MTU {} for interface {} is bigger than \
+                             maximum allowed MTU {}",
+                            desire_mtu, self.name, max_mtu
+                        ),
+                    ));
+                } else if desire_mtu < min_mtu {
+                    return Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired MTU {} for interface {} is smaller than \
+                             minimum allowed MTU {}",
+                            desire_mtu, self.name, min_mtu
+                        ),
+                    ));
+                }
+            }
         }
         Ok(())
     }

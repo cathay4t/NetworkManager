@@ -19,4 +19,12 @@ class NmError(Exception):
         )
 
     def from_dict(data):
-        return NmError(data["kind"], data["msg"])
+        match data["kind"]:
+            case "invalid-argument":
+                return NmValueError(data["kind"], data["msg"])
+            case _:
+                return NmError(data["kind"], data["msg"])
+
+
+class NmValueError(NmError, ValueError):
+    pass

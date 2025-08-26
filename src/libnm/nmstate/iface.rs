@@ -97,6 +97,7 @@ macro_rules! gen_sanitize_iface_specfic {
         match $desired {
             $(
                 $variant(i) => {
+                    println!("HAHA {:?}", i);
                     let cur_iface = if let Some($variant(c)) = $current {
                         Some(c)
                     } else {
@@ -113,6 +114,7 @@ macro_rules! gen_sanitize_iface_specfic {
                         }
                         None
                     };
+                    println!("HAHA cur_iface {:?}", cur_iface);
                     i.sanitize_iface_specfic(cur_iface.map(|v| &**v))
                 }
             )+
