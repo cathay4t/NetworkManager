@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-mod error;
 mod gen_diff;
 mod iface;
 mod iface_state;
@@ -20,7 +19,6 @@ pub(crate) mod deserializer;
 #[allow(dead_code)]
 pub(crate) mod serializer;
 
-pub use self::error::{ErrorKind, NmstateError};
 pub use self::iface::Interface;
 pub use self::iface_state::InterfaceState;
 pub use self::iface_trait::{
@@ -40,7 +38,6 @@ pub use self::state_options::{
     NmstateApplyOption, NmstateQueryOption, NmstateStateKind,
 };
 pub use self::version::CUR_SCHEMA_VERSION;
-pub use nmstate_derive::JsonDisplay;
 
 #[cfg(test)]
 mod unit_tests;

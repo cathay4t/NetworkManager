@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption};
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonDisplay, NmCanIpc, NmError, NmIpcConnection};
+use crate::{
+    JsonDisplay, NetworkState, NmCanIpc, NmError, NmIpcConnection,
+    NmstateApplyOption, NmstateQueryOption,
+};
 
 impl NmCanIpc for NetworkState {
     fn ipc_kind(&self) -> String {

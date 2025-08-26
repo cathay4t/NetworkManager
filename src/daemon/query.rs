@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{ErrorKind, NmError, NmIpcConnection, NmNoDaemon};
-use nmstate::{NetworkState, NmstateQueryOption, NmstateStateKind};
+use nm::{
+    ErrorKind, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
+    NmstateQueryOption, NmstateStateKind,
+};
 
 use super::{config::NmDaemonConfig, plugin::NmDaemonPlugins};
 

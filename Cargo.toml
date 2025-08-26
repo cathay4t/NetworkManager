@@ -5,8 +5,7 @@ members = [
     "src/daemon",
     "src/libnm",
     "src/libnm-plugin",
-    "src/nmstate",
-    "src/nmstate-derive",
+    "src/libnm-derive",
     "src/plugin-ovs",
 ]
 

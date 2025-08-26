@@ -2,7 +2,7 @@
 
 use std::io::Read;
 
-use nm::nmstate::NetworkState;
+use nm::NetworkState;
 
 use super::CliError;
 

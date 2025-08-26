@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonDisplay, MergedInterfaces, NetworkState, NmstateApplyOption,
-    NmstateError,
+    JsonDisplay, MergedInterfaces, NetworkState, NmError, NmstateApplyOption,
 };
 
 #[derive(
@@ -23,7 +22,7 @@ impl MergedNetworkState {
         desired: NetworkState,
         current: NetworkState,
         option: NmstateApplyOption,
-    ) -> Result<Self, NmstateError> {
+    ) -> Result<Self, NmError> {
         Ok(Self {
             version: desired.version,
             description: desired.description.clone(),
@@ -32,7 +31,7 @@ impl MergedNetworkState {
         })
     }
 
-    pub fn verify(&self, current: &NetworkState) -> Result<(), NmstateError> {
+    pub fn verify(&self, current: &NetworkState) -> Result<(), NmError> {
         self.ifaces.verify(&current.ifaces)
     }
 
@@ -46,7 +45,7 @@ impl MergedNetworkState {
 }
 
 impl NetworkState {
-    pub fn merge(&mut self, new_state: &Self) -> Result<(), NmstateError> {
+    pub fn merge(&mut self, new_state: &Self) -> Result<(), NmError> {
         self.ifaces.merge(&new_state.ifaces)?;
         Ok(())
     }

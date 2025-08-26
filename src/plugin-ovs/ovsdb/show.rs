@@ -2,9 +2,8 @@
 
 use std::collections::HashMap;
 
-use nm::NmError;
-use nmstate::{
-    BaseInterface, Interface, InterfaceType, Interfaces, NetworkState,
+use nm::{
+    BaseInterface, Interface, InterfaceType, Interfaces, NetworkState, NmError,
     NmstateController, NmstateInterface, OvsBridgeConfig, OvsBridgeInterface,
     OvsBridgePortConfig, OvsInterface, UnknownInterface,
 };

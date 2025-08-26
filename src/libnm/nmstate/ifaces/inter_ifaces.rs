@@ -6,9 +6,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq,
 };
 
-use crate::{
-    Interface, InterfaceType, JsonDisplay, NmstateError, NmstateInterface,
-};
+use crate::{Interface, InterfaceType, JsonDisplay, NmError, NmstateInterface};
 
 /// Represent a list of [Interface].
 ///
@@ -181,7 +179,7 @@ impl Interfaces {
         }
     }
 
-    pub fn merge(&mut self, new_ifaces: &Self) -> Result<(), NmstateError> {
+    pub fn merge(&mut self, new_ifaces: &Self) -> Result<(), NmError> {
         for new_iface in new_ifaces.iter() {
             if let Some(iface) =
                 self.get_mut(new_iface.name(), Some(new_iface.iface_type()))

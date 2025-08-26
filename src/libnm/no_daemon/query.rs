@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::{
-    EthernetInterface, Interface, InterfaceType, LoopbackInterface,
-    NetworkState, NmstateQueryOption, UnknownInterface,
-};
-
 use super::{base_iface::np_iface_to_base_iface, error::np_error_to_nmstate};
-use crate::{ErrorKind, NmError, NmNoDaemon};
+use crate::{
+    ErrorKind, EthernetInterface, Interface, InterfaceType, LoopbackInterface,
+    NetworkState, NmError, NmNoDaemon, NmstateQueryOption, UnknownInterface,
+};
 
 impl NmNoDaemon {
     pub async fn query_network_state(

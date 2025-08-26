@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Interface, InterfaceState, MergedInterface, NmstateError, NmstateInterface,
+    Interface, InterfaceState, MergedInterface, NmError, NmstateInterface,
 };
 
 use super::value::gen_revert_state;
 
 impl MergedInterface {
-    pub(crate) fn generate_revert(
-        &self,
-    ) -> Result<Option<Interface>, NmstateError> {
+    pub(crate) fn generate_revert(&self) -> Result<Option<Interface>, NmError> {
         let apply_iface = match self.for_apply.as_ref() {
             Some(i) => i,
             None => return Ok(None),
@@ -33,7 +31,7 @@ impl Interface {
     pub(crate) fn generate_revert(
         &self,
         current: &Self,
-    ) -> Result<Self, NmstateError> {
+    ) -> Result<Self, NmError> {
         if self.is_absent() {
             return Ok(current.clone());
         }

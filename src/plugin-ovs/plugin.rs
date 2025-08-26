@@ -2,10 +2,7 @@
 
 use std::sync::Arc;
 
-use nm::{
-    NmError, NmIpcConnection,
-    nmstate::{NetworkState, NmstateQueryOption},
-};
+use nm::{NetworkState, NmError, NmIpcConnection, NmstateQueryOption};
 use nm_plugin::{NmPlugin, NmPluginInfo};
 
 pub(crate) struct NmPluginOvs {}

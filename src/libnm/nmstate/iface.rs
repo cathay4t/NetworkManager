@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    JsonDisplay, LoopbackInterface, NmstateController, NmstateError,
+    JsonDisplay, LoopbackInterface, NmError, NmstateController,
     NmstateInterface, OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
@@ -146,7 +146,7 @@ impl NmstateInterface for Interface {
     fn sanitize_iface_specfic(
         &mut self,
         is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    ) -> Result<(), NmError> {
         match self {
             Self::Ethernet(i) => i.sanitize_iface_specfic(is_desired),
             Self::OvsBridge(i) => i.sanitize_iface_specfic(is_desired),
@@ -303,7 +303,7 @@ impl Interface {
         self.base_iface().clone_name_type_only().into()
     }
 
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmError> {
         let self_value = serde_json::to_value(self.clone())?;
         let current_value = serde_json::to_value(current.clone())?;
 
@@ -312,7 +312,7 @@ impl Interface {
             &self_value,
             &current_value,
         ) {
-            Err(NmstateError::new(
+            Err(NmError::new(
                 ErrorKind::VerificationError,
                 format!(
                     "Verification failure: {reference} desire '{desire}', \

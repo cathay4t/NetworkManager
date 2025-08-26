@@ -16,7 +16,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 nm = { path = "../libnm" }
 nm_plugin = { path = "../libnm-plugin" }
-nmstate = { path = "../nmstate" }
 
 [[bin]]
 name = "NetworkManager-plugin-ovs"

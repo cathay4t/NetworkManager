@@ -4,6 +4,7 @@ mod client;
 mod error;
 mod ipc;
 mod logging;
+mod nmstate;
 mod no_daemon;
 mod uuid;
 
@@ -13,6 +14,6 @@ pub use self::ipc::{NmCanIpc, NmIpcConnection};
 pub use self::logging::{NmLogEntry, NmLogLevel};
 pub use self::no_daemon::NmNoDaemon;
 pub use self::uuid::NmUuid;
-pub(crate) use nmstate::JsonDisplay;
 
-pub use nmstate;
+pub use libnm_derive::JsonDisplay;
+pub use nmstate::*;

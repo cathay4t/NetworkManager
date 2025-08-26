@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, JsonDisplay,
-    MergedInterface, NmstateError, NmstateInterface,
+    MergedInterface, NmError, NmstateInterface,
 };
 
 #[derive(
@@ -22,7 +22,7 @@ impl MergedInterfaces {
     pub fn new(
         desired: Interfaces,
         current: Interfaces,
-    ) -> Result<Self, NmstateError> {
+    ) -> Result<Self, NmError> {
         let mut desired = desired;
         let mut current = current;
 
@@ -122,10 +122,7 @@ impl MergedInterfaces {
             .chain(self.kernel_ifaces.values_mut())
     }
 
-    pub(crate) fn verify(
-        &self,
-        current: &Interfaces,
-    ) -> Result<(), NmstateError> {
+    pub(crate) fn verify(&self, current: &Interfaces) -> Result<(), NmError> {
         let mut merged = self.clone();
         let mut current = current.clone();
 
@@ -171,7 +168,7 @@ impl MergedInterfaces {
                     iface.verify(cur_iface)?;
                 }
             } else if iface.is_up() {
-                return Err(NmstateError::new(
+                return Err(NmError::new(
                     ErrorKind::VerificationError,
                     format!(
                         "Failed to find desired interface {} {:?}",
@@ -188,10 +185,10 @@ impl MergedInterfaces {
 fn verify_desire_absent_but_found_in_current(
     des_iface: &Interface,
     cur_iface: &Interface,
-) -> Result<(), NmstateError> {
+) -> Result<(), NmError> {
     if cur_iface.is_virtual() {
         // Virtual interface should be deleted by absent action
-        Err(NmstateError::new(
+        Err(NmError::new(
             ErrorKind::VerificationError,
             format!(
                 "Absent/Down interface {}/{} still found as {:?}",

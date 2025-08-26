@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use nm::{
-    ErrorKind, NmError, NmIpcConnection,
-    nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption},
+    ErrorKind, NetworkState, NmError, NmIpcConnection, NmstateApplyOption,
+    NmstateQueryOption,
 };
 
 use crate::{NmIpcListener, NmPluginClient, NmPluginCmd, NmPluginInfo};

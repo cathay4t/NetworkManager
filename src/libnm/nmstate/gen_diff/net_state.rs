@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MergedNetworkState, NetworkState, NmstateError};
+use crate::{MergedNetworkState, NetworkState, NmError};
 
 impl NetworkState {
     /// Generate NetworkState containing only the properties changed comparing
     /// to `old_state`.
-    pub fn gen_diff(&self, old: &Self) -> Result<Self, NmstateError> {
+    pub fn gen_diff(&self, old: &Self) -> Result<Self, NmError> {
         let mut ret = Self::default();
         let old_version = old.version;
         let old_description = old.description.clone();

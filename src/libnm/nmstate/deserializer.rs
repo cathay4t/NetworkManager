@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, de, de::Visitor};
 
-use crate::{ErrorKind, NmstateError};
+use crate::{ErrorKind, NmError};
 
 pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
@@ -292,14 +292,14 @@ impl NumberAsString {
 }
 
 impl std::convert::TryFrom<serde_json::Value> for NumberAsString {
-    type Error = NmstateError;
-    fn try_from(s: serde_json::Value) -> Result<Self, NmstateError> {
+    type Error = NmError;
+    fn try_from(s: serde_json::Value) -> Result<Self, NmError> {
         match s {
             serde_json::Value::Number(d) => Ok(Self {
                 value: format!("{d}"),
             }),
             serde_json::Value::String(s) => Ok(Self { value: s }),
-            _ => Err(NmstateError::new(
+            _ => Err(NmError::new(
                 ErrorKind::InvalidArgument,
                 format!("Invalid data type: {s}, should be integer or string"),
             )),

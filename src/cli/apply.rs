@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmClient, NmNoDaemon, nmstate::NmstateApplyOption};
+use nm::{NmClient, NmNoDaemon, NmstateApplyOption};
 
 use super::{CliError, state::state_from_file};
 

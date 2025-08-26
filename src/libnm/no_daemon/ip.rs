@@ -11,8 +11,10 @@ pub(crate) fn np_ipv4_to_nmstate(
     np_iface: &nispor::Iface,
 ) -> Option<InterfaceIpv4> {
     if let Some(np_ip) = &np_iface.ipv4 {
-        let mut ip = InterfaceIpv4::default();
-        ip.enabled = Some(!np_ip.addresses.is_empty());
+        let mut ip = InterfaceIpv4 {
+            enabled: Some(!np_ip.addresses.is_empty()),
+            ..Default::default()
+        };
         if !ip.is_enabled() {
             return Some(ip);
         }
@@ -23,20 +25,23 @@ pub(crate) fn np_ipv4_to_nmstate(
             }
             match std::net::IpAddr::from_str(np_addr.address.as_str()) {
                 Ok(i) => {
-                    let mut addr = InterfaceIpAddr::default();
-                    addr.ip = i;
-                    addr.prefix_length = np_addr.prefix_len;
-                    addr.valid_life_time = if np_addr.valid_lft != "forever" {
-                        Some(np_addr.valid_lft.clone())
-                    } else {
-                        None
-                    };
-                    addr.preferred_life_time =
-                        if np_addr.preferred_lft != "forever" {
+                    let addr = InterfaceIpAddr {
+                        ip: i,
+                        prefix_length: np_addr.prefix_len,
+                        valid_life_time: if np_addr.valid_lft != "forever" {
+                            Some(np_addr.valid_lft.clone())
+                        } else {
+                            None
+                        },
+                        preferred_life_time: if np_addr.preferred_lft
+                            != "forever"
+                        {
                             Some(np_addr.preferred_lft.clone())
                         } else {
                             None
-                        };
+                        },
+                        ..Default::default()
+                    };
                     addresses.push(addr);
                 }
                 Err(e) => {
@@ -63,9 +68,10 @@ pub(crate) fn np_ipv6_to_nmstate(
     np_iface: &nispor::Iface,
 ) -> Option<InterfaceIpv6> {
     if let Some(np_ip) = &np_iface.ipv6 {
-        let mut ip = InterfaceIpv6::default();
-
-        ip.enabled = Some(!np_ip.addresses.is_empty());
+        let mut ip = InterfaceIpv6 {
+            enabled: Some(!np_ip.addresses.is_empty()),
+            ..Default::default()
+        };
 
         if !ip.is_enabled() {
             return Some(ip);
@@ -81,20 +87,23 @@ pub(crate) fn np_ipv6_to_nmstate(
             }
             match std::net::IpAddr::from_str(np_addr.address.as_str()) {
                 Ok(i) => {
-                    let mut addr = InterfaceIpAddr::default();
-                    addr.ip = i;
-                    addr.prefix_length = np_addr.prefix_len;
-                    addr.valid_life_time = if np_addr.valid_lft != "forever" {
-                        Some(np_addr.valid_lft.clone())
-                    } else {
-                        None
-                    };
-                    addr.preferred_life_time =
-                        if np_addr.preferred_lft != "forever" {
+                    let addr = InterfaceIpAddr {
+                        ip: i,
+                        prefix_length: np_addr.prefix_len,
+                        valid_life_time: if np_addr.valid_lft != "forever" {
+                            Some(np_addr.valid_lft.clone())
+                        } else {
+                            None
+                        },
+                        preferred_life_time: if np_addr.preferred_lft
+                            != "forever"
+                        {
                             Some(np_addr.preferred_lft.clone())
                         } else {
                             None
-                        };
+                        },
+                        ..Default::default()
+                    };
                     addresses.push(addr);
                 }
                 Err(e) => {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{ErrorKind, NmError, nmstate::NetworkState};
+use nm::{ErrorKind, NetworkState, NmError};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

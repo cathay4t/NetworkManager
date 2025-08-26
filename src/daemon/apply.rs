@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmError, NmIpcConnection, NmNoDaemon};
-use nmstate::{MergedNetworkState, NetworkState, NmstateApplyOption};
+use nm::{
+    MergedNetworkState, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
+    NmstateApplyOption,
+};
 
 use super::{
     config::NmDaemonConfig, plugin::NmDaemonPlugins, query::query_network_state,
@@ -93,9 +95,7 @@ async fn apply(
     conn.log_debug(format!("apply_state {apply_state}")).await;
 
     NmNoDaemon::apply_merged_state(merged_state).await?;
-    plugins
-        .apply_network_state(&apply_state, opt, conn)
-        .await?;
+    plugins.apply_network_state(&apply_state, opt, conn).await?;
 
     let mut result: Result<(), NmError> = Ok(());
     if !opt.no_verify {

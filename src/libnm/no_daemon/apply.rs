@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::{MergedNetworkState, NetworkState, NmstateApplyOption};
-
-use crate::{ErrorKind, NmError, NmNoDaemon};
+use crate::{
+    ErrorKind, MergedNetworkState, NetworkState, NmError, NmNoDaemon,
+    NmstateApplyOption,
+};
 
 use super::inter_ifaces::apply_ifaces;
 

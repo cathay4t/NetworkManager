@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nmstate::NmstateError;
 use serde::{Deserialize, Serialize};
 
 use crate::{JsonDisplay, NmCanIpc};
@@ -11,17 +10,32 @@ use crate::{JsonDisplay, NmCanIpc};
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ErrorKind {
+    /// Please report this as bug to upstream
     Bug,
+    /// Inter-process communication remote end closed
     IpcClosed,
+    /// Inter-process communication failure
     IpcFailure,
+    /// Data send through NmIpcConnection exceeded the maximum size
     IpcMessageTooLarge,
+    /// Invalid log level
     InvalidLogLevel,
+    /// Invalid UUID format
     InvalidUuid,
+    /// Invalid schema version
     InvalidSchemaVersion,
+    /// Invalid argument
+    InvalidArgument,
+    /// Timeout
     Timeout,
+    /// Not supported
     NoSupport,
+    /// Plugin failure
     PluginFailure,
+    /// Daemon failure
     DaemonFailure,
+    /// Post applied state does not match with desired state
+    VerificationError,
 }
 
 // Try not implement From for NmError here unless you are sure this
@@ -52,12 +66,6 @@ impl From<serde_json::Error> for NmError {
 impl NmCanIpc for NmError {
     fn ipc_kind(&self) -> String {
         Self::IPC_KIND.to_string()
-    }
-}
-
-impl From<NmstateError> for NmError {
-    fn from(e: NmstateError) -> Self {
-        Self::new(ErrorKind::Bug, format!("NmstateError: {e}"))
     }
 }
 

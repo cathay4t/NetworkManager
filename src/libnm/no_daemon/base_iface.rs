@@ -70,28 +70,32 @@ fn np_iface_state_to_nmstate(
 pub(crate) fn np_iface_to_base_iface(
     np_iface: &nispor::Iface,
 ) -> BaseInterface {
-    let mut base_iface = BaseInterface::default();
-    base_iface.name = np_iface.name.to_string();
-    base_iface.state =
-        np_iface_state_to_nmstate(&np_iface.state, np_iface.flags.as_slice());
-    base_iface.iface_type = np_iface_type_to_nmstate(&np_iface.iface_type);
-    base_iface.mac_address = Some(np_iface.mac_address.to_uppercase());
-    base_iface.permanent_mac_address = get_permanent_mac_address(np_iface);
-    base_iface.controller = np_iface.controller.as_ref().map(|c| c.to_string());
-    base_iface.mtu = if np_iface.mtu >= 0 {
-        Some(np_iface.mtu as u64)
-    } else {
-        Some(0u64)
-    };
-    base_iface.min_mtu = if let Some(mtu) = np_iface.min_mtu {
-        if mtu >= 0 { Some(mtu as u64) } else { None }
-    } else {
-        None
-    };
-    base_iface.max_mtu = if let Some(mtu) = np_iface.max_mtu {
-        if mtu >= 0 { Some(mtu as u64) } else { None }
-    } else {
-        None
+    let mut base_iface = BaseInterface {
+        name: np_iface.name.to_string(),
+        state: np_iface_state_to_nmstate(
+            &np_iface.state,
+            np_iface.flags.as_slice(),
+        ),
+        iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
+        mac_address: Some(np_iface.mac_address.to_uppercase()),
+        permanent_mac_address: get_permanent_mac_address(np_iface),
+        controller: np_iface.controller.as_ref().map(|c| c.to_string()),
+        mtu: if np_iface.mtu >= 0 {
+            Some(np_iface.mtu as u64)
+        } else {
+            Some(0u64)
+        },
+        min_mtu: if let Some(mtu) = np_iface.min_mtu {
+            if mtu >= 0 { Some(mtu as u64) } else { None }
+        } else {
+            None
+        },
+        max_mtu: if let Some(mtu) = np_iface.max_mtu {
+            if mtu >= 0 { Some(mtu as u64) } else { None }
+        } else {
+            None
+        },
+        ..Default::default()
     };
     if !SUPPORTED_LIST.contains(&base_iface.iface_type) {
         log::debug!(

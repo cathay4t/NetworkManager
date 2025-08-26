@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmCanIpc, NmError, NmIpcConnection};
-use nmstate::{
-    JsonDisplay, NetworkState, NmstateApplyOption, NmstateQueryOption,
+use nm::{
+    JsonDisplay, NetworkState, NmCanIpc, NmError, NmIpcConnection,
+    NmstateApplyOption, NmstateQueryOption,
 };
 use serde::{Deserialize, Serialize};
 

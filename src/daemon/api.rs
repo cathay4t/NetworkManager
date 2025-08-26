@@ -2,8 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use nm::{ErrorKind, NmClientCmd, NmError, NmIpcConnection};
-use nmstate::NetworkState;
+use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
 use super::{
     apply::apply_network_state, plugin::NmDaemonPlugins,

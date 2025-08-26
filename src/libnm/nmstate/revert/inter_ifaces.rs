@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interfaces, MergedInterfaces, NmstateError};
+use crate::{Interfaces, MergedInterfaces, NmError};
 
 impl MergedInterfaces {
-    pub(crate) fn generate_revert(&self) -> Result<Interfaces, NmstateError> {
+    pub(crate) fn generate_revert(&self) -> Result<Interfaces, NmError> {
         let mut ret = Interfaces::default();
         for iface in self
             .kernel_ifaces

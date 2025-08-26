@@ -1,8 +1,8 @@
 [package]
-name = "nmstate_derive"
+name = "libnm_derive"
 version.workspace = true
 authors.workspace = true
-description = "derives of nmstate"
+description = "derives of libnm"
 documentation.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,6 +13,6 @@ syn = { workspace = true }
 quote = { workspace = true }
 
 [lib]
-name = "nmstate_derive"
+name = "libnm_derive"
 path = "lib.rs"
 proc-macro = true

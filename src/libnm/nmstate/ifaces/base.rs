@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, JsonDisplay,
-    NmstateError,
+    NmError,
 };
 
 #[derive(
@@ -116,7 +116,7 @@ impl BaseInterface {
         }
     }
 
-    pub fn sanitize(&mut self, is_desired: bool) -> Result<(), NmstateError> {
+    pub fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
         if let Some(ipv4) = self.ipv4.as_mut() {
             ipv4.sanitize(is_desired)?;
         }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmClient, NmNoDaemon, nmstate::NmstateQueryOption};
+use nm::{NmClient, NmNoDaemon, NmstateQueryOption};
 
 use crate::CliError;
 

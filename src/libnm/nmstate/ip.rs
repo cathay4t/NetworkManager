@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, JsonDisplay, NmstateError};
+use crate::{ErrorKind, JsonDisplay, NmError};
 
 const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
@@ -94,10 +94,7 @@ impl InterfaceIpv4 {
 
     // * Remove auto IP address.
     // * Disable DHCP and remove address if enabled: false
-    pub(crate) fn sanitize(
-        &mut self,
-        is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
         if self.is_auto() {
             if let Some(addrs) = self.addresses.as_ref() {
                 if is_desired {
@@ -119,7 +116,7 @@ impl InterfaceIpv4 {
                 if let Some(addr) =
                     addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
                 {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         format!(
                             "Got IPv6 address {addr} in ipv4 config section"
@@ -130,7 +127,7 @@ impl InterfaceIpv4 {
                     .iter()
                     .find(|a| a.prefix_length as usize > IPV4_ADDR_LEN)
                 {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         format!(
                             "Invalid IPv4 network prefix length '{}', should \
@@ -257,17 +254,14 @@ impl InterfaceIpv6 {
 
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    pub(crate) fn sanitize(
-        &mut self,
-        is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
         if let Some(addrs) = self.addresses.as_mut() {
             if is_desired {
                 for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
                     log::info!("Ignoring Auto IP address {addr}");
                 }
                 if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv4()) {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         format!(
                             "Got IPv4 address {addr} in ipv6 config section"
@@ -278,7 +272,7 @@ impl InterfaceIpv6 {
                     .iter()
                     .find(|a| a.prefix_length as usize > IPV6_ADDR_LEN)
                 {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         format!(
                             "Invalid IPv6 network prefix length '{}', should \
@@ -412,12 +406,12 @@ impl InterfaceIpAddr {
 }
 
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {
-    type Error = NmstateError;
+    type Error = NmError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut addr: Vec<&str> = value.split('/').collect();
         addr.resize(2, "");
         let ip = IpAddr::from_str(addr[0]).map_err(|e| {
-            let e = NmstateError::new(
+            let e = NmError::new(
                 ErrorKind::InvalidArgument,
                 format!("Invalid IP address {}: {e}", addr[0]),
             );
@@ -429,7 +423,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             if ip.is_ipv6() { 128 } else { 32 }
         } else {
             addr[1].parse::<u8>().map_err(|parse_error| {
-                let e = NmstateError::new(
+                let e = NmError::new(
                     ErrorKind::InvalidArgument,
                     format!("Invalid IP address {value}: {parse_error}"),
                 );

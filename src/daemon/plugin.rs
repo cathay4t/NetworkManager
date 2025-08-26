@@ -5,9 +5,11 @@ use std::env::current_exe;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 
-use nm::{NmError, NmIpcConnection};
+use nm::{
+    NetworkState, NmError, NmIpcConnection, NmstateApplyOption,
+    NmstateQueryOption,
+};
 use nm_plugin::{NmPluginClient, NmPluginInfo};
-use nmstate::{NetworkState, NmstateApplyOption, NmstateQueryOption};
 
 const NM_PLUGIN_PREFIX: &str = "NetworkManager-plugin-";
 const NM_PLUGIN_CONN_RETRY: i8 = 50;

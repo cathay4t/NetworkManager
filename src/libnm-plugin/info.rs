@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::NmCanIpc;
-use nmstate::InterfaceType;
+use nm::{InterfaceType, NmCanIpc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

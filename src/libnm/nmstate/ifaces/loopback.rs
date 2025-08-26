@@ -5,7 +5,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, ErrorKind, InterfaceIpAddr, JsonDisplay, NmstateError,
+    BaseInterface, ErrorKind, InterfaceIpAddr, JsonDisplay, NmError,
     NmstateInterface,
 };
 
@@ -53,7 +53,7 @@ impl NmstateInterface for LoopbackInterface {
     fn sanitize_iface_specfic(
         &mut self,
         is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    ) -> Result<(), NmError> {
         let default_ipv4_addr = InterfaceIpAddr {
             ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
             prefix_length: 8,
@@ -67,7 +67,7 @@ impl NmstateInterface for LoopbackInterface {
         if is_desired {
             if let Some(ipv4) = self.base.ipv4.as_mut() {
                 if !ipv4.is_enabled() {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         "Disabling IPv4 on loopback interface is not allowed"
                             .to_string(),
@@ -86,7 +86,7 @@ impl NmstateInterface for LoopbackInterface {
 
             if let Some(ipv6) = self.base.ipv6.as_mut() {
                 if !ipv6.is_enabled() {
-                    return Err(NmstateError::new(
+                    return Err(NmError::new(
                         ErrorKind::InvalidArgument,
                         "Disabling IPv6 on loopback interface is not allowed"
                             .to_string(),

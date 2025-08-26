@@ -2,9 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplay, NmstateError,
-};
+use crate::{CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplay, NmError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonDisplay)]
 #[serde(deny_unknown_fields)]
@@ -51,11 +49,11 @@ impl NetworkState {
     }
 
     /// Wrapping function of [serde_yaml::from_str()] with error mapped to
-    /// [NmstateError].
-    pub fn new_from_yaml(net_state_yaml: &str) -> Result<Self, NmstateError> {
+    /// [NmError].
+    pub fn new_from_yaml(net_state_yaml: &str) -> Result<Self, NmError> {
         match serde_yaml::from_str(net_state_yaml) {
             Ok(s) => Ok(s),
-            Err(e) => Err(NmstateError::new(
+            Err(e) => Err(NmError::new(
                 ErrorKind::InvalidArgument,
                 format!("Invalid YAML string: {e}"),
             )),

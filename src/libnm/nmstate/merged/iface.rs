@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Interface, JsonDisplay, NmstateError, NmstateInterface};
+use crate::{Interface, JsonDisplay, NmError, NmstateInterface};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
@@ -20,7 +20,7 @@ impl MergedInterface {
     pub fn new(
         desired: Option<Interface>,
         current: Option<Interface>,
-    ) -> Result<Self, NmstateError> {
+    ) -> Result<Self, NmError> {
         let merged = match (&desired, &current) {
             (Some(desired), Some(current)) => {
                 let mut merged = current.clone();

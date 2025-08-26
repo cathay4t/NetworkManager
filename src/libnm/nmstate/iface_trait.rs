@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::value::copy_undefined_value;
-use crate::{BaseInterface, InterfaceType, NmstateError};
+use crate::{BaseInterface, InterfaceType, NmError};
 
 /// Trait implemented by all type of interfaces.
 pub trait NmstateInterface:
@@ -58,7 +58,7 @@ pub trait NmstateInterface:
     /// Will invoke `merge_iface_specific()` at the end.
     /// Please do not override this function but implement
     /// `merge_iface_specific()` instead.
-    fn merge(&mut self, new_state: &Self) -> Result<(), NmstateError>
+    fn merge(&mut self, new_state: &Self) -> Result<(), NmError>
     where
         for<'de> Self: Deserialize<'de>,
     {
@@ -79,12 +79,12 @@ pub trait NmstateInterface:
     fn merge_iface_specific(
         &mut self,
         _new_state: &Self,
-    ) -> Result<(), NmstateError> {
+    ) -> Result<(), NmError> {
         Ok(())
     }
 
     /// Invoke sanitize on the [BaseInterface] and `sanitize_iface_specfic()`.
-    fn sanitize(&mut self, is_desired: bool) -> Result<(), NmstateError> {
+    fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
         self.base_iface_mut().sanitize(is_desired)?;
         self.sanitize_iface_specfic(is_desired)
     }
@@ -101,7 +101,7 @@ pub trait NmstateInterface:
     fn sanitize_iface_specfic(
         &mut self,
         _is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    ) -> Result<(), NmError> {
         Ok(())
     }
 

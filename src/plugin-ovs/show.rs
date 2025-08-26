@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmError, NmIpcConnection, NmLogEntry};
-use nmstate::NetworkState;
+use nm::{NetworkState, NmError, NmIpcConnection, NmLogEntry};
 
 use super::{
     ovsdb::{ovsdb_is_running, ovsdb_retrieve},

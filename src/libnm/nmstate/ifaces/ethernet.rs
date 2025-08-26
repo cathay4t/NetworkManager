@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, JsonDisplay, NmstateError, NmstateInterface,
+    BaseInterface, InterfaceType, JsonDisplay, NmError, NmstateInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
@@ -58,7 +58,7 @@ impl NmstateInterface for EthernetInterface {
     fn sanitize_iface_specfic(
         &mut self,
         _is_desired: bool,
-    ) -> Result<(), NmstateError> {
+    ) -> Result<(), NmError> {
         Ok(())
     }
 
