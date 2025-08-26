@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{ErrorKind, NetworkState, NmError};
+use nm::{ErrorKind, InterfaceType, NetworkState, NmError, NmstateInterface};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -16,6 +16,9 @@ impl NmDaemonConfig {
         net_state: &NetworkState,
     ) -> Result<(), NmError> {
         create_instal_state_dir()?;
+
+        let mut net_state = net_state.clone();
+        discard_absent_iface(&mut net_state);
 
         let yaml_str = serde_yaml::to_string(&net_state).map_err(|e| {
             NmError::new(
@@ -72,4 +75,23 @@ fn create_instal_state_dir() -> Result<(), NmError> {
         })?;
     }
     Ok(())
+}
+
+fn discard_absent_iface(net_state: &mut NetworkState) {
+    let pending_changes: Vec<(String, InterfaceType)> = net_state
+        .ifaces
+        .iter()
+        .filter_map(|i| {
+            if i.is_absent() {
+                Some((i.name().to_string(), i.iface_type().clone()))
+            } else {
+                None
+            }
+        })
+        .collect();
+    for (iface_name, iface_type) in pending_changes {
+        net_state
+            .ifaces
+            .remove(iface_name.as_str(), Some(&iface_type));
+    }
 }
