@@ -92,78 +92,106 @@ impl<'de> Deserialize<'de> for Interface {
     }
 }
 
+macro_rules! gen_sanitize_iface_specfic {
+    ( $desired:ident, $current:ident, $($variant:path,)+ ) => {
+        match $desired {
+            $(
+                $variant(i) => {
+                    let cur_iface = if let Some($variant(c)) = $current {
+                        Some(c)
+                    } else {
+                        if $current.is_some() {
+                            return Err(NmError::new(
+                                ErrorKind::Bug,
+                                format!(
+                                    "current interface holding the same \
+                                    interface type as as desired, current {}, \
+                                    desired {}", i.iface_type(),
+                                    $current.unwrap().iface_type(),
+                                ),
+                            ));
+                        }
+                        None
+                    };
+                    i.sanitize_iface_specfic(cur_iface.map(|v| &**v))
+                }
+            )+
+        }
+    };
+}
+
+macro_rules! gen_iface_fun {
+    ( $self:ident, $func:ident, $($variant:path,)+ ) => {
+        match $self {
+            $(
+                $variant(i) => i.$func(),
+            )+
+        }
+    };
+}
+
+macro_rules! gen_iface_trait_impl {
+    ( $(($func:ident, $return:ty),)+ ) => {
+        $(
+            fn $func(&self) -> $return {
+                gen_iface_fun!(
+                    self,
+                    $func,
+                    Self::Ethernet,
+                    Self::OvsBridge,
+                    Self::OvsInterface,
+                    Self::Loopback,
+                    Self::Unknown,
+                )
+            }
+        )+
+    }
+}
+
+macro_rules! gen_iface_trait_impl_mut {
+    ( $(($func:ident, $return:ty),)+ ) => {
+        $(
+            fn $func(&mut self) -> $return {
+                gen_iface_fun!(
+                    self,
+                    $func,
+                    Self::Ethernet,
+                    Self::OvsBridge,
+                    Self::OvsInterface,
+                    Self::Loopback,
+                    Self::Unknown,
+                )
+            }
+        )+
+    }
+}
+
 impl NmstateInterface for Interface {
-    fn is_virtual(&self) -> bool {
-        match self {
-            Self::Ethernet(i) => i.is_virtual(),
-            Self::OvsBridge(i) => i.is_virtual(),
-            Self::OvsInterface(i) => i.is_virtual(),
-            Self::Loopback(i) => i.is_virtual(),
-            Self::Unknown(i) => i.is_virtual(),
-        }
-    }
+    gen_iface_trait_impl!(
+        (is_virtual, bool),
+        (is_userspace, bool),
+        (base_iface, &BaseInterface),
+    );
 
-    fn is_userspace(&self) -> bool {
-        match self {
-            Self::Ethernet(i) => i.is_userspace(),
-            Self::OvsBridge(i) => i.is_userspace(),
-            Self::OvsInterface(i) => i.is_userspace(),
-            Self::Loopback(i) => i.is_userspace(),
-            Self::Unknown(i) => i.is_userspace(),
-        }
-    }
-
-    fn base_iface(&self) -> &BaseInterface {
-        match self {
-            Self::Ethernet(i) => i.base_iface(),
-            Self::OvsBridge(i) => i.base_iface(),
-            Self::OvsInterface(i) => i.base_iface(),
-            Self::Loopback(i) => i.base_iface(),
-            Self::Unknown(i) => i.base_iface(),
-        }
-    }
-
-    fn base_iface_mut(&mut self) -> &mut BaseInterface {
-        match self {
-            Self::Ethernet(i) => i.base_iface_mut(),
-            Self::OvsBridge(i) => i.base_iface_mut(),
-            Self::OvsInterface(i) => i.base_iface_mut(),
-            Self::Loopback(i) => i.base_iface_mut(),
-            Self::Unknown(i) => i.base_iface_mut(),
-        }
-    }
-
-    fn hide_secrets_iface_specific(&mut self) {
-        match self {
-            Self::Ethernet(i) => i.hide_secrets_iface_specific(),
-            Self::OvsBridge(i) => i.hide_secrets_iface_specific(),
-            Self::OvsInterface(i) => i.hide_secrets_iface_specific(),
-            Self::Loopback(i) => i.hide_secrets_iface_specific(),
-            Self::Unknown(i) => i.hide_secrets_iface_specific(),
-        }
-    }
+    gen_iface_trait_impl_mut!(
+        (base_iface_mut, &mut BaseInterface),
+        (hide_secrets_iface_specific, ()),
+        (sanitize_for_verify_iface_specfic, ()),
+    );
 
     fn sanitize_iface_specfic(
         &mut self,
-        is_desired: bool,
+        current: Option<&Self>,
     ) -> Result<(), NmError> {
-        match self {
-            Self::Ethernet(i) => i.sanitize_iface_specfic(is_desired),
-            Self::OvsBridge(i) => i.sanitize_iface_specfic(is_desired),
-            Self::OvsInterface(i) => i.sanitize_iface_specfic(is_desired),
-            Self::Loopback(i) => i.sanitize_iface_specfic(is_desired),
-            Self::Unknown(i) => i.sanitize_iface_specfic(is_desired),
-        }
-    }
-
-    fn sanitize_for_verify_iface_specfic(&mut self) {
-        match self {
-            Self::Ethernet(i) => i.sanitize_for_verify_iface_specfic(),
-            Self::OvsBridge(i) => i.sanitize_for_verify_iface_specfic(),
-            Self::OvsInterface(i) => i.sanitize_for_verify_iface_specfic(),
-            Self::Loopback(i) => i.sanitize_for_verify_iface_specfic(),
-            Self::Unknown(i) => i.sanitize_for_verify_iface_specfic(),
-        }
+        gen_sanitize_iface_specfic!(
+            self,
+            current,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::Unknown,
+        )
     }
 
     fn include_diff_context_iface_specific(

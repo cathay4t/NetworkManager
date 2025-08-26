@@ -94,48 +94,44 @@ impl InterfaceIpv4 {
 
     // * Remove auto IP address.
     // * Disable DHCP and remove address if enabled: false
-    pub(crate) fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        _current: Option<&Self>,
+    ) -> Result<(), NmError> {
         if self.is_auto() {
             if let Some(addrs) = self.addresses.as_ref() {
-                if is_desired {
-                    for addr in addrs {
-                        log::info!(
-                            "Static addresses {addr} defined when dynamic IP \
-                             is enabled"
-                        );
-                    }
+                for addr in addrs {
+                    log::info!(
+                        "Static addresses {addr} defined when dynamic IP is \
+                         enabled"
+                    );
                 }
             }
         }
 
         if let Some(addrs) = self.addresses.as_mut() {
-            if is_desired {
-                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
-                    log::info!("Ignoring Auto IP address {addr}");
-                }
-                if let Some(addr) =
-                    addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
-                {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Got IPv6 address {addr} in ipv4 config section"
-                        ),
-                    ));
-                }
-                if let Some(addr) = addrs
-                    .iter()
-                    .find(|a| a.prefix_length as usize > IPV4_ADDR_LEN)
-                {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Invalid IPv4 network prefix length '{}', should \
-                             be in the range of 0 to {IPV4_ADDR_LEN}",
-                            addr.prefix_length
-                        ),
-                    ));
-                }
+            for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                log::info!("Ignoring Auto IP address {addr}");
+            }
+            if let Some(addr) = addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
+            {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Got IPv6 address {addr} in ipv4 config section"),
+                ));
+            }
+            if let Some(addr) = addrs
+                .iter()
+                .find(|a| a.prefix_length as usize > IPV4_ADDR_LEN)
+            {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid IPv4 network prefix length '{}', should be \
+                         in the range of 0 to {IPV4_ADDR_LEN}",
+                        addr.prefix_length
+                    ),
+                ));
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
@@ -254,33 +250,32 @@ impl InterfaceIpv6 {
 
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    pub(crate) fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        _current: Option<&Self>,
+    ) -> Result<(), NmError> {
         if let Some(addrs) = self.addresses.as_mut() {
-            if is_desired {
-                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
-                    log::info!("Ignoring Auto IP address {addr}");
-                }
-                if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv4()) {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Got IPv4 address {addr} in ipv6 config section"
-                        ),
-                    ));
-                }
-                if let Some(addr) = addrs
-                    .iter()
-                    .find(|a| a.prefix_length as usize > IPV6_ADDR_LEN)
-                {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Invalid IPv6 network prefix length '{}', should \
-                             be in the range of 0 to {IPV6_ADDR_LEN}",
-                            addr.prefix_length
-                        ),
-                    ));
-                }
+            for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                log::info!("Ignoring Auto IP address {addr}");
+            }
+            if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv4()) {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Got IPv4 address {addr} in ipv6 config section"),
+                ));
+            }
+            if let Some(addr) = addrs
+                .iter()
+                .find(|a| a.prefix_length as usize > IPV6_ADDR_LEN)
+            {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid IPv6 network prefix length '{}', should be \
+                         in the range of 0 to {IPV6_ADDR_LEN}",
+                        addr.prefix_length
+                    ),
+                ));
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
@@ -291,13 +286,11 @@ impl InterfaceIpv6 {
 
         if self.is_auto() {
             if let Some(addrs) = self.addresses.as_ref() {
-                if is_desired {
-                    for addr in addrs {
-                        log::info!(
-                            "Static addresses {addr} defined when dynamic IP \
-                             is enabled"
-                        );
-                    }
+                for addr in addrs {
+                    log::info!(
+                        "Static addresses {addr} defined when dynamic IP is \
+                         enabled"
+                    );
                 }
             }
         }
@@ -306,13 +299,11 @@ impl InterfaceIpv6 {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
                     if ip_addr.is_unicast_link_local() {
-                        if is_desired {
-                            log::warn!(
-                                "Ignoring IPv6 link local address {}/{}",
-                                &addr.ip,
-                                addr.prefix_length
-                            );
-                        }
+                        log::warn!(
+                            "Ignoring IPv6 link local address {}/{}",
+                            &addr.ip,
+                            addr.prefix_length
+                        );
                         false
                     } else {
                         true

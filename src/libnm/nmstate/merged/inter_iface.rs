@@ -36,12 +36,9 @@ impl MergedInterfaces {
         // TODO: Remove ignore interface
         // TODO: Resolve `type: unknown` in desired based on current state
         for mut des_iface in desired.drain() {
-            des_iface.sanitize(true)?;
-            let mut cur_iface =
+            let cur_iface =
                 current.remove(des_iface.name(), Some(des_iface.iface_type()));
-            if let Some(cur_iface) = cur_iface.as_mut() {
-                cur_iface.sanitize(false)?;
-            }
+            des_iface.sanitize(cur_iface.as_ref())?;
             if des_iface.is_userspace() {
                 user_ifaces.insert(
                     (
@@ -128,23 +125,7 @@ impl MergedInterfaces {
 
         current.unify_veth_and_ethernet();
 
-        for iface in current
-            .kernel_ifaces
-            .values_mut()
-            .chain(current.user_ifaces.values_mut())
-        {
-            iface.sanitize(false).ok();
-        }
         current.sanitize_for_verify();
-
-        for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
-            let iface = if let Some(i) = des_iface.for_verify.as_mut() {
-                i
-            } else {
-                continue;
-            };
-            iface.sanitize(true).ok();
-        }
 
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
             let iface = if let Some(i) = des_iface.for_verify.as_mut() {

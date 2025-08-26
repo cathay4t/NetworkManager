@@ -21,9 +21,7 @@ impl MergedInterfaces {
                 continue;
             };
             let cur_iface = if let Some(i) = merged_iface.current.as_ref() {
-                let mut cur_iface = i.clone();
-                cur_iface.sanitize(false).ok();
-                cur_iface
+                i.clone()
             } else {
                 if let Some(origin_des_iface) = &merged_iface.desired {
                     ret.push(origin_des_iface.clone());

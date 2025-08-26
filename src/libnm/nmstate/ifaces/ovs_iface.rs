@@ -53,7 +53,7 @@ impl NmstateInterface for OvsInterface {
 
     fn sanitize_iface_specfic(
         &mut self,
-        _is_desired: bool,
+        _current: Option<&Self>,
     ) -> Result<(), NmError> {
         Ok(())
     }

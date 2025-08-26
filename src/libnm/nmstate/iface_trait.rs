@@ -84,9 +84,10 @@ pub trait NmstateInterface:
     }
 
     /// Invoke sanitize on the [BaseInterface] and `sanitize_iface_specfic()`.
-    fn sanitize(&mut self, is_desired: bool) -> Result<(), NmError> {
-        self.base_iface_mut().sanitize(is_desired)?;
-        self.sanitize_iface_specfic(is_desired)
+    fn sanitize(&mut self, current: Option<&Self>) -> Result<(), NmError> {
+        self.base_iface_mut()
+            .sanitize(current.as_ref().map(|c| c.base_iface()))?;
+        self.sanitize_iface_specfic(current)
     }
 
     /// Invoke sanitize current for verify on the [BaseInterface] and
@@ -100,7 +101,7 @@ pub trait NmstateInterface:
     /// for certain interface type. Do not include action for [BaseInterface].
     fn sanitize_iface_specfic(
         &mut self,
-        _is_desired: bool,
+        _current: Option<&Self>,
     ) -> Result<(), NmError> {
         Ok(())
     }

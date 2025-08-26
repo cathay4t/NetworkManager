@@ -52,7 +52,7 @@ impl NmstateInterface for LoopbackInterface {
     /// regardless what user desired.
     fn sanitize_iface_specfic(
         &mut self,
-        is_desired: bool,
+        _current: Option<&Self>,
     ) -> Result<(), NmError> {
         let default_ipv4_addr = InterfaceIpAddr {
             ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -64,42 +64,40 @@ impl NmstateInterface for LoopbackInterface {
             prefix_length: 128,
             ..Default::default()
         };
-        if is_desired {
-            if let Some(ipv4) = self.base.ipv4.as_mut() {
-                if !ipv4.is_enabled() {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        "Disabling IPv4 on loopback interface is not allowed"
-                            .to_string(),
-                    ));
-                }
-                if let Some(addrs) = ipv4.addresses.as_mut() {
-                    if !addrs.contains(&default_ipv4_addr) {
-                        log::info!(
-                            "Appending 127.0.0.1/8 address to desired IPv4 \
-                             addresses of loopback"
-                        );
-                        addrs.push(default_ipv4_addr);
-                    }
+        if let Some(ipv4) = self.base.ipv4.as_mut() {
+            if !ipv4.is_enabled() {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    "Disabling IPv4 on loopback interface is not allowed"
+                        .to_string(),
+                ));
+            }
+            if let Some(addrs) = ipv4.addresses.as_mut() {
+                if !addrs.contains(&default_ipv4_addr) {
+                    log::info!(
+                        "Appending 127.0.0.1/8 address to desired IPv4 \
+                         addresses of loopback"
+                    );
+                    addrs.push(default_ipv4_addr);
                 }
             }
+        }
 
-            if let Some(ipv6) = self.base.ipv6.as_mut() {
-                if !ipv6.is_enabled() {
-                    return Err(NmError::new(
-                        ErrorKind::InvalidArgument,
-                        "Disabling IPv6 on loopback interface is not allowed"
-                            .to_string(),
-                    ));
-                }
-                if let Some(addrs) = ipv6.addresses.as_mut() {
-                    if !addrs.contains(&default_ipv6_addr) {
-                        log::info!(
-                            "Appending ::1/128 address to desired IPv6 \
-                             addresses of loopback"
-                        );
-                        addrs.push(default_ipv6_addr);
-                    }
+        if let Some(ipv6) = self.base.ipv6.as_mut() {
+            if !ipv6.is_enabled() {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    "Disabling IPv6 on loopback interface is not allowed"
+                        .to_string(),
+                ));
+            }
+            if let Some(addrs) = ipv6.addresses.as_mut() {
+                if !addrs.contains(&default_ipv6_addr) {
+                    log::info!(
+                        "Appending ::1/128 address to desired IPv6 addresses \
+                         of loopback"
+                    );
+                    addrs.push(default_ipv6_addr);
                 }
             }
         }
