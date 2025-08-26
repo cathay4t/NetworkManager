@@ -3,7 +3,7 @@
 use nm::{ErrorKind, NmError, NmIpcConnection, NmNoDaemon};
 use nmstate::{NetworkState, NmstateQueryOption, NmstateStateKind};
 
-use super::super::plugin::NmDaemonPlugins;
+use super::{config::NmDaemonConfig, plugin::NmDaemonPlugins};
 
 pub(crate) async fn query_network_state(
     conn: &mut NmIpcConnection,
@@ -23,7 +23,11 @@ pub(crate) async fn query_network_state(
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;
             }
+            // TODO: Mark interface/routes not int saved state as ignored.
             Ok(net_state)
+        }
+        NmstateStateKind::SavedNetworkState => {
+            Ok(NmDaemonConfig::read_applied_state().await?)
         }
         _ => Err(NmError::new(
             ErrorKind::NoSupport,

@@ -6,9 +6,8 @@ use nm::{ErrorKind, NmClientCmd, NmError, NmIpcConnection};
 use nmstate::NetworkState;
 
 use super::{
-    net_state::{apply_network_state, query_network_state},
-    plugin::NmDaemonPlugins,
-    share_data::NmDaemonShareData,
+    apply::apply_network_state, plugin::NmDaemonPlugins,
+    query::query_network_state, share_data::NmDaemonShareData,
 };
 
 pub(crate) async fn process_api_connection(

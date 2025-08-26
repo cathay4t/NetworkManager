@@ -267,6 +267,9 @@ impl NmstateController for Interface {
 impl From<BaseInterface> for Interface {
     fn from(base_iface: BaseInterface) -> Self {
         match base_iface.iface_type {
+            InterfaceType::Loopback => Interface::Loopback(Box::new(
+                LoopbackInterface::from_base(base_iface),
+            )),
             InterfaceType::Ethernet | InterfaceType::Veth => {
                 Interface::Ethernet(Box::new(EthernetInterface::from_base(
                     base_iface,

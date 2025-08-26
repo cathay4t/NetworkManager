@@ -17,11 +17,7 @@ pub struct NetworkState {
     /// Description for the whole desire state.
     pub description: Option<String>,
     /// Network interfaces
-    #[serde(
-        default,
-        skip_serializing_if = "Interfaces::is_empty",
-        rename = "interfaces"
-    )]
+    #[serde(default, rename = "interfaces")]
     pub ifaces: Interfaces,
 }
 
@@ -52,11 +48,6 @@ impl NetworkState {
 
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn merge(&mut self, new_state: &Self) -> Result<(), NmstateError> {
-        self.ifaces.merge(&new_state.ifaces)?;
-        Ok(())
     }
 
     /// Wrapping function of [serde_yaml::from_str()] with error mapped to

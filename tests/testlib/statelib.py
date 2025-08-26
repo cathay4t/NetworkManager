@@ -4,14 +4,24 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 
 from libnm import NmClient
+from libnm.nmstate import NmstateStateKind
+from libnm.nmstate import NmstateQueryOption
 import yaml
 
 RETRY_COUNT = 100
 
 
-def show_only(iface_name):
+def show_only(iface_name, kind=NmstateStateKind.RUNNING):
     client = NmClient()
-    state = client.query_network_state()
+    state = client.query_network_state(NmstateQueryOption(kind=kind))
+    for iface in state["interfaces"]:
+        if iface["name"] == iface_name:
+            return iface
+
+
+def show_saved_only(iface_name):
+    client = NmClient()
+    state = client.query_network_state(NmstateQueryOption.saved())
     for iface in state["interfaces"]:
         if iface["name"] == iface_name:
             return iface

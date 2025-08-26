@@ -21,6 +21,7 @@ pub enum ErrorKind {
     Timeout,
     NoSupport,
     PluginFailure,
+    DaemonFailure,
 }
 
 // Try not implement From for NmError here unless you are sure this
@@ -57,5 +58,11 @@ impl NmCanIpc for NmError {
 impl From<NmstateError> for NmError {
     fn from(e: NmstateError) -> Self {
         Self::new(ErrorKind::Bug, format!("NmstateError: {e}"))
+    }
+}
+
+impl From<std::io::Error> for NmError {
+    fn from(e: std::io::Error) -> Self {
+        Self::new(ErrorKind::Bug, format!("std::io::Error: {e}"))
     }
 }

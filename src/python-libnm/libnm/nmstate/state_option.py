@@ -6,9 +6,9 @@ from ..version import LATEST_SCHEMA_VERSION
 
 
 class NmstateStateKind(enum.StrEnum):
-    RUNNING_NETWORK_STATE = "running-network-state"
-    SAVED_NETWORK_STATE = "saved-network-state"
-    DEFAULT = RUNNING_NETWORK_STATE
+    RUNNING = "running-network-state"
+    SAVED = "saved-network-state"
+    DEFAULT = RUNNING
 
 
 class NmstateQueryOption:
@@ -20,6 +20,12 @@ class NmstateQueryOption:
 
     def to_dict(self):
         return {"version": self.version, "kind": self.kind}
+
+    def running():
+        return NmstateQueryOption(kind=NmstateStateKind.RUNNING)
+
+    def saved():
+        return NmstateQueryOption(kind=NmstateStateKind.SAVED)
 
 
 class NmstateApplyOption:

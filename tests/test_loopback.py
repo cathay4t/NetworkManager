@@ -7,6 +7,7 @@ from .testlib.statelib import load_yaml
 import pytest
 
 from libnm import NmClient
+from libnm.nmstate import NmstateStateKind
 
 
 def test_query_loopback():
@@ -66,7 +67,18 @@ def clean_up_loopback():
     )
 
 
-def test_add_ip_to_loopback(clean_up_loopback):
+@pytest.mark.parametrize(
+    "query_kind",
+    [
+        NmstateStateKind.RUNNING,
+        NmstateStateKind.SAVED,
+    ],
+    ids=[
+        "query_running",
+        "query_saved",
+    ],
+)
+def test_add_ip_to_loopback(clean_up_loopback, query_kind):
     cli = NmClient()
     cli.apply_network_state(
         load_yaml(
@@ -89,7 +101,7 @@ def test_add_ip_to_loopback(clean_up_loopback):
         )
     )
 
-    iface_state = show_only("lo")
+    iface_state = show_only("lo", kind=query_kind)
     assert state_match(
         [
             {"ip": "127.0.0.2", "prefix-length": 32},

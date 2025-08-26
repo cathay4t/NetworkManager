@@ -44,3 +44,10 @@ impl MergedNetworkState {
         }
     }
 }
+
+impl NetworkState {
+    pub fn merge(&mut self, new_state: &Self) -> Result<(), NmstateError> {
+        self.ifaces.merge(&new_state.ifaces)?;
+        Ok(())
+    }
+}

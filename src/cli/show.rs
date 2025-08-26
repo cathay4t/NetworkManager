@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{NmClient, NmNoDaemon};
+use nm::{NmClient, NmNoDaemon, nmstate::NmstateQueryOption};
 
 use crate::CliError;
 
@@ -20,16 +20,33 @@ impl CommandShow {
                     .action(clap::ArgAction::SetTrue)
                     .help("Do not connect to NetworkManager daemon"),
             )
+            .arg(
+                clap::Arg::new("SAVED")
+                    .long("saved")
+                    .short('s')
+                    .action(clap::ArgAction::SetTrue)
+                    .help("Show the daemon saved state only"),
+            )
     }
 
     pub(crate) async fn handle(
         matches: &clap::ArgMatches,
     ) -> Result<(), CliError> {
         let net_state = if matches.get_flag("NO_DAEMON") {
+            if matches.get_flag("SAVED") {
+                return Err(
+                    "--no-daemon cannot be used with --saved argument".into()
+                );
+            }
             NmNoDaemon::query_network_state(Default::default()).await?
         } else {
             let mut cli = NmClient::new().await?;
-            cli.query_network_state(Default::default()).await?
+            let opt = if matches.get_flag("SAVED") {
+                NmstateQueryOption::saved()
+            } else {
+                NmstateQueryOption::running()
+            };
+            cli.query_network_state(opt).await?
         };
         println!("{}", serde_yaml::to_string(&net_state)?);
 
