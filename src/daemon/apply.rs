@@ -70,7 +70,10 @@ pub(crate) async fn apply_network_state(
     previous_applied_state.merge(&apply_state)?;
     let new_applied_state = previous_applied_state;
 
-    if let Err(e) = NmDaemonConfig::save_state(&new_applied_state).await {
+    if let Err(e) =
+        NmDaemonConfig::save_state(conn, &desired_state, &new_applied_state)
+            .await
+    {
         conn.log_warn(format!(
             "BUG: Failed to persistent desired state {new_applied_state}: {e}"
         ))

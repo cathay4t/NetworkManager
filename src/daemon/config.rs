@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use nm::{ErrorKind, InterfaceType, NetworkState, NmError, NmstateInterface};
+use nm::{
+    ErrorKind, InterfaceType, NetworkState, NmError, NmIpcConnection,
+    NmstateInterface,
+};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -13,12 +16,16 @@ impl NmDaemonConfig {
         "/etc/NetworkManager/states/internal/applied.yml";
 
     pub(crate) async fn save_state(
-        net_state: &NetworkState,
+        conn: &mut NmIpcConnection,
+        desired_state: &NetworkState,
+        applied_net_state: &NetworkState,
     ) -> Result<(), NmError> {
         create_instal_state_dir()?;
 
-        let mut net_state = net_state.clone();
-        discard_absent_iface(&mut net_state);
+        let mut net_state = applied_net_state.clone();
+        discard_absent_iface(&mut net_state, desired_state);
+
+        conn.log_debug(format!("Saving state {net_state}")).await;
 
         let yaml_str = serde_yaml::to_string(&net_state).map_err(|e| {
             NmError::new(
@@ -77,8 +84,11 @@ fn create_instal_state_dir() -> Result<(), NmError> {
     Ok(())
 }
 
-fn discard_absent_iface(net_state: &mut NetworkState) {
-    let pending_changes: Vec<(String, InterfaceType)> = net_state
+fn discard_absent_iface(
+    applied_net_state: &mut NetworkState,
+    desired_state: &NetworkState,
+) {
+    let pending_changes: Vec<(String, InterfaceType)> = desired_state
         .ifaces
         .iter()
         .filter_map(|i| {
@@ -90,7 +100,7 @@ fn discard_absent_iface(net_state: &mut NetworkState) {
         })
         .collect();
     for (iface_name, iface_type) in pending_changes {
-        net_state
+        applied_net_state
             .ifaces
             .remove(iface_name.as_str(), Some(&iface_type));
     }

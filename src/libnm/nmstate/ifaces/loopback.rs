@@ -5,13 +5,11 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, ErrorKind, InterfaceIpAddr, JsonDisplay, NmError,
-    NmstateInterface,
+    BaseInterface, ErrorKind, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, JsonDisplay, NmError, NmstateInterface,
 };
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// Holder for interface with unknown interface type defined.
@@ -27,6 +25,39 @@ impl LoopbackInterface {
         Self {
             base,
             ..Default::default()
+        }
+    }
+}
+
+impl Default for LoopbackInterface {
+    fn default() -> Self {
+        Self {
+            base: BaseInterface {
+                name: "lo".into(),
+                iface_type: InterfaceType::Loopback,
+                state: InterfaceState::Up,
+                mtu: Some(65536),
+                ipv4: Some(InterfaceIpv4 {
+                    enabled: Some(true),
+                    dhcp: Some(false),
+                    addresses: Some(vec![InterfaceIpAddr {
+                        ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
+                        prefix_length: 8,
+                        ..Default::default()
+                    }]),
+                }),
+                ipv6: Some(InterfaceIpv6 {
+                    enabled: Some(true),
+                    autoconf: Some(false),
+                    dhcp: Some(false),
+                    addresses: Some(vec![InterfaceIpAddr {
+                        ip: IpAddr::V6(Ipv6Addr::LOCALHOST),
+                        prefix_length: 128,
+                        ..Default::default()
+                    }]),
+                }),
+                ..Default::default()
+            },
         }
     }
 }
@@ -48,8 +79,8 @@ impl NmstateInterface for LoopbackInterface {
         true
     }
 
-    /// Loopback interface should always have 127.0.0.1 and ::1 IP address
-    /// regardless what user desired.
+    /// * Loopback interface should always have 127.0.0.1 and ::1 IP address
+    ///   regardless what user desired.
     fn sanitize_iface_specfic(
         &mut self,
         _current: Option<&Self>,

@@ -43,12 +43,7 @@ def clean_up_loopback():
                 interfaces:
                 - name: lo
                   type: loopback
-                  ipv4:
-                    enabled: true
-                    address: []
-                  ipv6:
-                    enabled: true
-                    address: []
+                  state: absent
                 """
         )
     )

@@ -80,6 +80,7 @@ pub(crate) fn apply_iface_link_changes(
 }
 
 /// Skip link:
+///  * loopback interface cannot be deleted
 ///  * Absent on non-exist interface
 ///  * Veth peer should be skipped when both end is marked as absent
 fn should_skip_link_change(
@@ -88,6 +89,13 @@ fn should_skip_link_change(
     merged_ifaces: &MergedInterfaces,
 ) -> bool {
     if apply_iface.is_absent() {
+        if apply_iface.iface_type() == &InterfaceType::Loopback {
+            log::info!(
+                "Skipping removing loopback interface because it cannot be \
+                 deleted",
+            );
+            return true;
+        }
         if cur_iface.is_none() {
             log::info!(
                 "Skipping removing interface {}/{} because it does not exists",

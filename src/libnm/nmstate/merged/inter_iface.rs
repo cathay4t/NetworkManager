@@ -166,7 +166,15 @@ impl MergedInterfaces {
     }
 
     fn post_merge_sanitize(&mut self) -> Result<(), NmError> {
-        // Place holder
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+        {
+            if iface.merged.iface_type() == &InterfaceType::Loopback {
+                iface.post_merge_sanitize_loopback();
+            }
+        }
         Ok(())
     }
 }
