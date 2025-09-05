@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq,
 };
 
-use crate::{Interface, InterfaceType, JsonDisplay, NmError, NmstateInterface};
+use crate::{Interface, InterfaceType, JsonDisplay, NmstateInterface};
 
 /// Represent a list of [Interface].
 ///
@@ -159,36 +159,33 @@ impl Interfaces {
     /// Remove interface based on interface name and interface type.
     /// When iface_type is defined, we validate interface type also.
     /// The first interface matches will be returned.
+    /// If iface_type is undefined, only search kernel interfaces
     pub fn remove(
         &mut self,
         iface_name: &str,
         iface_type: Option<&InterfaceType>,
     ) -> Option<Interface> {
-        if let Some(iface_ref) = self.get(iface_name, iface_type) {
-            let is_userspace = iface_ref.is_userspace();
-            let iface_type = iface_ref.iface_type().clone();
-
-            if is_userspace {
+        if let Some(iface_type) = iface_type {
+            if iface_type.is_userspace() {
                 self.user_ifaces
-                    .remove(&(iface_name.to_string(), iface_type))
+                    .remove(&(iface_name.to_string(), iface_type.clone()))
+            } else if let Some(iface) = self.kernel_ifaces.get(iface_name) {
+                if iface.iface_type() == iface_type {
+                    self.kernel_ifaces.remove(iface_name)
+                } else {
+                    log::debug!(
+                        "Interfaces::remove(): found interface \
+                         {iface_name} holding {}, not requested \
+                         {iface_type}",
+                        iface.iface_type()
+                    );
+                    None
+                }
             } else {
-                self.kernel_ifaces.remove(iface_name)
+                None
             }
         } else {
-            None
+            self.kernel_ifaces.remove(iface_name)
         }
-    }
-
-    pub fn merge(&mut self, new_ifaces: &Self) -> Result<(), NmError> {
-        for new_iface in new_ifaces.iter() {
-            if let Some(iface) =
-                self.get_mut(new_iface.name(), Some(new_iface.iface_type()))
-            {
-                iface.merge(new_iface)?;
-            } else {
-                self.push(new_iface.clone());
-            }
-        }
-        Ok(())
     }
 }

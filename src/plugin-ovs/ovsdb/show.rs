@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use nm::{
     BaseInterface, Interface, InterfaceType, Interfaces, NetworkState, NmError,
-    NmstateController, NmstateInterface, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgePortConfig, OvsInterface, UnknownInterface,
+    NmstateInterface, OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
+    OvsInterface, UnknownInterface,
 };
 
 use super::db::{OvsDbConnection, OvsDbEntry};

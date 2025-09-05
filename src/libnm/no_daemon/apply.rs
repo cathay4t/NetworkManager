@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::inter_ifaces::apply_ifaces;
 use crate::{
     ErrorKind, MergedNetworkState, NetworkState, NmError, NmNoDaemon,
     NmstateApplyOption,
 };
 
-use super::inter_ifaces::apply_ifaces;
+const RETRY_COUNT: usize = 10;
+const RETRY_INTERVAL_MS: u64 = 500;
 
 impl NmNoDaemon {
     pub async fn apply_network_state(
@@ -34,12 +36,30 @@ impl NmNoDaemon {
 
         Self::apply_merged_state(&merged_state).await?;
 
+        let mut result: Result<(), NmError> = Ok(());
         if !option.no_verify {
-            let post_apply_current_state =
-                Self::query_network_state(Default::default()).await?;
-            log::debug!("Post apply network state: {post_apply_current_state}");
-            merged_state.verify(&post_apply_current_state)?;
+            for cur_retry_count in 1..(RETRY_COUNT + 1) {
+                let post_apply_current_state =
+                    Self::query_network_state(Default::default()).await?;
+                log::debug!(
+                    "Post apply network state: {post_apply_current_state}"
+                );
+                result = merged_state.verify(&post_apply_current_state);
+                if let Err(e) = &result {
+                    log::info!(
+                        "Retrying({cur_retry_count}/{RETRY_COUNT}) on \
+                         verification error: {e}"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        RETRY_INTERVAL_MS,
+                    ))
+                    .await;
+                } else {
+                    break;
+                }
+            }
         }
+        result?;
 
         let diff_state = merged_state
             .gen_state_for_apply()

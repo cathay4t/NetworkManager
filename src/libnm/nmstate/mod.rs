@@ -19,25 +19,22 @@ pub(crate) mod deserializer;
 #[allow(dead_code)]
 pub(crate) mod serializer;
 
-pub use self::iface::Interface;
-pub use self::iface_state::InterfaceState;
-pub use self::iface_trait::{
-    NmstateChild, NmstateChildInterface, NmstateController,
-    NmstateControllerInterface, NmstateInterface,
+pub use self::{
+    iface::Interface,
+    iface_state::InterfaceState,
+    iface_trait::NmstateInterface,
+    iface_type::InterfaceType,
+    ifaces::{
+        BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
+        Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
+        OvsBridgePortConfig, OvsInterface, UnknownInterface, VethConfig,
+    },
+    ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
+    merged::{MergedInterface, MergedInterfaces, MergedNetworkState},
+    net_state::NetworkState,
+    state_options::{NmstateApplyOption, NmstateQueryOption, NmstateStateKind},
+    version::CUR_SCHEMA_VERSION,
 };
-pub use self::iface_type::InterfaceType;
-pub use self::ifaces::{
-    BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgePortConfig, OvsInterface, UnknownInterface, VethConfig,
-};
-pub use self::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
-pub use self::merged::{MergedInterface, MergedInterfaces, MergedNetworkState};
-pub use self::net_state::NetworkState;
-pub use self::state_options::{
-    NmstateApplyOption, NmstateQueryOption, NmstateStateKind,
-};
-pub use self::version::CUR_SCHEMA_VERSION;
 
 #[cfg(test)]
 mod unit_tests;

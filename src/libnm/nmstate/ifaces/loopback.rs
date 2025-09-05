@@ -71,10 +71,6 @@ impl NmstateInterface for LoopbackInterface {
         &mut self.base
     }
 
-    fn is_userspace(&self) -> bool {
-        false
-    }
-
     fn is_virtual(&self) -> bool {
         true
     }

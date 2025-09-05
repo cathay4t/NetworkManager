@@ -5,24 +5,17 @@ use std::net::IpAddr;
 use crate::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 
 impl InterfaceIpv4 {
-    pub(crate) fn merge(&mut self, new: &Self) {
-        if new.enabled.is_some() {
-            self.enabled = new.enabled;
-        }
-        if self.dhcp.is_none() && self.is_enabled() {
-            self.dhcp = new.dhcp;
-        }
+    pub(crate) fn post_merge(&mut self, old: &Self) {
         // Normally, we expect backend to preserve configuration which not
         // mentioned in desire or all auto ip address, but when DHCP switch from
         // ON to OFF, the design of nmstate is expecting dynamic IP address goes
         // static. This should be done by top level code.
-        if new.is_auto()
-            && new.addresses.is_some()
+        if old.is_auto()
+            && old.addresses.is_some()
             && self.is_enabled()
             && !self.is_auto()
-            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
+            && is_ip_addrs_none_or_all_auto(old.addresses.as_deref())
         {
-            self.addresses.clone_from(&new.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
                     a.valid_life_time = None;
@@ -34,27 +27,17 @@ impl InterfaceIpv4 {
 }
 
 impl InterfaceIpv6 {
-    pub(crate) fn merge(&mut self, new: &Self) {
-        if new.enabled.is_some() {
-            self.enabled = new.enabled;
-        }
-        if self.dhcp.is_none() && self.is_enabled() {
-            self.dhcp = new.dhcp;
-        }
-        if self.autoconf.is_none() && self.is_enabled() {
-            self.autoconf = new.autoconf;
-        }
+    pub(crate) fn post_merge(&mut self, old: &Self) {
         // Normally, we expect backend to preserve configuration which not
         // mentioned in desire, but when DHCP switch from ON to OFF, the design
         // of nmstate is expecting dynamic IP address goes static. This should
         // be done by top level code.
-        if new.is_auto()
-            && new.addresses.is_some()
+        if old.is_auto()
+            && old.addresses.is_some()
             && self.is_enabled()
             && !self.is_auto()
-            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
+            && is_ip_addrs_none_or_all_auto(old.addresses.as_deref())
         {
-            self.addresses.clone_from(&new.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
                     a.valid_life_time = None;

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ErrorKind, MergedInterfaces, NmError, NmstateInterface};
-
 use super::{iface::apply_iface_link_changes, ip::apply_iface_ip_changes};
+use crate::{
+    ErrorKind, MergedInterface, MergedInterfaces, NmError, NmstateInterface,
+};
 
 pub(crate) async fn apply_ifaces(
     merged_ifaces: &MergedInterfaces,
@@ -20,15 +21,24 @@ async fn apply_ifaces_link_changes(
 ) -> Result<(), NmError> {
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
 
-    // TODO(Gris Ge): Sort by apply_order
-    for merged_iface in merged_ifaces
+    let mut sorted_changed_mergd_ifaces: Vec<&MergedInterface> = merged_ifaces
         .kernel_ifaces
         .values()
         .filter(|i| i.for_apply.is_some())
-    {
-        // It is safe to unwrap here as it is checked by filter()
-        let apply_iface = merged_iface.for_apply.as_ref().unwrap();
+        .collect();
+    sorted_changed_mergd_ifaces.sort_unstable_by_key(|i| {
+        i.for_apply
+            .as_ref()
+            .map(|i| i.base_iface().up_priority)
+            .unwrap_or(u32::MAX)
+    });
 
+    for merged_iface in sorted_changed_mergd_ifaces {
+        let apply_iface = if let Some(i) = merged_iface.for_apply.as_ref() {
+            i
+        } else {
+            continue;
+        };
         if let Some(np_iface) = apply_iface_link_changes(
             apply_iface,
             merged_iface.current.as_ref(),

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::value::gen_revert_state;
 use crate::{
     Interface, InterfaceState, MergedInterface, NmError, NmstateInterface,
 };
-
-use super::value::gen_revert_state;
 
 impl MergedInterface {
     pub(crate) fn generate_revert(&self) -> Result<Option<Interface>, NmError> {

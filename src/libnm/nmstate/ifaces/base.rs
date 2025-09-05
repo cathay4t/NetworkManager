@@ -69,53 +69,6 @@ pub struct BaseInterface {
 impl BaseInterface {
     pub fn hide_secrets(&mut self) {}
 
-    pub fn merge(&mut self, other: &Self) {
-        // Do not allow unknown interface type overriding existing
-        // Do not allow ethernet interface type overriding veth
-        if !(other.iface_type.is_unknown()
-            || (other.iface_type == InterfaceType::Ethernet
-                && self.iface_type == InterfaceType::Veth))
-        {
-            self.iface_type = other.iface_type.clone();
-        }
-        if other.state != InterfaceState::Unknown {
-            self.state = other.state;
-        }
-        if other.controller.is_some() {
-            self.controller.clone_from(&other.controller);
-        }
-        if other.controller_type.is_some() {
-            self.controller_type.clone_from(&other.controller_type);
-        }
-        if other.mac_address.is_some() {
-            self.mac_address.clone_from(&other.mac_address);
-        }
-        if other.permanent_mac_address.is_some() {
-            self.permanent_mac_address
-                .clone_from(&other.permanent_mac_address);
-        }
-        if other.mtu.is_some() {
-            self.mtu = other.mtu;
-        }
-        if other.min_mtu.is_some() {
-            self.min_mtu = other.min_mtu;
-        }
-        if other.max_mtu.is_some() {
-            self.max_mtu = other.max_mtu;
-        }
-        match (self.ipv4.as_mut(), other.ipv4.as_ref()) {
-            (None, Some(other_ipv4)) => self.ipv4 = Some(other_ipv4.clone()),
-            (Some(self_ipv4), Some(other_ipv4)) => self_ipv4.merge(other_ipv4),
-            _ => (),
-        }
-
-        match (self.ipv6.as_mut(), other.ipv6.as_ref()) {
-            (None, Some(other_ipv6)) => self.ipv6 = Some(other_ipv6.clone()),
-            (Some(self_ipv6), Some(other_ipv6)) => self_ipv6.merge(other_ipv6),
-            _ => (),
-        }
-    }
-
     pub fn sanitize(&mut self, current: Option<&Self>) -> Result<(), NmError> {
         if let Some(ipv4) = self.ipv4.as_mut() {
             ipv4.sanitize(current.and_then(|c| c.ipv4.as_ref()))?;
@@ -176,6 +129,22 @@ impl BaseInterface {
 
     pub(crate) fn is_absent(&self) -> bool {
         self.state == InterfaceState::Absent
+    }
+
+    pub(crate) fn is_up_priority_valid(&self) -> bool {
+        if self.has_controller() {
+            self.up_priority != 0
+        } else {
+            true
+        }
+    }
+
+    fn has_controller(&self) -> bool {
+        if let Some(ctrl) = self.controller.as_deref() {
+            !ctrl.is_empty()
+        } else {
+            false
+        }
     }
 }
 

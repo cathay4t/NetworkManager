@@ -5,7 +5,9 @@ mod info;
 mod listener;
 mod plugin_trait;
 
-pub use self::client::{NmPluginClient, NmPluginCmd};
-pub use self::info::NmPluginInfo;
-pub use self::listener::NmIpcListener;
-pub use self::plugin_trait::NmPlugin;
+pub use self::{
+    client::{NmPluginClient, NmPluginCmd},
+    info::NmPluginInfo,
+    listener::NmIpcListener,
+    plugin_trait::NmPlugin,
+};

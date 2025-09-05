@@ -37,12 +37,6 @@ impl NmstateInterface for UnknownInterface {
 
     /// Not sure is kernel interface or user space interface, return true
     /// always.
-    fn is_userspace(&self) -> bool {
-        true
-    }
-
-    /// Not sure is kernel interface or user space interface, return true
-    /// always.
     fn is_virtual(&self) -> bool {
         true
     }

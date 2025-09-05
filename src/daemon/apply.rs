@@ -15,7 +15,7 @@ const RETRY_INTERVAL_MS: u64 = 500;
 pub(crate) async fn apply_network_state(
     conn: &mut NmIpcConnection,
     plugins: &NmDaemonPlugins,
-    desired_state: NetworkState,
+    mut desired_state: NetworkState,
     opt: NmstateApplyOption,
 ) -> Result<NetworkState, NmError> {
     conn.log_debug(format!("apply {desired_state} with option {opt}"))
@@ -23,17 +23,22 @@ pub(crate) async fn apply_network_state(
 
     let mut previous_applied_state =
         NmDaemonConfig::read_applied_state().await?;
-    let mut new_desired_state = previous_applied_state.clone();
 
-    new_desired_state.merge(&desired_state)?;
+    desired_state.ifaces.unify_veth_and_ethernet();
 
-    conn.log_debug(format!(
-        "Merged desired state with saved state, got {new_desired_state}"
+    let state_to_save = previous_applied_state.merge(&desired_state)?;
+    let mut state_to_apply = state_to_save.clone();
+    remove_undesired_ifaces(&mut state_to_apply, &desired_state);
+
+    conn.log_info(format!(
+        "Merged desired with previous saved state, state to apply \
+         {state_to_apply}"
     ))
     .await;
-
-    let pre_apply_current_state =
+    let mut pre_apply_current_state =
         query_network_state(conn, plugins, Default::default()).await?;
+
+    pre_apply_current_state.ifaces.unify_veth_and_ethernet();
 
     conn.log_debug(format!(
         "Pre-apply current state {pre_apply_current_state}"
@@ -41,10 +46,10 @@ pub(crate) async fn apply_network_state(
     .await;
 
     let revert_state =
-        new_desired_state.generate_revert(&pre_apply_current_state)?;
+        state_to_apply.generate_revert(&pre_apply_current_state)?;
 
     let merged_state = MergedNetworkState::new(
-        new_desired_state,
+        state_to_apply,
         pre_apply_current_state.clone(),
         opt.clone(),
     )?;
@@ -66,16 +71,9 @@ pub(crate) async fn apply_network_state(
         return Err(e);
     }
 
-    let apply_state = merged_state.gen_state_for_apply();
-    previous_applied_state.merge(&apply_state)?;
-    let new_applied_state = previous_applied_state;
-
-    if let Err(e) =
-        NmDaemonConfig::save_state(conn, &desired_state, &new_applied_state)
-            .await
-    {
+    if let Err(e) = NmDaemonConfig::save_state(conn, &state_to_save).await {
         conn.log_warn(format!(
-            "BUG: Failed to persistent desired state {new_applied_state}: {e}"
+            "BUG: Failed to persistent desired state {state_to_save}: {e}"
         ))
         .await;
     }
@@ -158,4 +156,25 @@ async fn verify(
     .await;
     merged_state.verify(&post_apply_current_state)?;
     Ok(())
+}
+
+fn remove_undesired_ifaces(
+    merged_desired_state: &mut NetworkState,
+    desired_state: &NetworkState,
+) {
+    merged_desired_state
+        .ifaces
+        .kernel_ifaces
+        .retain(|iface_name, _| {
+            desired_state
+                .ifaces
+                .kernel_ifaces
+                .contains_key(&iface_name.to_string())
+        });
+    merged_desired_state.ifaces.user_ifaces.retain(|key, _| {
+        desired_state
+            .ifaces
+            .user_ifaces
+            .contains_key(&(key.clone()))
+    });
 }

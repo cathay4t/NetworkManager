@@ -45,10 +45,6 @@ impl NmstateInterface for OvsInterface {
         true
     }
 
-    fn is_userspace(&self) -> bool {
-        false
-    }
-
     fn hide_secrets_iface_specific(&mut self) {}
 
     fn sanitize_iface_specfic(

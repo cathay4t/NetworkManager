@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::super::value::{copy_undefined_value, gen_diff_json_value};
 use crate::{
     Interface, Interfaces, MergedInterfaces, NmError, NmstateInterface,
 };
-
-use super::super::value::{copy_undefined_value, gen_diff_json_value};
 
 impl MergedInterfaces {
     pub fn gen_diff(&self) -> Result<Interfaces, NmError> {

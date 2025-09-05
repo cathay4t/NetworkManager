@@ -95,4 +95,20 @@ impl InterfaceType {
     pub fn is_unknown(&self) -> bool {
         matches!(self, InterfaceType::Unknown(_))
     }
+
+    /// Whether interface only exist in userspace configuration without
+    /// any kernel interface index.
+    pub fn is_userspace(&self) -> bool {
+        matches!(self, InterfaceType::Unknown(_) | InterfaceType::OvsBridge)
+    }
+
+    pub fn is_controller(&self) -> bool {
+        matches!(
+            self,
+            InterfaceType::OvsBridge
+                | InterfaceType::Bond
+                | InterfaceType::Hsr
+                | InterfaceType::Vrf,
+        )
+    }
 }

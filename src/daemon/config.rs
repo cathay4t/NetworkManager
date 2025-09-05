@@ -4,8 +4,10 @@ use nm::{
     ErrorKind, InterfaceType, NetworkState, NmError, NmIpcConnection,
     NmstateInterface,
 };
-use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::{
+    fs::File,
+    io::{AsyncReadExt, AsyncWriteExt},
+};
 
 pub(crate) struct NmDaemonConfig;
 
@@ -17,13 +19,12 @@ impl NmDaemonConfig {
 
     pub(crate) async fn save_state(
         conn: &mut NmIpcConnection,
-        desired_state: &NetworkState,
-        applied_net_state: &NetworkState,
+        state_to_save: &NetworkState,
     ) -> Result<(), NmError> {
         create_instal_state_dir()?;
 
-        let mut net_state = applied_net_state.clone();
-        discard_absent_iface(&mut net_state, desired_state);
+        let mut net_state = state_to_save.clone();
+        discard_absent_iface(&mut net_state);
 
         conn.log_debug(format!("Saving state {net_state}")).await;
 
@@ -84,11 +85,8 @@ fn create_instal_state_dir() -> Result<(), NmError> {
     Ok(())
 }
 
-fn discard_absent_iface(
-    applied_net_state: &mut NetworkState,
-    desired_state: &NetworkState,
-) {
-    let pending_changes: Vec<(String, InterfaceType)> = desired_state
+fn discard_absent_iface(state_to_save: &mut NetworkState) {
+    let pending_changes: Vec<(String, InterfaceType)> = state_to_save
         .ifaces
         .iter()
         .filter_map(|i| {
@@ -100,7 +98,7 @@ fn discard_absent_iface(
         })
         .collect();
     for (iface_name, iface_type) in pending_changes {
-        applied_net_state
+        state_to_save
             .ifaces
             .remove(iface_name.as_str(), Some(&iface_type));
     }

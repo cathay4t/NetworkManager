@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::env::current_exe;
-use std::os::unix::fs::FileTypeExt;
-use std::os::unix::fs::PermissionsExt;
+use std::{
+    collections::HashMap,
+    env::current_exe,
+    os::unix::fs::{FileTypeExt, PermissionsExt},
+};
 
 use nm::{
     NetworkState, NmError, NmIpcConnection, NmstateApplyOption,

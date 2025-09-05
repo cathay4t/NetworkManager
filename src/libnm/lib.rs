@@ -8,12 +8,14 @@ mod nmstate;
 mod no_daemon;
 mod uuid;
 
-pub use self::client::{NmClient, NmClientCmd};
-pub use self::error::{ErrorKind, NmError};
-pub use self::ipc::{NmCanIpc, NmIpcConnection};
-pub use self::logging::{NmLogEntry, NmLogLevel};
-pub use self::no_daemon::NmNoDaemon;
-pub use self::uuid::NmUuid;
-
 pub use libnm_derive::JsonDisplay;
 pub use nmstate::*;
+
+pub use self::{
+    client::{NmClient, NmClientCmd},
+    error::{ErrorKind, NmError},
+    ipc::{NmCanIpc, NmIpcConnection},
+    logging::{NmLogEntry, NmLogLevel},
+    no_daemon::NmNoDaemon,
+    uuid::NmUuid,
+};

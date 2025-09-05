@@ -7,15 +7,26 @@ use crate::{BaseInterface, InterfaceType, NmError};
 
 /// Trait implemented by all type of interfaces.
 pub trait NmstateInterface:
-    std::fmt::Debug + for<'a> Deserialize<'a> + Serialize + Default
+    std::fmt::Debug + for<'a> Deserialize<'a> + Serialize + Default + Clone
 {
     fn base_iface(&self) -> &BaseInterface;
 
     fn base_iface_mut(&mut self) -> &mut BaseInterface;
 
+    /// Whether interface is physical interface or create by kernel or
+    /// userspace at runtime.
     fn is_virtual(&self) -> bool;
 
-    fn is_userspace(&self) -> bool;
+    /// Whether specified interface only exist in user space configuration
+    /// without any kernel interface index.
+    fn is_userspace(&self) -> bool {
+        self.iface_type().is_userspace()
+    }
+
+    /// Whether can hold ports
+    fn is_controller(&self) -> bool {
+        self.iface_type().is_controller()
+    }
 
     fn name(&self) -> &str {
         self.base_iface().name.as_str()
@@ -58,27 +69,29 @@ pub trait NmstateInterface:
     /// Will invoke `merge_iface_specific()` at the end.
     /// Please do not override this function but implement
     /// `merge_iface_specific()` instead.
-    fn merge(&mut self, new_state: &Self) -> Result<(), NmError>
+    fn merge(&self, new_state: &Self) -> Result<Self, NmError>
     where
         for<'de> Self: Deserialize<'de>,
     {
         let mut new_value = serde_json::to_value(new_state)?;
-        let old_value = serde_json::to_value(&self)?;
+        let old_value = serde_json::to_value(self)?;
         copy_undefined_value(&mut new_value, &old_value);
 
-        *self = serde_json::from_value(new_value)?;
-        self.base_iface_mut().merge(new_state.base_iface());
-        self.merge_iface_specific(new_state)?;
+        let old_state = self.clone();
 
-        Ok(())
+        let mut ret: Self = serde_json::from_value(new_value)?;
+        ret.base_iface_mut().post_merge(old_state.base_iface())?;
+        ret.post_merge_iface_specific(&old_state)?;
+
+        Ok(ret)
     }
 
     /// Please implemented this function if special merge action required
     /// for certain interface type. Do not need to worry about the merge of
     /// [BaseInterface].
-    fn merge_iface_specific(
+    fn post_merge_iface_specific(
         &mut self,
-        _new_state: &Self,
+        _old_state: &Self,
     ) -> Result<(), NmError> {
         Ok(())
     }
@@ -158,55 +171,15 @@ pub trait NmstateInterface:
         _pre_apply: &Self,
     ) {
     }
-}
 
-pub trait NmstateController {
-    fn is_controller(&self) -> bool;
-    fn ports(&self) -> Option<Vec<&str>>;
-}
-
-impl<T> NmstateController for T
-where
-    T: NmstateControllerInterface,
-{
-    fn is_controller(&self) -> bool {
-        true
-    }
-
+    /// Return a list of port names. None means not desired or cannot hold
+    /// ports
     fn ports(&self) -> Option<Vec<&str>> {
-        self.ports()
-    }
-}
-
-/// Controller Interface
-///
-/// E.g. Bond, Linux bridge, OVS bridge, VRF
-pub trait NmstateControllerInterface: NmstateInterface {
-    fn ports(&self) -> Option<Vec<&str>>;
-}
-
-pub trait NmstateChild {
-    fn is_child(&self) -> bool;
-
-    fn parent(&self) -> Option<&str>;
-}
-
-/// Interface depend on its parent interface
-///
-/// E.g VLAN, VxLAN, MacVlan
-pub trait NmstateChildInterface: NmstateInterface {
-    fn parent(&self) -> Option<&str>;
-}
-
-impl<T> NmstateChild for T
-where
-    T: NmstateChildInterface,
-{
-    fn is_child(&self) -> bool {
-        true
+        None
     }
 
+    /// Return parent interface name, None means not desired or no parent
     fn parent(&self) -> Option<&str> {
-        self.parent()
+        None
     }
 }

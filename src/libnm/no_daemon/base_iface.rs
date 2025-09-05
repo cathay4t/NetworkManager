@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    NmError,
-    nmstate::{
-        BaseInterface, Interface, InterfaceState, InterfaceType,
-        NmstateInterface,
-    },
-};
-
 use super::{
     iface::nmstate_iface_state_to_nispor,
     ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
+};
+use crate::{
+    NmError,
+    nmstate::{BaseInterface, InterfaceState, InterfaceType},
 };
 
 const SUPPORTED_LIST: [InterfaceType; 3] = [
@@ -132,10 +128,17 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
 /// Apply changes to [BaseInterface] except the IP layer stuff.
 pub(crate) fn apply_base_iface_link_changes(
     np_iface: &mut nispor::IfaceConf,
-    apply_iface: &Interface,
-    _cur_iface: Option<&Interface>,
+    apply_iface: &BaseInterface,
 ) -> Result<(), NmError> {
-    np_iface.state =
-        nmstate_iface_state_to_nispor(apply_iface.base_iface().state);
+    // We do not check current property state, nispor will ignore unchanged
+    // property.
+
+    np_iface.state = nmstate_iface_state_to_nispor(apply_iface.state);
+    // It is OK to use `as` action here:
+    // 1. Pre-apply sanitize checker already confirmed it never exceed max_mtu,
+    //    in linux kernel, the ethernet max MTU is u32::MAX.
+    // 2. Verification process will complains if overflow a u32 for special
+    //    interface which support MTU bigger than u32::MAX.
+    np_iface.mtu = apply_iface.mtu.map(|mtu| mtu as u32);
     Ok(())
 }

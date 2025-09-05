@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::{
+    base_iface::apply_base_iface_link_changes, ethernet::apply_ethernet_conf,
+};
 use crate::{
     BaseInterface, Interface, InterfaceState, InterfaceType, MergedInterfaces,
     NmError, NmstateInterface,
-};
-
-use super::{
-    base_iface::apply_base_iface_link_changes, ethernet::apply_ethernet_conf,
 };
 
 fn nmstate_iface_type_to_nispor(
@@ -66,13 +65,13 @@ pub(crate) fn apply_iface_link_changes(
     };
     let init_np_conf = np_conf.clone();
 
-    apply_base_iface_link_changes(&mut np_conf, apply_iface, cur_iface)?;
+    apply_base_iface_link_changes(&mut np_conf, apply_iface.base_iface())?;
 
     if let Interface::Ethernet(apply_iface) = apply_iface {
         apply_ethernet_conf(&mut np_conf, apply_iface, cur_iface)?;
     }
 
-    if np_conf != init_np_conf {
+    if np_conf != init_np_conf || cur_iface.is_none() {
         Ok(Some(np_conf))
     } else {
         Ok(None)

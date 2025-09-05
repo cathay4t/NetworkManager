@@ -63,11 +63,6 @@ impl NmstateInterface for EthernetInterface {
     }
 
     fn is_virtual(&self) -> bool {
-        // TODO: Whether we should treat veth as virtual?
-        false
-    }
-
-    fn is_userspace(&self) -> bool {
         false
     }
 

@@ -5,8 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    JsonDisplay, LoopbackInterface, NmError, NmstateController,
-    NmstateInterface, OvsBridgeInterface, OvsInterface, UnknownInterface,
+    JsonDisplay, LoopbackInterface, NmError, NmstateInterface,
+    OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplay)]
@@ -169,8 +169,10 @@ macro_rules! gen_iface_trait_impl_mut {
 impl NmstateInterface for Interface {
     gen_iface_trait_impl!(
         (is_virtual, bool),
-        (is_userspace, bool),
         (base_iface, &BaseInterface),
+        (is_controller, bool),
+        (ports, Option<Vec<&str>>),
+        (parent, Option<&str>),
     );
 
     gen_iface_trait_impl_mut!(
@@ -272,22 +274,6 @@ impl NmstateInterface for Interface {
                      {pre_apply:?}"
                 );
             }
-        }
-    }
-}
-
-impl NmstateController for Interface {
-    fn is_controller(&self) -> bool {
-        match self {
-            Self::OvsBridge(i) => i.is_controller(),
-            _ => false,
-        }
-    }
-
-    fn ports(&self) -> Option<Vec<&str>> {
-        match self {
-            Self::OvsBridge(i) => i.ports(),
-            _ => None,
         }
     }
 }

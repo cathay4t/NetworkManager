@@ -22,11 +22,7 @@ impl MergedInterface {
         current: Option<Interface>,
     ) -> Result<Self, NmError> {
         let merged = match (&desired, &current) {
-            (Some(desired), Some(current)) => {
-                let mut merged = current.clone();
-                merged.merge(desired)?;
-                merged
-            }
+            (Some(desired), Some(current)) => current.merge(desired)?,
             (Some(state), None) | (None, Some(state)) => state.clone(),
             _ => {
                 log::warn!(

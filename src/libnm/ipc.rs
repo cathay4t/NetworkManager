@@ -3,8 +3,10 @@
 use std::time::Duration;
 
 use serde::{Serialize, Serializer, de::DeserializeOwned, ser::SerializeMap};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::UnixStream,
+};
 
 use crate::{ErrorKind, NmError, NmLogEntry};
 

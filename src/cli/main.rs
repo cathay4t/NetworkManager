@@ -2,15 +2,14 @@
 
 mod apply;
 mod error;
+mod merge;
 mod show;
 mod state;
 
-pub(crate) use self::error::CliError;
-
 use nm::NmClient;
 
-use self::apply::CommandApply;
-use self::show::CommandShow;
+pub(crate) use self::error::CliError;
+use self::{apply::CommandApply, merge::CommandMerge, show::CommandShow};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), CliError> {
@@ -34,7 +33,8 @@ async fn main() -> Result<(), CliError> {
         )
         .subcommand(clap::Command::new("ping").about("Check daemon connection"))
         .subcommand(CommandShow::new_cmd())
-        .subcommand(CommandApply::new_cmd());
+        .subcommand(CommandApply::new_cmd())
+        .subcommand(CommandMerge::new_cmd());
 
     let matches = cli_cmd.get_matches_mut();
 
@@ -78,6 +78,10 @@ async fn call_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     } else if let Some(matches) = matches.subcommand_matches(CommandApply::CMD)
     {
         CommandApply::handle(matches).await?;
+        Ok(())
+    } else if let Some(matches) = matches.subcommand_matches(CommandMerge::CMD)
+    {
+        CommandMerge::handle(matches).await?;
         Ok(())
     } else {
         Err(CliError::from("Unknown command"))

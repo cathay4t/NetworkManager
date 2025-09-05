@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, JsonDisplay, NmError,
-    NmstateControllerInterface, NmstateInterface,
+    BaseInterface, InterfaceType, JsonDisplay, NmError, NmstateInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
@@ -49,10 +48,6 @@ impl NmstateInterface for OvsBridgeInterface {
         true
     }
 
-    fn is_userspace(&self) -> bool {
-        true
-    }
-
     fn hide_secrets_iface_specific(&mut self) {}
 
     fn sanitize_iface_specfic(
@@ -77,9 +72,7 @@ impl NmstateInterface for OvsBridgeInterface {
     ) {
         // TODO(Gris Ge): Include full port config if any changed
     }
-}
 
-impl NmstateControllerInterface for OvsBridgeInterface {
     fn ports(&self) -> Option<Vec<&str>> {
         if let Some(br_conf) = &self.bridge {
             if let Some(port_confs) = &br_conf.ports {
