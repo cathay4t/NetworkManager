@@ -8,7 +8,6 @@
  * `nmstate`: Schema for desired state
  * `nmstatectl`: Nmstate backward compatibility CLI
 
-
 ## Features
  * Daemon Free Mode
  * Simply Plugin Design
