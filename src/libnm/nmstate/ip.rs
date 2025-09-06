@@ -132,11 +132,20 @@ impl InterfaceIpv4 {
                     ),
                 ));
             }
-            addrs.retain(|a| !a.is_auto());
-            addrs.iter_mut().for_each(|a| {
-                a.valid_life_time = None;
-                a.preferred_life_time = None
-            });
+            if let Some(addrs) = self.addresses.as_mut() {
+                addrs.retain(|addr| {
+                    if addr.is_auto() {
+                        log::info!("Ignoring dynamic addresses {addr}");
+                        false
+                    } else {
+                        true
+                    }
+                });
+                addrs.iter_mut().for_each(|a| {
+                    a.valid_life_time = None;
+                    a.preferred_life_time = None
+                });
+            }
         }
 
         if !self.is_enabled() {
@@ -276,22 +285,18 @@ impl InterfaceIpv6 {
                     ),
                 ));
             }
-            addrs.retain(|a| !a.is_auto());
+            addrs.retain(|addr| {
+                if addr.is_auto() {
+                    log::info!("Ignoring dynamic addresses {addr}");
+                    false
+                } else {
+                    true
+                }
+            });
             addrs.iter_mut().for_each(|a| {
                 a.valid_life_time = None;
                 a.preferred_life_time = None
             });
-        }
-
-        if self.is_auto() {
-            if let Some(addrs) = self.addresses.as_ref() {
-                for addr in addrs {
-                    log::info!(
-                        "Static addresses {addr} defined when dynamic IP is \
-                         enabled"
-                    );
-                }
-            }
         }
 
         if let Some(addrs) = self.addresses.as_mut() {
