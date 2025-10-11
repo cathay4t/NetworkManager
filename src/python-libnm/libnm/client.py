@@ -22,7 +22,8 @@ class NmIpcConnection:
 
     def send(self, json_str):
         data_raw = json_str.encode("utf-8")
-        length_raw = struct.pack(">I", len(data_raw) & U32_MAX)
+        length = len(data_raw) & U32_MAX
+        length_raw = length.to_bytes(4, byteorder="big")
         self.socket.sendall(length_raw)
         self.socket.sendall(data_raw)
 
@@ -32,7 +33,7 @@ class NmIpcConnection:
             length_raw = self.socket.recv(4)
             if not length_raw:
                 raise NmError("BUG", "Got empty reply from daemon")
-            length = struct.unpack(">I", length_raw)[0]
+            length = int.from_bytes(length_raw, byteorder="big")
             reply = json.loads(self.socket.recv(length).decode("utf-8"))
             match reply["kind"]:
                 case NmError.IPC_KIND:
