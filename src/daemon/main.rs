@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod api;
+mod dhcp;
 mod apply;
 mod config;
 mod daemon;

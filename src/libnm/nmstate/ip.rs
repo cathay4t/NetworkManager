@@ -10,6 +10,54 @@ const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
 const FOREVER: &str = "forever";
 
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+#[serde(try_from = "String", into = "String")]
+pub enum DhcpState {
+    #[default]
+    WaitLinkCarrier,
+    Running,
+    Done,
+    Error(String),
+}
+
+impl std::convert::Into<String> for DhcpState {
+    fn into(self) -> String {
+        match self {
+            Self::WaitLinkCarrier => "wait-link-carrier".into(),
+            Self::Running => "running".into(),
+            Self::Done => "done".into(),
+            Self::Error(v) => format!("error:{v}"),
+        }
+    }
+}
+
+impl std::convert::TryFrom<String> for DhcpState {
+    type Error = NmError;
+
+    fn try_from(value: String) -> Result<Self, NmError> {
+        match value.as_str() {
+            "wait-link-carrier" => Ok(Self::WaitLinkCarrier),
+            "running" => Ok(Self::Running),
+            "done" => Ok(Self::Done),
+            value => {
+                if let Some(err_msg) = value.strip_prefix("error:") {
+                    Ok(Self::Error(err_msg.to_string()))
+                } else {
+                    Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Invalid DHCP state {value}, valid values are \
+                             wait-link-carrier, running, done, \
+                             `error:<erro_message>`"
+                        ),
+                    ))
+                }
+            }
+        }
+    }
+}
+
 /// IPv4 configuration of interface.
 /// Example YAML output of interface holding static IPv4:
 /// ```yaml
@@ -47,6 +95,8 @@ pub struct InterfaceIpv4 {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub dhcp: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dhcp_state: Option<DhcpState>,
     /// IPv4 addresses.
     /// When applying with `None`, current IP address will be preserved.
     /// When applying with `Some(Vec::new())`, all IP address will be removed.
@@ -66,6 +116,7 @@ impl Default for InterfaceIpv4 {
         Self {
             enabled: Some(false),
             dhcp: None,
+            dhcp_state: None,
             addresses: None,
         }
     }
@@ -91,12 +142,14 @@ impl InterfaceIpv4 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
+    // * Remove DHCP state
     // * Remove auto IP address.
     // * Disable DHCP and remove address if enabled: false
     pub(crate) fn sanitize(
         &mut self,
         _current: Option<&Self>,
     ) -> Result<(), NmError> {
+        self.dhcp_state = None;
         if self.is_auto() {
             if let Some(addrs) = self.addresses.as_ref() {
                 for addr in addrs {

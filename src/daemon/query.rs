@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::sync::{Arc, Mutex};
+
 use nm::{
     ErrorKind, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
     NmstateQueryOption, NmstateStateKind,
 };
 
-use super::{config::NmDaemonConfig, plugin::NmDaemonPlugins};
+use super::{
+    config::NmDaemonConfig, plugin::NmDaemonPlugins,
+    share_data::NmDaemonShareData,
+};
 
 pub(crate) async fn query_network_state(
     conn: &mut NmIpcConnection,
     plugins: &NmDaemonPlugins,
     opt: NmstateQueryOption,
+    share_data: Arc<Mutex<NmDaemonShareData>>,
 ) -> Result<NetworkState, NmError> {
     conn.log_debug(format!("querying network state with option {opt}"))
         .await;
@@ -25,6 +31,17 @@ pub(crate) async fn query_network_state(
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;
             }
+            share_data
+                .lock()
+                .map_err(|e| {
+                    NmError::new(
+                        ErrorKind::Bug,
+                        format!("Failed to unlick NmDaemonShareData: {e}"),
+                    )
+                })?
+                .dhcpv4_manager
+                .query(&mut net_state)?;
+
             // TODO: Mark interface/routes not int saved state as ignored.
             Ok(net_state)
         }

@@ -29,7 +29,7 @@ impl NmDaemon {
         Ok(Self {
             api_ipc,
             plugins,
-            share_data: Arc::new(Mutex::new(NmDaemonShareData::new())),
+            share_data: Arc::new(Mutex::new(NmDaemonShareData::default())),
         })
     }
 

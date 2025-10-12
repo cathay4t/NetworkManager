@@ -1,15 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[derive(Debug)]
-pub(crate) struct NmDaemonShareData {
-    // Place holder
-    _foo: String,
-}
+use super::dhcp::NmDhcpV4Manager;
 
-impl NmDaemonShareData {
-    pub(crate) fn new() -> Self {
-        Self {
-            _foo: "place_holder".into(),
-        }
-    }
+#[derive(Debug, Default)]
+pub(crate) struct NmDaemonShareData {
+    pub(crate) dhcpv4_manager: NmDhcpV4Manager,
 }

@@ -17,6 +17,8 @@ pub struct BaseInterface {
     pub name: String,
     #[serde(default, rename = "type")]
     pub iface_type: InterfaceType,
+    #[serde(default, skip)]
+    pub iface_index: u32,
     #[serde(default)]
     pub state: InterfaceState,
     /// In which order should this interface been activated. The smallest

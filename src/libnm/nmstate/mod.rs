@@ -29,7 +29,7 @@ pub use self::{
         Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
         OvsBridgePortConfig, OvsInterface, UnknownInterface, VethConfig,
     },
-    ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
+    ip::{DhcpState, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
     merged::{MergedInterface, MergedInterfaces, MergedNetworkState},
     net_state::NetworkState,
     state_options::{NmstateApplyOption, NmstateQueryOption, NmstateStateKind},

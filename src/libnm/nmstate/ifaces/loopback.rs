@@ -45,6 +45,7 @@ impl Default for LoopbackInterface {
                         prefix_length: 8,
                         ..Default::default()
                     }]),
+                    ..Default::default()
                 }),
                 ipv6: Some(InterfaceIpv6 {
                     enabled: Some(true),

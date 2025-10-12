@@ -72,6 +72,7 @@ pub(crate) fn np_iface_to_base_iface(
             &np_iface.state,
             np_iface.flags.as_slice(),
         ),
+        iface_index: np_iface.index,
         iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
         mac_address: Some(np_iface.mac_address.to_uppercase()),
         permanent_mac_address: get_permanent_mac_address(np_iface),

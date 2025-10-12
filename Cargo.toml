@@ -44,7 +44,8 @@ default-features = false
 features = ["feature", "hostname"]
 
 [workspace.dependencies.mozim]
-version = "0.2.2"
+git = "https://github.com/nispor/mozim"
+default-features = false
 
 [workspace.dependencies.rtnetlink]
 version = "0.17.1"

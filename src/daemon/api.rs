@@ -11,15 +11,20 @@ use super::{
 
 pub(crate) async fn process_api_connection(
     mut conn: NmIpcConnection,
-    _share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: Arc<Mutex<NmDaemonShareData>>,
     plugins: NmDaemonPlugins,
 ) -> Result<(), NmError> {
     loop {
         match conn.recv::<NmClientCmd>().await {
             Ok(NmClientCmd::Ping) => conn.send(Ok("pong".to_string())).await?,
             Ok(NmClientCmd::QueryNetworkState(opt)) => {
-                let result =
-                    query_network_state(&mut conn, &plugins, *opt).await;
+                let result = query_network_state(
+                    &mut conn,
+                    &plugins,
+                    *opt,
+                    share_data.clone(),
+                )
+                .await;
                 conn.send(result).await?;
             }
             Ok(NmClientCmd::ApplyNetworkState(opt)) => {
@@ -29,6 +34,7 @@ pub(crate) async fn process_api_connection(
                     &plugins,
                     desired_state,
                     opt,
+                    share_data.clone(),
                 )
                 .await;
                 conn.send(result).await?;
