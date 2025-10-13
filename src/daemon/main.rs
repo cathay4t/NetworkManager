@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod api;
-mod dhcp;
 mod apply;
 mod config;
 mod daemon;
+mod dhcp;
 mod plugin;
 mod query;
 mod share_data;

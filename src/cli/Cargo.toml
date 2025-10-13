@@ -5,7 +5,7 @@ authors.workspace = true
 description = "Command line tool for communicating with NetworkManager daemon"
 documentation.workspace = true
 edition.workspace = true
-license.workspace = true
+license = "GPL-3.0-or-later"
 rust-version.workspace = true
 
 [dependencies]

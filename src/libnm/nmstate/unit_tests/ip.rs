@@ -39,7 +39,8 @@ fn test_purge_auto_ip_when_apply() {
           type: ethernet
           state: up
         "#,
-    ).unwrap();
+    )
+    .unwrap();
 
     let merged =
         MergedNetworkState::new(desired, current, Default::default()).unwrap();

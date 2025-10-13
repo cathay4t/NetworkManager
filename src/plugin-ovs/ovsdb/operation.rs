@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// This file is based on the work of nmstate project(https://nmstate.io/) which
+// is under license of Apache 2.0, author of nmstate origin file is:
+//  * Gris Ge <fge@redhat.com>
+
 // Hold 'Database Operations' defined in RFC-7047
 
 use std::collections::HashMap;

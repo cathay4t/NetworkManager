@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// This file is based on the work of nmstate project(https://nmstate.io/) which
+// is under license of Apache 2.0, authors of original file are:
+//  * Fernando Fernandez Mancera <ffmancera@riseup.net>
+//  * Gris Ge <fge@redhat.com>
+//  * elomscansio <163124154+elomscansio@users.noreply.github.com>
+
 use serde::Serializer;
 
 pub(crate) fn is_option_string_empty(data: &Option<String>) -> bool {

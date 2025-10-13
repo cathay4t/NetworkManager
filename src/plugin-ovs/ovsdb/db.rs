@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// This file is based on the work of nmstate project(https://nmstate.io/) which
+// is under license of Apache 2.0, authors of nmstate origin file are:
+//  * Gris Ge <fge@redhat.com>
+//  * Fernando Fernandez Mancera <ffmancera@riseup.net>
+
 use std::collections::HashMap;
 
 use nm::{ErrorKind, NmError};

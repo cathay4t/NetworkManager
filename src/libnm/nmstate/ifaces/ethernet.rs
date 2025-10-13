@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// This file is based on the work of nmstate project(https://nmstate.io/) which
+// is under license of Apache 2.0, authors of original file are:
+//  * Gris Ge <fge@redhat.com>
+//  * Marcelo Guerrero <marguerr@redhat.com>
+
 use serde::{Deserialize, Serialize};
 
 use crate::{

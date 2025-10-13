@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// This file is based on the work of nmstate project(https://nmstate.io/) which
+// is under license of Apache 2.0, authors of original file are:
+//  * Gris Ge <fge@redhat.com>
+//  * Fernando Fernandez Mancera <ffmancera@riseup.net>
+//  * Ales Musil <amusil@redhat.com>
+//  * Jan Vaclav <jvaclav@redhat.com>
+//  * Dan Kenigsberg <danken@redhat.com>
+//  * Enrique Llorente <ellorent@redhat.com>
+//  * Jan Vaclav <jvaclav@redhat.com>
+//  * Rahul Rajesh <rajeshrah22@gmail.com>
+
 use std::collections::HashMap;
 
 use serde::{
@@ -174,9 +185,8 @@ impl Interfaces {
                     self.kernel_ifaces.remove(iface_name)
                 } else {
                     log::debug!(
-                        "Interfaces::remove(): found interface \
-                         {iface_name} holding {}, not requested \
-                         {iface_type}",
+                        "Interfaces::remove(): found interface {iface_name} \
+                         holding {}, not requested {iface_type}",
                         iface.iface_type()
                     );
                     None
