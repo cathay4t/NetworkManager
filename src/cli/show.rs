@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use nm::{NmClient, NmNoDaemon, NmstateQueryOption};
+use nm::{
+    NetworkState, NmClient, NmNoDaemon, NmstateInterface, NmstateQueryOption,
+};
 
 use crate::CliError;
 
@@ -13,6 +15,11 @@ impl CommandShow {
         clap::Command::new("show")
             .alias("s")
             .about("Query network state")
+            .arg(
+                clap::Arg::new("IFNAME")
+                    .index(1)
+                    .help("Show specific interface only"),
+            )
             .arg(
                 clap::Arg::new("NO_DAEMON")
                     .long("no-daemon")
@@ -48,8 +55,28 @@ impl CommandShow {
             };
             cli.query_network_state(opt).await?
         };
+        let net_state =
+            if let Some(ifname) = matches.get_one::<String>("IFNAME") {
+                filter_net_state(&net_state, ifname)
+            } else {
+                net_state
+            };
+
         println!("{}", serde_yaml::to_string(&net_state)?);
 
         Ok(())
     }
+}
+
+fn filter_net_state(
+    net_state: &NetworkState,
+    iface_name: &str,
+) -> NetworkState {
+    let mut ret = NetworkState::new();
+    for iface in net_state.ifaces.to_vec() {
+        if iface.name() == iface_name {
+            ret.ifaces.push(iface.clone())
+        }
+    }
+    ret
 }
