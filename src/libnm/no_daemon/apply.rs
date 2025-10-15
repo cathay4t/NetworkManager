@@ -2,8 +2,7 @@
 
 use super::inter_ifaces::apply_ifaces;
 use crate::{
-    ErrorKind, MergedNetworkState, NetworkState, NmError, NmNoDaemon,
-    NmstateApplyOption,
+    MergedNetworkState, NetworkState, NmError, NmNoDaemon, NmstateApplyOption,
 };
 
 const RETRY_COUNT: usize = 10;
@@ -14,20 +13,11 @@ impl NmNoDaemon {
         desired_state: NetworkState,
         option: NmstateApplyOption,
     ) -> Result<NetworkState, NmError> {
-        if option.version != 1 {
-            return Err(NmError::new(
-                ErrorKind::InvalidSchemaVersion,
-                format!(
-                    "Only support version 1, but desired {}",
-                    option.version
-                ),
-            ));
-        }
         let current_state =
             Self::query_network_state(Default::default()).await?;
 
-        log::debug!("Current state {current_state}");
-        log::debug!("Applying {desired_state} with option {option}");
+        log::trace!("Current state {current_state}");
+        log::trace!("Applying {desired_state} with option {option}");
         let merged_state = MergedNetworkState::new(
             desired_state.clone(),
             current_state.clone(),
@@ -41,7 +31,7 @@ impl NmNoDaemon {
             for cur_retry_count in 1..(RETRY_COUNT + 1) {
                 let post_apply_current_state =
                     Self::query_network_state(Default::default()).await?;
-                log::debug!(
+                log::trace!(
                     "Post apply network state: {post_apply_current_state}"
                 );
                 result = merged_state.verify(&post_apply_current_state);

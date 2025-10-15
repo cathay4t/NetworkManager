@@ -57,7 +57,7 @@ impl NmNoDaemon {
                     LoopbackInterface::new(base_iface),
                 )),
                 _ => {
-                    log::debug!(
+                    log::trace!(
                         "Got unsupported interface {} type {:?}",
                         np_iface.name,
                         np_iface.iface_type

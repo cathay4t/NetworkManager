@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{Arc, Mutex};
-
 use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
 use super::{
@@ -11,7 +9,7 @@ use super::{
 
 pub(crate) async fn process_api_connection(
     mut conn: NmIpcConnection,
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
     plugins: NmDaemonPlugins,
 ) -> Result<(), NmError> {
     loop {

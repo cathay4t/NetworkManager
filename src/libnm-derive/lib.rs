@@ -17,7 +17,18 @@ pub fn derive_json_display(input: TokenStream) -> TokenStream {
         impl std::fmt::Display for #class_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match serde_json::to_string(&self) {
-                    Ok(s) => write!(f, "{}", s),
+                    Ok(s) => {
+                        // For simple string, remove the quote.
+                        if s.matches('"').count() == 2
+                            && let Some(s) = 
+                                s.strip_prefix('"')
+                                    .and_then(|s| s.strip_suffix('"'))
+                        {
+                            write!(f, "{}", s)
+                        } else {
+                            write!(f, "{}", s)
+                        }
+                    }
                     Err(e) => {
                         log::warn!("Failed to convert {self:?} into JSON: {e}");
                         write!(f, "{self:?}")

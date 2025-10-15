@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{Arc, Mutex};
-
 use nm::{NmClient, NmError, NmIpcConnection};
 use nm_plugin::NmIpcListener;
 
@@ -17,7 +15,7 @@ pub(crate) struct NmDaemon {
     // Daemon will fork(tokio is controlling maximum threads) new thread for
     // each client connection, this share data will shared along all forked
     // threads.
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
 }
 
 impl NmDaemon {
@@ -29,7 +27,7 @@ impl NmDaemon {
         Ok(Self {
             api_ipc,
             plugins,
-            share_data: Arc::new(Mutex::new(NmDaemonShareData::default())),
+            share_data: NmDaemonShareData::new(),
         })
     }
 

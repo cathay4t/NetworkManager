@@ -53,7 +53,7 @@ impl MergedInterface {
         self.desired.is_some()
     }
 
-    pub(crate) fn is_changed(&self) -> bool {
+    pub fn is_changed(&self) -> bool {
         self.for_apply.is_some()
     }
 }

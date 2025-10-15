@@ -140,7 +140,7 @@ impl InterfaceIpv4 {
         self.enabled != Some(false)
     }
 
-    pub(crate) fn is_auto(&self) -> bool {
+    pub fn is_auto(&self) -> bool {
         self.is_enabled() && self.dhcp == Some(true)
     }
 
@@ -151,7 +151,6 @@ impl InterfaceIpv4 {
     }
 
     // * Remove DHCP state
-    // * Remove auto IP address.
     // * Disable DHCP and remove address if enabled: false
     pub(crate) fn sanitize(
         &mut self,
@@ -160,7 +159,7 @@ impl InterfaceIpv4 {
         self.dhcp_state = None;
         if self.is_auto() {
             if let Some(addrs) = self.addresses.as_ref() {
-                for addr in addrs {
+                for addr in addrs.iter().filter(|a| !a.is_auto()) {
                     log::info!(
                         "Static addresses {addr} defined when dynamic IP is \
                          enabled"
@@ -170,9 +169,6 @@ impl InterfaceIpv4 {
         }
 
         if let Some(addrs) = self.addresses.as_mut() {
-            for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
-                log::info!("Ignoring Auto IP address {addr}");
-            }
             if let Some(addr) = addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
             {
                 return Err(NmError::new(
@@ -194,17 +190,11 @@ impl InterfaceIpv4 {
                 ));
             }
             if let Some(addrs) = self.addresses.as_mut() {
-                addrs.retain(|addr| {
-                    if addr.is_auto() {
-                        log::info!("Ignoring dynamic addresses {addr}");
-                        false
-                    } else {
-                        true
-                    }
-                });
                 addrs.iter_mut().for_each(|a| {
-                    a.valid_life_time = None;
-                    a.preferred_life_time = None
+                    if !a.is_auto() {
+                        a.valid_life_time = None;
+                        a.preferred_life_time = None
+                    }
                 });
             }
         }
@@ -398,6 +388,13 @@ impl InterfaceIpv6 {
     }
 }
 
+/// IP Address
+///
+/// When `valid_life_time` or `preferred_life_time` not equal to `None` or
+/// `Some("forever")`:
+///  * `NmClient::apply_network_state()` will ignore this address.
+///  * `NmNoDaemon::apply_network_state()` will apply this address with desired
+///    life time setting.
 #[derive(
     Debug,
     Clone,
@@ -420,7 +417,6 @@ pub struct InterfaceIpAddr {
     pub prefix_length: u8,
     /// Remaining time for IP address been valid. The output format is
     /// "32sec" or "forever".
-    /// This property is query only, it will be ignored when applying.
     /// Serialize to `valid-life-time`.
     /// Deserialize from `valid-life-time` or `valid-left` or `valid-lft`.
     #[serde(
@@ -431,7 +427,6 @@ pub struct InterfaceIpAddr {
     pub valid_life_time: Option<String>,
     /// Remaining time for IP address been preferred. The output format is
     /// "32sec" or "forever".
-    /// This property is query only, it will be ignored when applying.
     /// Serialize to `preferred-life-time`.
     /// Deserialize from `preferred-life-time` or `preferred-left` or
     /// `preferred-lft`.
@@ -450,6 +445,16 @@ impl Default for InterfaceIpAddr {
             prefix_length: 128,
             valid_life_time: None,
             preferred_life_time: None,
+        }
+    }
+}
+
+impl InterfaceIpAddr {
+    pub fn new(ip: IpAddr, prefix_length: u8) -> Self {
+        Self {
+            ip,
+            prefix_length,
+            ..Default::default()
         }
     }
 }

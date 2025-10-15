@@ -57,18 +57,23 @@ pub enum NmstateStateKind {
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 pub struct NmstateApplyOption {
-    /// Schema version for output
-    #[serde(default)]
-    pub version: u32,
     /// Do not verify whether post applied state matches with desired state.
     pub no_verify: bool,
 }
 
 impl Default for NmstateApplyOption {
     fn default() -> Self {
-        Self {
-            version: CUR_SCHEMA_VERSION,
-            no_verify: false,
-        }
+        Self { no_verify: false }
+    }
+}
+
+impl NmstateApplyOption {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn no_verify(mut self) -> Self {
+        self.no_verify = true;
+        self
     }
 }

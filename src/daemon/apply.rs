@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-use std::sync::{Arc, Mutex};
 
 use nm::{
-    ErrorKind, MergedNetworkState, NetworkState, NmError, NmIpcConnection,
-    NmNoDaemon, NmstateApplyOption,
+    MergedNetworkState, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
+    NmstateApplyOption,
 };
 
 use super::{
@@ -19,9 +18,9 @@ pub(crate) async fn apply_network_state(
     plugins: &NmDaemonPlugins,
     mut desired_state: NetworkState,
     opt: NmstateApplyOption,
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
 ) -> Result<NetworkState, NmError> {
-    conn.log_debug(format!("apply {desired_state} with option {opt}"))
+    conn.log_trace(format!("apply {desired_state} with option {opt}"))
         .await;
 
     let mut previous_applied_state =
@@ -62,6 +61,8 @@ pub(crate) async fn apply_network_state(
         opt.clone(),
     )?;
 
+    // TODO(Gris Ge): discard auto IPs
+
     if let Err(e) =
         apply(conn, &merged_state, plugins, &opt, share_data.clone()).await
     {
@@ -71,7 +72,7 @@ pub(crate) async fn apply_network_state(
             .await;
         conn.log_warn("Rollback to state before apply".to_string())
             .await;
-        conn.log_debug(format!(
+        conn.log_trace(format!(
             "Rollback to state before apply {revert_state}"
         ))
         .await;
@@ -102,16 +103,16 @@ async fn apply(
     merged_state: &MergedNetworkState,
     plugins: &NmDaemonPlugins,
     opt: &NmstateApplyOption,
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let apply_state = merged_state.gen_state_for_apply();
 
-    conn.log_debug(format!("apply_state {apply_state}")).await;
+    conn.log_trace(format!("apply_state {apply_state}")).await;
 
     NmNoDaemon::apply_merged_state(merged_state).await?;
     plugins.apply_network_state(&apply_state, opt, conn).await?;
 
-    apply_dhcp_config(merged_state, share_data.clone()).await?;
+    apply_dhcp_config(conn, merged_state, share_data.clone()).await?;
 
     let mut result: Result<(), NmError> = Ok(());
     if !opt.no_verify {
@@ -140,7 +141,7 @@ async fn rollback(
     conn: &mut NmIpcConnection,
     revert_state: NetworkState,
     plugins: &NmDaemonPlugins,
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let mut opt = NmstateApplyOption::default();
     opt.no_verify = true;
@@ -162,7 +163,7 @@ async fn rollback(
         .apply_network_state(&apply_state, &opt, conn)
         .await?;
 
-    apply_dhcp_config(&merged_state, share_data.clone()).await?;
+    apply_dhcp_config(conn, &merged_state, share_data.clone()).await?;
 
     Ok(())
 }
@@ -171,12 +172,12 @@ async fn verify(
     conn: &mut NmIpcConnection,
     merged_state: &MergedNetworkState,
     plugins: &NmDaemonPlugins,
-    share_data: Arc<Mutex<NmDaemonShareData>>,
+    share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let post_apply_current_state =
         query_network_state(conn, plugins, Default::default(), share_data)
             .await?;
-    conn.log_debug(format!(
+    conn.log_trace(format!(
         "Post apply network state: {post_apply_current_state}"
     ))
     .await;

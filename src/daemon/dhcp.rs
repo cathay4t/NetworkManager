@@ -7,8 +7,9 @@ use std::{
 
 use mozim::{DhcpV4Client, DhcpV4Config, DhcpV4Lease, DhcpV4State};
 use nm::{
-    BaseInterface, DhcpState, ErrorKind, MergedNetworkState, NetworkState,
-    NmError, NmstateInterface,
+    BaseInterface, DhcpState, ErrorKind, Interface, InterfaceIpAddr,
+    InterfaceIpv4, MergedNetworkState, NetworkState, NmError, NmIpcConnection,
+    NmNoDaemon, NmstateApplyOption, NmstateInterface,
 };
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -25,6 +26,10 @@ pub(crate) struct NmDhcpV4Manager {
 // into Mutex protected `NmDaemonShareData`. The
 // `MutexGuard` will cause function not `Send`.
 impl NmDhcpV4Manager {
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
     /// Fill the NetworkState with DHCP states
     pub(crate) fn query(
         &self,
@@ -46,13 +51,9 @@ impl NmDhcpV4Manager {
         Ok(())
     }
 
-    pub(crate) fn add_dhcp_worker(
-        &mut self,
-        worker: NmDhcpV4Worker,
-    ) -> Result<(), NmError> {
+    pub(crate) fn add_dhcp_worker(&mut self, worker: NmDhcpV4Worker) {
         self.workers
             .insert(worker.base_iface.name.to_string(), worker);
-        Ok(())
     }
 
     /// Remove DHCP worker will cause DHCP thread been terminated
@@ -66,7 +67,7 @@ pub(crate) struct NmDhcpV4Worker {
     base_iface: BaseInterface,
     // No need to send any data. Dropping this Sender will cause
     // Receiver.recv() got None which trigger DHCP thread quit.
-    quit_notifer: Sender<()>,
+    _quit_notifer: Sender<()>,
     share_data: Arc<Mutex<NmDhcpShareData>>,
 }
 
@@ -83,7 +84,7 @@ impl NmDhcpV4Worker {
             tokio::sync::mpsc::channel::<()>(MPSC_CHANNEL_BUFFER);
         let ret = Self {
             base_iface: base_iface.clone(),
-            quit_notifer: sender,
+            _quit_notifer: sender,
             share_data: Arc::new(Mutex::new(NmDhcpShareData::default())),
         };
         let mac_addr = match base_iface.mac_address.as_deref() {
@@ -98,9 +99,21 @@ impl NmDhcpV4Worker {
                 ));
             }
         };
+        let iface_index = match base_iface.iface_index {
+            Some(m) => m,
+            None => {
+                return Err(NmError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "Got no interface index for DHCPv4 on interface {}({})",
+                        base_iface.name, base_iface.iface_type
+                    ),
+                ));
+            }
+        };
         let mut dhcp_config = DhcpV4Config::new(base_iface.name.as_str());
         dhcp_config
-            .set_iface_index(base_iface.iface_index)
+            .set_iface_index(iface_index)
             .set_iface_mac(mac_addr)
             .map_err(|e| {
                 NmError::new(
@@ -239,15 +252,93 @@ async fn dhcp_thread(
 }
 
 async fn apply_lease(
-    _base_iface: &BaseInterface,
-    _lease: &DhcpV4Lease,
+    base_iface: &BaseInterface,
+    lease: &DhcpV4Lease,
 ) -> Result<(), NmError> {
-    todo!()
+    log::debug!(
+        "Applying DHCPv4 lease {}/{} to interface {}({})",
+        lease.yiaddr,
+        lease.prefix_length(),
+        base_iface.name,
+        base_iface.iface_type
+    );
+
+    let mut ip_addr = InterfaceIpAddr::new(
+        lease.yiaddr.clone().into(),
+        lease.prefix_length(),
+    );
+    ip_addr.preferred_life_time = Some(format!("{}sec", lease.lease_time_sec));
+    ip_addr.valid_life_time = Some(format!("{}sec", lease.lease_time_sec));
+
+    let mut ipv4_conf = InterfaceIpv4::new();
+    ipv4_conf.enabled = Some(true);
+    ipv4_conf.dhcp = Some(true);
+    ipv4_conf.addresses = Some(vec![ip_addr]);
+
+    let mut apply_base_iface = base_iface.clone_name_type_only();
+
+    apply_base_iface.ipv4 = Some(ipv4_conf);
+    let iface_state: Interface = apply_base_iface.into();
+    let mut net_state = NetworkState::new();
+    net_state.ifaces.push(iface_state);
+
+    let apply_opt = NmstateApplyOption::new();
+    NmNoDaemon::apply_network_state(net_state, apply_opt).await?;
+    Ok(())
 }
 
 pub(crate) async fn apply_dhcp_config(
-    _merged_state: &MergedNetworkState,
-    _share_data: Arc<Mutex<NmDaemonShareData>>,
+    conn: &mut NmIpcConnection,
+    merged_state: &MergedNetworkState,
+    mut share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
-    todo!()
+    for merged_iface in merged_state
+        .ifaces
+        .kernel_ifaces
+        .values()
+        .filter(|i| i.is_changed())
+    {
+        let mut apply_iface = match merged_iface.for_apply.as_ref() {
+            Some(i) => i.clone(),
+            None => {
+                continue;
+            }
+        };
+        if apply_iface.base_iface().mac_address.is_none() {
+            apply_iface.base_iface_mut().mac_address =
+                merged_iface.merged.base_iface().mac_address.clone();
+        }
+        apply_iface.base_iface_mut().iface_index =
+            merged_iface.merged.base_iface().iface_index.clone();
+        if apply_iface.is_up() {
+            if let Some(dhcp_enabled) =
+                apply_iface.base_iface().ipv4.as_ref().map(|i| i.is_auto())
+            {
+                if dhcp_enabled {
+                    conn.log_debug(format!(
+                        "Starting DHCPv4 on interface {}({})",
+                        apply_iface.name(),
+                        apply_iface.iface_type()
+                    )).await;
+                    let dhcp_worker =
+                        NmDhcpV4Worker::new(apply_iface.base_iface()).await?;
+                    share_data.dhcpv4_manager()?.add_dhcp_worker(dhcp_worker);
+                } else {
+                    conn.log_debug(format!(
+                        "Stopping DHCPv4 on interface {}({})",
+                        apply_iface.name(),
+                        apply_iface.iface_type()
+                    )).await;
+                    share_data
+                        .dhcpv4_manager()?
+                        .remove_dhcp_worker(apply_iface.name());
+                }
+            }
+        } else {
+            share_data
+                .dhcpv4_manager()?
+                .remove_dhcp_worker(apply_iface.name());
+        }
+    }
+    Ok(())
 }

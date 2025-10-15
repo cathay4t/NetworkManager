@@ -21,10 +21,12 @@ use crate::{
 /// Information shared among all interface types
 pub struct BaseInterface {
     pub name: String,
+    // TODO(Gris Ge): Introduce `iface_name` property so we can differentiate
+    // iface_name along with logical name(profile name).
     #[serde(default, rename = "type")]
     pub iface_type: InterfaceType,
-    #[serde(default, skip)]
-    pub iface_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iface_index: Option<u32>,
     #[serde(default)]
     pub state: InterfaceState,
     /// In which order should this interface been activated. The smallest
@@ -126,7 +128,7 @@ impl BaseInterface {
         }
     }
 
-    pub(crate) fn clone_name_type_only(&self) -> Self {
+    pub fn clone_name_type_only(&self) -> Self {
         Self {
             name: self.name.clone(),
             iface_type: self.iface_type.clone(),
