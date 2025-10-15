@@ -20,7 +20,7 @@ pub fn derive_json_display(input: TokenStream) -> TokenStream {
                     Ok(s) => {
                         // For simple string, remove the quote.
                         if s.matches('"').count() == 2
-                            && let Some(s) = 
+                            && let Some(s) =
                                 s.strip_prefix('"')
                                     .and_then(|s| s.strip_suffix('"'))
                         {

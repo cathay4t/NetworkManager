@@ -319,7 +319,8 @@ pub(crate) async fn apply_dhcp_config(
                         "Starting DHCPv4 on interface {}({})",
                         apply_iface.name(),
                         apply_iface.iface_type()
-                    )).await;
+                    ))
+                    .await;
                     let dhcp_worker =
                         NmDhcpV4Worker::new(apply_iface.base_iface()).await?;
                     share_data.dhcpv4_manager()?.add_dhcp_worker(dhcp_worker);
@@ -328,7 +329,8 @@ pub(crate) async fn apply_dhcp_config(
                         "Stopping DHCPv4 on interface {}({})",
                         apply_iface.name(),
                         apply_iface.iface_type()
-                    )).await;
+                    ))
+                    .await;
                     share_data
                         .dhcpv4_manager()?
                         .remove_dhcp_worker(apply_iface.name());

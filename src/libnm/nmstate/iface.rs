@@ -289,35 +289,35 @@ impl NmstateInterface for Interface {
 
 impl From<BaseInterface> for Interface {
     fn from(base_iface: BaseInterface) -> Self {
-        match base_iface.iface_type {
-            InterfaceType::Loopback => Interface::Loopback(Box::new(
-                LoopbackInterface::from_base(base_iface),
-            )),
-            InterfaceType::Ethernet | InterfaceType::Veth => {
-                Interface::Ethernet(Box::new(EthernetInterface::from_base(
-                    base_iface,
-                )))
+        let mut iface = match &base_iface.iface_type {
+            InterfaceType::Ethernet => Interface::Ethernet(Default::default()),
+            InterfaceType::Hsr => todo!(),
+            InterfaceType::Bond => todo!(),
+            InterfaceType::LinuxBridge => todo!(),
+            InterfaceType::Dummy => todo!(),
+            InterfaceType::Loopback => Interface::Loopback(Default::default()),
+            InterfaceType::MacVlan => todo!(),
+            InterfaceType::MacVtap => todo!(),
+            InterfaceType::OvsBridge => {
+                Interface::OvsBridge(Default::default())
             }
-            InterfaceType::OvsBridge => Interface::OvsBridge(Box::new(
-                OvsBridgeInterface::from_base(base_iface),
-            )),
-            InterfaceType::OvsInterface => Interface::OvsInterface(Box::new(
-                OvsInterface::from_base(base_iface),
-            )),
-            InterfaceType::Unknown(_) => Interface::Unknown(Box::new(
-                UnknownInterface::from_base(base_iface),
-            )),
-            _ => {
-                log::warn!(
-                    "Unsupported interface type {} for interface {}",
-                    base_iface.iface_type,
-                    base_iface.name
-                );
-                Interface::Unknown(Box::new(UnknownInterface::from_base(
-                    base_iface,
-                )))
+            InterfaceType::OvsInterface => {
+                Interface::OvsInterface(Default::default())
             }
-        }
+            InterfaceType::Veth => todo!(),
+            InterfaceType::Vlan => todo!(),
+            InterfaceType::Vrf => todo!(),
+            InterfaceType::Vxlan => todo!(),
+            InterfaceType::InfiniBand => todo!(),
+            InterfaceType::Tun => todo!(),
+            InterfaceType::MacSec => todo!(),
+            InterfaceType::Ipsec => todo!(),
+            InterfaceType::Xfrm => todo!(),
+            InterfaceType::IpVlan => todo!(),
+            InterfaceType::Unknown(_) => Interface::Unknown(Default::default()),
+        };
+        *iface.base_iface_mut() = base_iface;
+        iface
     }
 }
 
