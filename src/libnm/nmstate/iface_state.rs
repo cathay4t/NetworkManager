@@ -19,10 +19,12 @@ use crate::JsonDisplay;
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The state of interface
+#[derive(Default)]
 pub enum InterfaceState {
     /// Interface is marked as up.
     /// TODO: Please check link status for carrier state
     /// Deserialize and serialize from/to 'up'.
+    #[default]
     Up,
     /// Interface is marked as down.
     /// For apply action, down means configuration still exist but
@@ -58,12 +60,6 @@ pub enum InterfaceState {
     /// Unknown state to nmstate. This state also been treated as
     /// [InterfaceState::Ignore] when applying.
     Unknown,
-}
-
-impl Default for InterfaceState {
-    fn default() -> Self {
-        Self::Up
-    }
 }
 
 impl From<&str> for InterfaceState {

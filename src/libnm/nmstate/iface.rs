@@ -109,14 +109,14 @@ macro_rules! gen_sanitize_iface_specfic {
                     let cur_iface = if let Some($variant(c)) = $current {
                         Some(c)
                     } else {
-                        if $current.is_some() {
+                        if let Some(current) = $current {
                             return Err(NmError::new(
                                 ErrorKind::Bug,
                                 format!(
                                     "current interface holding the same \
                                     interface type as as desired, current {}, \
                                     desired {}", i.iface_type(),
-                                    $current.unwrap().iface_type(),
+                                    current.iface_type(),
                                 ),
                             ));
                         }

@@ -263,10 +263,8 @@ async fn apply_lease(
         base_iface.iface_type
     );
 
-    let mut ip_addr = InterfaceIpAddr::new(
-        lease.yiaddr.clone().into(),
-        lease.prefix_length(),
-    );
+    let mut ip_addr =
+        InterfaceIpAddr::new(lease.yiaddr.into(), lease.prefix_length());
     ip_addr.preferred_life_time = Some(format!("{}sec", lease.lease_time_sec));
     ip_addr.valid_life_time = Some(format!("{}sec", lease.lease_time_sec));
 
@@ -309,7 +307,7 @@ pub(crate) async fn apply_dhcp_config(
                 merged_iface.merged.base_iface().mac_address.clone();
         }
         apply_iface.base_iface_mut().iface_index =
-            merged_iface.merged.base_iface().iface_index.clone();
+            merged_iface.merged.base_iface().iface_index;
         if apply_iface.is_up() {
             if let Some(dhcp_enabled) =
                 apply_iface.base_iface().ipv4.as_ref().map(|i| i.is_auto())

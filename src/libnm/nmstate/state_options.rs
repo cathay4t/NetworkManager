@@ -56,15 +56,10 @@ pub enum NmstateStateKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub struct NmstateApplyOption {
     /// Do not verify whether post applied state matches with desired state.
     pub no_verify: bool,
-}
-
-impl Default for NmstateApplyOption {
-    fn default() -> Self {
-        Self { no_verify: false }
-    }
 }
 
 impl NmstateApplyOption {

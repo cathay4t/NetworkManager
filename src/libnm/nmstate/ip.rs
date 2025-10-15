@@ -29,13 +29,13 @@ pub enum DhcpState {
     Error(String),
 }
 
-impl std::convert::Into<String> for DhcpState {
-    fn into(self) -> String {
-        match self {
-            Self::WaitLinkCarrier => "wait-link-carrier".into(),
-            Self::Running => "running".into(),
-            Self::Done => "done".into(),
-            Self::Error(v) => format!("error:{v}"),
+impl std::convert::From<DhcpState> for String {
+    fn from(val: DhcpState) -> Self {
+        match val {
+            DhcpState::WaitLinkCarrier => "wait-link-carrier".into(),
+            DhcpState::Running => "running".into(),
+            DhcpState::Done => "done".into(),
+            DhcpState::Error(v) => format!("error:{v}"),
         }
     }
 }
