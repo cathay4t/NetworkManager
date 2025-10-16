@@ -25,6 +25,12 @@ pub struct NmIpcConnection {
     pub(crate) log_target: String,
 }
 
+impl std::os::fd::AsFd for NmIpcConnection {
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        self.socket.as_fd()
+    }
+}
+
 impl NmIpcConnection {
     const DEFAULT_TIMEOUT_MS: u32 = 30000;
 

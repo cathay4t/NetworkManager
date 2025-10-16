@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use nm::{NmClient, NmError, NmIpcConnection};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+
+use nm::{ErrorKind, NmClient, NmError, NmIpcConnection};
 use nm_plugin::NmIpcListener;
 
 use super::{
@@ -23,6 +25,21 @@ impl NmDaemon {
         let plugins = NmDaemonPlugins::new().await?;
 
         let api_ipc = NmIpcListener::new(NmClient::DEFAULT_SOCKET_PATH)?;
+        // Make the API IPC globally read and writable for non-root user to
+        // query and ping
+        std::fs::set_permissions(
+            NmClient::DEFAULT_SOCKET_PATH,
+            Permissions::from_mode(0o0666),
+        )
+        .map_err(|e| {
+            NmError::new(
+                ErrorKind::Bug,
+                format!(
+                    "Failed to set permission of {} to 0666: {e}",
+                    NmClient::DEFAULT_SOCKET_PATH
+                ),
+            )
+        })?;
 
         Ok(Self {
             api_ipc,

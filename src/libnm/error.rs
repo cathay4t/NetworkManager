@@ -36,6 +36,8 @@ pub enum ErrorKind {
     DaemonFailure,
     /// Post applied state does not match with desired state
     VerificationError,
+    /// Permission deny
+    PermissionDeny,
 }
 
 // Try not implement From for NmError here unless you are sure this
