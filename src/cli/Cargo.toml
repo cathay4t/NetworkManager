@@ -1,5 +1,5 @@
 [package]
-name = "nmcli"
+name = "nmc"
 version.workspace = true
 authors.workspace = true
 description = "Command line tool for communicating with NetworkManager daemon"
@@ -20,5 +20,5 @@ uuid = { workspace = true }
 clap = { workspace = true }
 
 [[bin]]
-name = "nmcli"
+name = "nmc"
 path = "main.rs"
