@@ -23,12 +23,11 @@ pub(crate) async fn apply_network_state(
     conn.log_trace(format!("apply {desired_state} with option {opt}"))
         .await;
 
-    let mut previous_applied_state =
-        NmDaemonConfig::read_applied_state().await?;
+    let mut state_to_save = NmDaemonConfig::read_applied_state().await?;
 
     desired_state.ifaces.unify_veth_and_ethernet();
 
-    let state_to_save = previous_applied_state.merge(&desired_state)?;
+    state_to_save.merge(&desired_state)?;
     let mut state_to_apply = state_to_save.clone();
     remove_undesired_ifaces(&mut state_to_apply, &desired_state);
 

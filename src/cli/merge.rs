@@ -28,16 +28,16 @@ impl CommandMerge {
     pub(crate) async fn handle(
         matches: &clap::ArgMatches,
     ) -> Result<(), CliError> {
-        let mut old_state = state_from_file(
+        let mut state = state_from_file(
             matches.get_one::<String>("OLD_STATE_FILE").unwrap(),
         )?;
         let new_state = state_from_file(
             matches.get_one::<String>("NEW_STATE_FILE").unwrap(),
         )?;
 
-        let new_state = old_state.merge(&new_state)?;
+        state.merge(&new_state)?;
 
-        println!("{}", serde_yaml::to_string(&new_state)?);
+        println!("{}", serde_yaml::to_string(&state)?);
 
         Ok(())
     }
