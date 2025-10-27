@@ -79,6 +79,7 @@ impl NmIpcConnection {
     where
         T: NmCanIpc,
     {
+        log::trace!("{}sending JSON for data: {:?}", self.log_prefix, data);
         let msg = NmMessage::<T>::from(data);
         let json_str = serde_json::to_string(&msg).map_err(|e| {
             NmError::new(
@@ -86,7 +87,6 @@ impl NmIpcConnection {
                 format!("Failed to generate JSON string for {msg:?}: {e}",),
             )
         })?;
-        log::trace!("{}sending json: {json_str}", self.log_prefix,);
         let data = json_str.as_bytes();
         if data.len() > Self::IPC_MAX_SIZE {
             return Err(NmError::new(
@@ -244,8 +244,8 @@ impl NmIpcConnection {
                 ),
             )
         })?;
-        log::trace!("{}Received {json_str}", self.log_prefix);
         let ret = NmMessage::from_json(json_str)?;
+        log::trace!("{}Received {ret:?}", self.log_prefix);
         Ok(ret)
     }
 }

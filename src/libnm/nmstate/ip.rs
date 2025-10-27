@@ -206,7 +206,7 @@ impl InterfaceIpv4 {
         Ok(())
     }
 
-    pub fn sanitize_for_verify(&mut self) {
+    pub fn sanitize_current_for_verify(&mut self) {
         if self.dhcp.is_none() {
             self.dhcp = Some(false);
         }
@@ -378,7 +378,7 @@ impl InterfaceIpv6 {
         Ok(())
     }
 
-    pub fn sanitize_for_verify(&mut self) {
+    pub fn sanitize_current_for_verify(&mut self) {
         if self.dhcp.is_none() {
             self.dhcp = Some(false);
         }

@@ -119,12 +119,12 @@ impl BaseInterface {
         Ok(())
     }
 
-    pub fn sanitize_for_verify(&mut self) {
+    pub fn sanitize_current_for_verify(&mut self) {
         if let Some(ipv4) = self.ipv4.as_mut() {
-            ipv4.sanitize_for_verify();
+            ipv4.sanitize_current_for_verify();
         }
         if let Some(ipv6) = self.ipv6.as_mut() {
-            ipv6.sanitize_for_verify();
+            ipv6.sanitize_current_for_verify();
         }
     }
 
@@ -155,6 +155,10 @@ impl BaseInterface {
         } else {
             false
         }
+    }
+
+    pub(crate) fn include_extra_for_apply(&mut self, current: Option<&Self>) {
+        self.iface_index = current.and_then(|c| c.iface_index);
     }
 }
 

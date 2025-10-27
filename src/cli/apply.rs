@@ -50,12 +50,14 @@ impl CommandApply {
                 state_from_file("-")?
             };
 
-        let diff_net_state = if matches.get_flag("NO_DAEMON") {
+        let mut diff_net_state = if matches.get_flag("NO_DAEMON") {
             NmNoDaemon::apply_network_state(desired_state, opt).await?
         } else {
             let mut cli = NmClient::new().await?;
             cli.apply_network_state(desired_state, opt).await?
         };
+
+        diff_net_state.hide_secrets();
         if diff_net_state.is_empty() {
             println!("Nothing changed");
         } else {

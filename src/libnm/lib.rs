@@ -8,7 +8,7 @@ mod nmstate;
 mod no_daemon;
 mod uuid;
 
-pub use libnm_derive::JsonDisplay;
+pub use libnm_derive::{JsonDisplay, JsonDisplayHideSecrets};
 pub use nmstate::*;
 
 pub use self::{

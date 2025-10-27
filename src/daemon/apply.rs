@@ -20,7 +20,7 @@ pub(crate) async fn apply_network_state(
     opt: NmstateApplyOption,
     share_data: NmDaemonShareData,
 ) -> Result<NetworkState, NmError> {
-    conn.log_trace(format!("apply {desired_state} with option {opt}"))
+    conn.log_trace(format!("Apply {desired_state} with option {opt}"))
         .await;
 
     let mut state_to_save = NmDaemonConfig::read_applied_state().await?;

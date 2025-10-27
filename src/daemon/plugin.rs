@@ -6,9 +6,10 @@ use std::{
     os::unix::fs::{FileTypeExt, PermissionsExt},
 };
 
+use futures::{StreamExt, stream::FuturesUnordered};
 use nm::{
     NetworkState, NmError, NmIpcConnection, NmstateApplyOption,
-    NmstateQueryOption,
+    NmstateInterface, NmstateQueryOption,
 };
 use nm_plugin::{NmPluginClient, NmPluginInfo};
 
@@ -143,9 +144,17 @@ impl NmDaemonPlugins {
     ) -> Result<(), NmError> {
         // TODO(Gris Ge): Should request all plugin at the same time instead
         // of one by one.
+        let mut result_futures = FuturesUnordered::new();
         for plugin in self.plugins.values() {
-            if let Err(e) = plugin.apply_network_state(apply_state, opt).await {
-                conn.log_info(e.msg.to_string()).await;
+            let result_future = plugin.apply_network_state(apply_state, opt);
+            result_futures.push(result_future);
+        }
+
+        while let Some(result) = result_futures.next().await {
+            // It is OK for plugin to fail, verification process will
+            // noticed the difference
+            if let Err(e) = result {
+                conn.log_warn(e.to_string()).await;
             }
         }
 
@@ -155,8 +164,8 @@ impl NmDaemonPlugins {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmDaemonPlugin {
-    _name: String,
-    _plugin_info: NmPluginInfo,
+    name: String,
+    plugin_info: NmPluginInfo,
     socket_path: String,
 }
 
@@ -180,9 +189,26 @@ impl NmDaemonPlugin {
         apply_state: &NetworkState,
         opt: &NmstateApplyOption,
     ) -> Result<(), NmError> {
-        let mut cli = NmPluginClient::new(&self.socket_path).await?;
-        cli.apply_network_state(apply_state.clone(), opt.clone())
-            .await
+        let mut new_state = NetworkState::new();
+        // Include only interfaces supported by plugin
+        for iface in apply_state.ifaces.iter() {
+            if self.plugin_info.iface_types.contains(iface.iface_type()) {
+                new_state.ifaces.push(iface.clone());
+            }
+        }
+        if new_state.is_empty() {
+            log::trace!("No state require {} to apply", self.name);
+            Ok(())
+        } else {
+            log::trace!(
+                "Plugin {} apply_network_state {}",
+                self.name,
+                new_state
+            );
+
+            let mut cli = NmPluginClient::new(&self.socket_path).await?;
+            cli.apply_network_state(new_state, opt.clone()).await
+        }
     }
 }
 
@@ -201,8 +227,8 @@ async fn connect_plugins(plugins: &mut HashMap<String, NmDaemonPlugin>) {
                         plugins.insert(
                             info.name.to_string(),
                             NmDaemonPlugin {
-                                _name: info.name.to_string(),
-                                _plugin_info: info,
+                                name: info.name.to_string(),
+                                plugin_info: info,
                                 socket_path: file_path,
                             },
                         );

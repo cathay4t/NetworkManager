@@ -40,8 +40,18 @@ impl MergedInterface {
                 Interface::default()
             }
         };
+        let for_apply = if let Some(desired) = desired.as_ref() {
+            let mut ret = desired.clone();
+            ret.base_iface_mut().include_extra_for_apply(
+                current.as_ref().map(|c| c.base_iface()),
+            );
+            Some(ret)
+        } else {
+            None
+        };
+
         Ok(Self {
-            for_apply: desired.clone(),
+            for_apply,
             for_verify: desired.clone(),
             desired,
             current,
@@ -55,5 +65,21 @@ impl MergedInterface {
 
     pub fn is_changed(&self) -> bool {
         self.for_apply.is_some()
+    }
+
+    pub fn hide_secrets(&mut self) {
+        for state in [
+            self.desired.as_mut(),
+            self.current.as_mut(),
+            Some(&mut self.merged),
+            self.for_apply.as_mut(),
+            self.for_verify.as_mut(),
+        ]
+        .iter_mut()
+        {
+            if let Some(s) = state {
+                s.hide_secrets()
+            }
+        }
     }
 }

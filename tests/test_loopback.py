@@ -6,8 +6,8 @@ from .testlib.statelib import load_yaml
 
 import pytest
 
-from libnm import NmClient
-from libnm.nmstate import NmstateStateKind
+import libnm
+from libnm import NmstateStateKind
 
 
 def test_query_loopback():
@@ -35,8 +35,7 @@ def test_query_loopback():
 @pytest.fixture
 def clean_up_loopback():
     yield
-    cli = NmClient()
-    cli.apply_network_state(
+    libnm.apply(
         load_yaml(
             """---
                 version: 1
@@ -74,8 +73,7 @@ def clean_up_loopback():
     ],
 )
 def test_add_ip_to_loopback(clean_up_loopback, query_kind):
-    cli = NmClient()
-    cli.apply_network_state(
+    libnm.apply(
         load_yaml(
             """---
                 version: 1

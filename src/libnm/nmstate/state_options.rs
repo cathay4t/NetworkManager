@@ -10,9 +10,13 @@ pub struct NmstateQueryOption {
     /// Schema version for output
     #[serde(default)]
     pub version: u32,
-    /// Which kind of NetworkState to query
+    /// Which kind of NetworkState to query, default:
+    /// [NmstateStateKind::RunningNetworkState]
     #[serde(default)]
     pub kind: NmstateStateKind,
+    /// Whether include secrets/passwords, default to false.
+    #[serde(default)]
+    pub include_secrets: bool,
 }
 
 impl Default for NmstateQueryOption {
@@ -20,6 +24,7 @@ impl Default for NmstateQueryOption {
         Self {
             version: CUR_SCHEMA_VERSION,
             kind: NmstateStateKind::default(),
+            include_secrets: false,
         }
     }
 }
@@ -37,6 +42,11 @@ impl NmstateQueryOption {
             kind: NmstateStateKind::SavedNetworkState,
             ..Default::default()
         }
+    }
+
+    pub fn include_secrets(mut self, value: bool) -> Self {
+        self.include_secrets = value;
+        self
     }
 }
 

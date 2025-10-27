@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::value::copy_undefined_value;
-use crate::{BaseInterface, InterfaceType, NmError};
+use crate::{BaseInterface, InterfaceState, InterfaceType, NmError};
 
 /// Trait implemented by all type of interfaces.
 pub trait NmstateInterface:
@@ -34,6 +34,10 @@ pub trait NmstateInterface:
 
     fn iface_type(&self) -> &InterfaceType {
         &self.base_iface().iface_type
+    }
+
+    fn iface_state(&self) -> InterfaceState {
+        self.base_iface().state
     }
 
     /// Invoke [BaseInterface::hide_secrets()] and interface specifics
@@ -97,6 +101,11 @@ pub trait NmstateInterface:
     }
 
     /// Invoke sanitize on the [BaseInterface] and `sanitize_iface_specfic()`.
+    /// Sanitation process is performed for apply action when merging desired
+    /// state with current state:
+    ///  * Validate user inputs.
+    ///  * Clean up properties which is for query only.
+    ///  * Change desired state smartly. (e.g. Remove IP for disabled IP stack)
     fn sanitize(&mut self, current: Option<&Self>) -> Result<(), NmError> {
         self.base_iface_mut()
             .sanitize(current.as_ref().map(|c| c.base_iface()))?;
@@ -105,9 +114,9 @@ pub trait NmstateInterface:
 
     /// Invoke sanitize current for verify on the [BaseInterface] and
     /// `sanitize_iface_specfic()`
-    fn sanitize_for_verify(&mut self) {
-        self.base_iface_mut().sanitize_for_verify();
-        self.sanitize_for_verify_iface_specfic();
+    fn sanitize_current_for_verify(&mut self) {
+        self.base_iface_mut().sanitize_current_for_verify();
+        self.sanitize_current_for_verify_iface_specfic();
     }
 
     /// Please implement this function if special sanitize action required
@@ -122,7 +131,7 @@ pub trait NmstateInterface:
     /// Please implement this function if special sanitize action required
     /// for certain interface type during verification. Do not include action
     /// for [BaseInterface]. Default implementation is empty.
-    fn sanitize_for_verify_iface_specfic(&mut self) {}
+    fn sanitize_current_for_verify_iface_specfic(&mut self) {}
 
     /// When generating difference between desired and current, certain value
     /// should be included as context in the output. For example, when

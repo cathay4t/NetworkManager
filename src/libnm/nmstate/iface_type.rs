@@ -89,6 +89,10 @@ pub enum InterfaceType {
     /// IPVLAN kernel interface
     #[serde(rename = "ipvlan")]
     IpVlan,
+    /// WiFi Physical Interface
+    WifiPhy,
+    /// Pseudo interface for WiFi Configuration
+    WifiCfg,
     /// Interface unknown
     #[serde(untagged)]
     Unknown(String),
@@ -108,7 +112,12 @@ impl InterfaceType {
     /// Whether interface only exist in userspace configuration without
     /// any kernel interface index.
     pub fn is_userspace(&self) -> bool {
-        matches!(self, InterfaceType::Unknown(_) | InterfaceType::OvsBridge)
+        matches!(
+            self,
+            InterfaceType::Unknown(_)
+                | InterfaceType::OvsBridge
+                | InterfaceType::WifiCfg,
+        )
     }
 
     pub fn is_controller(&self) -> bool {
@@ -118,6 +127,16 @@ impl InterfaceType {
                 | InterfaceType::Bond
                 | InterfaceType::Hsr
                 | InterfaceType::Vrf,
+        )
+    }
+
+    pub fn is_supported(&self) -> bool {
+        matches!(
+            self,
+            InterfaceType::Ethernet
+                | InterfaceType::Veth
+                | InterfaceType::Loopback
+                | InterfaceType::WifiPhy
         )
     }
 }

@@ -17,17 +17,8 @@ pub(crate) async fn process_api_connection(
     loop {
         let cmd = match conn.recv::<NmClientCmd>().await {
             Ok(c) => {
-                if peer_uid != 0
-                    && !matches!(
-                        c,
-                        NmClientCmd::Ping | NmClientCmd::QueryNetworkState(_)
-                    )
-                {
-                    conn.send::<Result<(), NmError>>(Err(NmError::new(
-                        ErrorKind::PermissionDeny,
-                        "Need to be root for making changes".into(),
-                    )))
-                    .await?;
+                if let Err(e) = permission_check(&c, peer_uid) {
+                    conn.send::<Result<(), NmError>>(Err(e)).await?;
                     continue;
                 } else {
                     c
@@ -89,4 +80,32 @@ fn get_peer_uid(conn: &NmIpcConnection) -> Result<u32, NmError> {
     })?;
 
     Ok(credential.uid())
+}
+
+fn permission_check(
+    command: &NmClientCmd,
+    peer_uid: u32,
+) -> Result<(), NmError> {
+    if peer_uid == 0 {
+        Ok(())
+    } else {
+        match command {
+            NmClientCmd::Ping => Ok(()),
+            NmClientCmd::QueryNetworkState(s) => {
+                if s.include_secrets {
+                    Err(NmError::new(
+                        ErrorKind::PermissionDeny,
+                        "Query with secrets included requires root permission"
+                            .into(),
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            _ => Err(NmError::new(
+                ErrorKind::PermissionDeny,
+                "Command {command} need to root permission".into(),
+            )),
+        }
+    }
 }

@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use nm::{NetworkState, NmError, NmIpcConnection, NmstateQueryOption};
+use nm::{
+    InterfaceType, NetworkState, NmError, NmIpcConnection, NmstateQueryOption,
+};
 use nm_plugin::{NmPlugin, NmPluginInfo};
 
 pub(crate) struct NmPluginOvs {}
@@ -18,7 +20,7 @@ impl NmPlugin for NmPluginOvs {
         Ok(NmPluginInfo::new(
             "ovs".to_string(),
             "0.1.0".to_string(),
-            Vec::new(),
+            vec![InterfaceType::OvsBridge, InterfaceType::OvsInterface],
         ))
     }
 

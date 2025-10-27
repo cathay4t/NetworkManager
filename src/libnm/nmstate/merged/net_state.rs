@@ -3,11 +3,18 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonDisplay, MergedInterfaces, NetworkState, NmError, NmstateApplyOption,
+    JsonDisplayHideSecrets, MergedInterfaces, NetworkState, NmError,
+    NmstateApplyOption,
 };
 
 #[derive(
-    Clone, Debug, Default, PartialEq, Deserialize, Serialize, JsonDisplay,
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    JsonDisplayHideSecrets,
 )]
 #[non_exhaustive]
 pub struct MergedNetworkState {
@@ -41,6 +48,10 @@ impl MergedNetworkState {
             version: self.version,
             description: self.description.clone(),
         }
+    }
+
+    pub fn hide_secrets(&mut self) {
+        self.ifaces.hide_secrets()
     }
 }
 

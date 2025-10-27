@@ -136,11 +136,7 @@ pub(crate) fn apply_iface_ip_changes(
         return Ok(None);
     }
 
-    let mut np_iface = if let Some(cur_iface) = cur_iface {
-        init_np_iface(cur_iface)
-    } else {
-        init_np_iface(des_iface)
-    };
+    let mut np_iface = init_np_iface(des_iface);
 
     let init_np_iface = np_iface.clone();
 
