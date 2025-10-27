@@ -2,7 +2,7 @@
 
 import pytest
 
-from libnm
+import libnm
 from libnm import NmValueError
 
 from .testlib.statelib import load_yaml
