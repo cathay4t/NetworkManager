@@ -29,9 +29,9 @@ class NmstateQueryOption:
 
 
 class NmstateApplyOption:
-    def __init__(self, version=LATEST_SCHEMA_VERSION, no_verify=False):
+    def __init__(self, version=LATEST_SCHEMA_VERSION, verify_change=True):
         self.version = version
-        self.no_verify = no_verify
+        self.no_verify = not verify_change
 
     def to_dict(self):
         return {"version": self.version, "no-verify": self.no_verify}

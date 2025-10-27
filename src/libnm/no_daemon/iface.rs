@@ -15,6 +15,7 @@ fn nmstate_iface_type_to_nispor(
         InterfaceType::Ethernet => nispor::IfaceType::Ethernet,
         InterfaceType::Loopback => nispor::IfaceType::Loopback,
         InterfaceType::Veth => nispor::IfaceType::Veth,
+        InterfaceType::WifiPhy => nispor::IfaceType::Wifi,
         _ => {
             log::warn!(
                 "BUG: Requesting unsupported interface type {iface_type}"
@@ -58,11 +59,7 @@ pub(crate) fn apply_iface_link_changes(
         return Ok(None);
     }
 
-    let mut np_conf = if let Some(cur_iface) = cur_iface {
-        init_np_iface(cur_iface.base_iface())
-    } else {
-        init_np_iface(apply_iface.base_iface())
-    };
+    let mut np_conf = init_np_iface(apply_iface.base_iface());
     let init_np_conf = np_conf.clone();
 
     apply_base_iface_link_changes(&mut np_conf, apply_iface.base_iface())?;
@@ -80,6 +77,7 @@ pub(crate) fn apply_iface_link_changes(
 
 /// Skip link:
 ///  * loopback interface cannot be deleted
+///  * Interface is not virtual.
 ///  * Absent on non-exist interface
 ///  * Veth peer should be skipped when both end is marked as absent
 fn should_skip_link_change(
@@ -92,6 +90,13 @@ fn should_skip_link_change(
             log::info!(
                 "Skipping removing loopback interface because it cannot be \
                  deleted",
+            );
+            return true;
+        }
+        if !apply_iface.is_virtual() {
+            log::debug!(
+                "Skipping removing interface {} because it is not virtual",
+                apply_iface.name()
             );
             return true;
         }

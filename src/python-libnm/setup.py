@@ -14,7 +14,7 @@ def requirements():
 
 
 setuptools.setup(
-    name="nmstate",
+    name="libnm",
     version="0.1.0",
     author="Gris Ge",
     author_email="fge@redhat.com",

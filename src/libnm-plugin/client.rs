@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nm::{
-    JsonDisplay, NetworkState, NmCanIpc, NmError, NmIpcConnection,
+    JsonDisplayHideSecrets, NetworkState, NmCanIpc, NmError, NmIpcConnection,
     NmstateApplyOption, NmstateQueryOption,
 };
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,9 @@ pub struct NmPluginClient {
 }
 
 /// Command send from daemon to plugin
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonDisplay)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, JsonDisplayHideSecrets,
+)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NmPluginCmd {
@@ -33,6 +35,14 @@ impl NmCanIpc for NmPluginCmd {
             Self::QueryNetworkState(_) => "query-network-state".to_string(),
             Self::ApplyNetworkState(_) => "apply-network-state".to_string(),
             Self::Quit => "quit".to_string(),
+        }
+    }
+}
+
+impl NmPluginCmd {
+    pub fn hide_secrets(&mut self) {
+        if let Self::ApplyNetworkState(cmd) = self {
+            cmd.0.hide_secrets();
         }
     }
 }

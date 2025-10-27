@@ -2,8 +2,8 @@
 
 import json
 
-from .nmstate import NmstateApplyOption
-from .nmstate import NmstateQueryOption
+from .nmstate.state_option import NmstateApplyOption
+from .nmstate.state_option import NmstateQueryOption
 
 
 class NmCmdPing:

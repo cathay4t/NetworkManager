@@ -2,9 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplay, NmError};
+use crate::{
+    CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplayHideSecrets, NmError,
+};
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonDisplay)]
+#[derive(
+    Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonDisplayHideSecrets,
+)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
@@ -33,7 +37,6 @@ impl NetworkState {
     pub const HIDE_PASSWORD_STR: &str = "<_password_hidden_by_nmstate>";
 
     pub fn hide_secrets(&mut self) {
-        log::debug!("Replacing secrets with {}", Self::HIDE_PASSWORD_STR);
         self.ifaces.hide_secrets();
     }
 

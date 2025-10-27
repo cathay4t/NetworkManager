@@ -4,6 +4,7 @@ use super::{base_iface::np_iface_to_base_iface, error::np_error_to_nmstate};
 use crate::{
     ErrorKind, EthernetInterface, Interface, InterfaceType, LoopbackInterface,
     NetworkState, NmError, NmNoDaemon, NmstateQueryOption, UnknownInterface,
+    WifiPhyInterface,
 };
 
 impl NmNoDaemon {
@@ -55,6 +56,9 @@ impl NmNoDaemon {
                 }
                 InterfaceType::Loopback => Interface::Loopback(Box::new(
                     LoopbackInterface::new(base_iface),
+                )),
+                InterfaceType::WifiPhy => Interface::WifiPhy(Box::new(
+                    WifiPhyInterface::new_from_nispor(base_iface, np_iface),
                 )),
                 _ => {
                     log::trace!(

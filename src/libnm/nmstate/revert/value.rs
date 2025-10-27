@@ -2,6 +2,8 @@
 
 use serde_json::{Map, Value};
 
+const SECRET_KEYS: [&str; 1] = ["password"];
+
 pub(crate) fn gen_revert_state(
     desired: &Value,
     current: &Value,
@@ -12,22 +14,28 @@ pub(crate) fn gen_revert_state(
             let cur_obj = if let Some(c) = current.as_object() {
                 c
             } else {
-                log::debug!("Current is not Value::Object but {current:?}");
+                log::trace!("Current is not Value::Object but {current:?}");
                 return;
             };
             let rev_obj = if let Some(r) = revert.as_object_mut() {
                 r
             } else {
-                log::debug!("Current is not Value::Object but {current:?}");
+                log::trace!("Current is not Value::Object but {current:?}");
                 return;
             };
             for (key, des_value) in des_obj.iter() {
+                let des_value_display = if SECRET_KEYS.contains(&key.as_str()) {
+                    &Value::from(crate::NetworkState::HIDE_PASSWORD_STR)
+                } else {
+                    des_value
+                };
+
                 let cur_value = if let Some(c) = cur_obj.get(key) {
                     c
                 } else {
-                    log::debug!(
+                    log::trace!(
                         "Current does not have key {key}, desired value \
-                         {des_value} full current: {current:?}"
+                         {des_value_display} full current: {current:?}"
                     );
                     continue;
                 };

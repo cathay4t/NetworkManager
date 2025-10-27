@@ -110,20 +110,8 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
     }
 }
 
-fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
-    if reference.contains("interface.link-aggregation.options") {
-        // Per oVirt request, bond option difference should not
-        // fail verification.
-        log::warn!(
-            "Bond option miss-match: {} desire '{}', current '{}'",
-            reference,
-            desire,
-            current
-        );
-        true
-    } else {
-        false
-    }
+fn should_ignore(_reference: &str, _desire: &Value, _current: &Value) -> bool {
+    false
 }
 
 pub(crate) fn gen_diff_json_value(

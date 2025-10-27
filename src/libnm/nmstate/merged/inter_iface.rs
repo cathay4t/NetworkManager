@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, Interface, InterfaceType, Interfaces, JsonDisplay,
+    ErrorKind, Interface, InterfaceType, Interfaces, JsonDisplayHideSecrets,
     MergedInterface, NmError, NmstateInterface,
 };
 
@@ -16,7 +16,14 @@ use crate::{
 const INTERFACES_SET_PRIORITY_MAX_RETRY: u32 = 4;
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonDisplayHideSecrets,
 )]
 #[non_exhaustive]
 pub struct MergedInterfaces {
@@ -26,6 +33,12 @@ pub struct MergedInterfaces {
 }
 
 impl MergedInterfaces {
+    pub fn hide_secrets(&mut self) {
+        for merged_iface in self.iter_mut() {
+            merged_iface.hide_secrets()
+        }
+    }
+
     pub fn new(
         desired: Interfaces,
         current: Interfaces,
@@ -44,6 +57,13 @@ impl MergedInterfaces {
         // TODO: Remove ignore interface
         // TODO: Resolve `type: unknown` in desired based on current state
         for mut des_iface in desired.drain() {
+            if des_iface.is_ignore() {
+                log::info!(
+                    "Ignoring interface {} for `state: ignore`",
+                    des_iface.name()
+                );
+                continue;
+            }
             insert_order.push((
                 des_iface.name().to_string(),
                 des_iface.iface_type().clone(),
@@ -174,7 +194,7 @@ impl MergedInterfaces {
 
         current.unify_veth_and_ethernet();
 
-        current.sanitize_for_verify();
+        current.sanitize_current_for_verify();
 
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
             let iface = if let Some(i) = des_iface.for_verify.as_mut() {
@@ -382,9 +402,9 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn sanitize_for_verify(&mut self) {
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
         for iface in self.iter_mut() {
-            iface.sanitize_for_verify();
+            iface.sanitize_current_for_verify();
         }
     }
 

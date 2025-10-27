@@ -4,8 +4,8 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 
 from libnm import NmClient
-from libnm.nmstate import NmstateStateKind
-from libnm.nmstate import NmstateQueryOption
+from libnm import NmstateStateKind
+from libnm import NmstateQueryOption
 import yaml
 
 RETRY_COUNT = 100

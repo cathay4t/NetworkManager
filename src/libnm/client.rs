@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonDisplay, NetworkState, NmCanIpc, NmError, NmIpcConnection,
+    JsonDisplayHideSecrets, NetworkState, NmCanIpc, NmError, NmIpcConnection,
     NmstateApplyOption, NmstateQueryOption,
 };
 
@@ -18,7 +18,9 @@ pub struct NmClient {
     pub(crate) ipc: NmIpcConnection,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
+#[derive(
+    Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplayHideSecrets,
+)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NmClientCmd {
@@ -33,6 +35,14 @@ impl NmCanIpc for NmClientCmd {
             Self::Ping => "ping".to_string(),
             Self::QueryNetworkState(_) => "query-network-state".to_string(),
             Self::ApplyNetworkState(_) => "apply-network-state".to_string(),
+        }
+    }
+}
+
+impl NmClientCmd {
+    pub fn hide_secrets(&mut self) {
+        if let NmClientCmd::ApplyNetworkState(cmd) = self {
+            cmd.0.hide_secrets();
         }
     }
 }

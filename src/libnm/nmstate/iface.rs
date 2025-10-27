@@ -14,11 +14,12 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, ErrorKind, EthernetInterface, InterfaceState, InterfaceType,
-    JsonDisplay, LoopbackInterface, NmError, NmstateInterface,
-    OvsBridgeInterface, OvsInterface, UnknownInterface,
+    JsonDisplayHideSecrets, LoopbackInterface, NmError, NmstateInterface,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, WifiCfgInterface,
+    WifiPhyInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplayHideSecrets)]
 #[serde(rename_all = "kebab-case", untagged)]
 #[non_exhaustive]
 /// Represent a kernel or user space network interface.
@@ -31,6 +32,10 @@ pub enum Interface {
     OvsInterface(Box<OvsInterface>),
     /// Loopback Interface
     Loopback(Box<LoopbackInterface>),
+    /// WiFi Interface
+    WifiPhy(Box<WifiPhyInterface>),
+    /// Pseudo Interface for WiFi configuration
+    WifiCfg(Box<WifiCfgInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -92,6 +97,16 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Loopback(Box::new(inner)))
             }
+            Some(InterfaceType::WifiPhy) => {
+                let inner = WifiPhyInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::WifiPhy(Box::new(inner)))
+            }
+            Some(InterfaceType::WifiCfg) => {
+                let inner = WifiCfgInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::WifiCfg(Box::new(inner)))
+            }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
@@ -150,6 +165,8 @@ macro_rules! gen_iface_trait_impl {
                     Self::OvsBridge,
                     Self::OvsInterface,
                     Self::Loopback,
+                    Self::WifiPhy,
+                    Self::WifiCfg,
                     Self::Unknown,
                 )
             }
@@ -168,6 +185,8 @@ macro_rules! gen_iface_trait_impl_mut {
                     Self::OvsBridge,
                     Self::OvsInterface,
                     Self::Loopback,
+                    Self::WifiPhy,
+                    Self::WifiCfg,
                     Self::Unknown,
                 )
             }
@@ -187,7 +206,7 @@ impl NmstateInterface for Interface {
     gen_iface_trait_impl_mut!(
         (base_iface_mut, &mut BaseInterface),
         (hide_secrets_iface_specific, ()),
-        (sanitize_for_verify_iface_specfic, ()),
+        (sanitize_current_for_verify_iface_specfic, ()),
     );
 
     fn sanitize_iface_specfic(
@@ -201,6 +220,8 @@ impl NmstateInterface for Interface {
             Interface::OvsBridge,
             Interface::OvsInterface,
             Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
             Interface::Unknown,
         )
     }
@@ -230,6 +251,16 @@ impl NmstateInterface for Interface {
                 Self::Loopback(i),
                 Self::Loopback(desired),
                 Self::Loopback(current),
+            ) => i.include_diff_context_iface_specific(desired, current),
+            (
+                Self::WifiPhy(i),
+                Self::WifiPhy(desired),
+                Self::WifiPhy(current),
+            ) => i.include_diff_context_iface_specific(desired, current),
+            (
+                Self::WifiCfg(i),
+                Self::WifiCfg(desired),
+                Self::WifiCfg(current),
             ) => i.include_diff_context_iface_specific(desired, current),
             (
                 Self::Unknown(i),
@@ -270,6 +301,16 @@ impl NmstateInterface for Interface {
                 Self::Loopback(i),
                 Self::Loopback(desired),
                 Self::Loopback(pre_apply),
+            ) => i.include_revert_context_iface_specific(desired, pre_apply),
+            (
+                Self::WifiPhy(i),
+                Self::WifiPhy(desired),
+                Self::WifiPhy(pre_apply),
+            ) => i.include_revert_context_iface_specific(desired, pre_apply),
+            (
+                Self::WifiCfg(i),
+                Self::WifiCfg(desired),
+                Self::WifiCfg(pre_apply),
             ) => i.include_revert_context_iface_specific(desired, pre_apply),
             (
                 Self::Unknown(i),
@@ -314,6 +355,8 @@ impl From<BaseInterface> for Interface {
             InterfaceType::Ipsec => todo!(),
             InterfaceType::Xfrm => todo!(),
             InterfaceType::IpVlan => todo!(),
+            InterfaceType::WifiPhy => Interface::WifiPhy(Default::default()),
+            InterfaceType::WifiCfg => Interface::WifiCfg(Default::default()),
             InterfaceType::Unknown(_) => Interface::Unknown(Default::default()),
         };
         *iface.base_iface_mut() = base_iface;

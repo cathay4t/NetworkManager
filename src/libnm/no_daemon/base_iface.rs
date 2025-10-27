@@ -9,12 +9,6 @@ use crate::{
     nmstate::{BaseInterface, InterfaceState, InterfaceType},
 };
 
-const SUPPORTED_LIST: [InterfaceType; 3] = [
-    InterfaceType::Ethernet,
-    InterfaceType::Veth,
-    InterfaceType::Loopback,
-];
-
 fn np_iface_type_to_nmstate(
     np_iface_type: &nispor::IfaceType,
 ) -> InterfaceType {
@@ -37,6 +31,7 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Tun => InterfaceType::Tun,
         nispor::IfaceType::Xfrm => InterfaceType::Xfrm,
         nispor::IfaceType::IpVlan => InterfaceType::IpVlan,
+        nispor::IfaceType::Wifi => InterfaceType::WifiPhy,
         nispor::IfaceType::Other(v) => InterfaceType::Unknown(v.to_lowercase()),
         _ => {
             InterfaceType::Unknown(format!("{np_iface_type:?}").to_lowercase())
@@ -94,7 +89,7 @@ pub(crate) fn np_iface_to_base_iface(
         },
         ..Default::default()
     };
-    if !SUPPORTED_LIST.contains(&base_iface.iface_type) {
+    if !base_iface.iface_type.is_supported() {
         log::trace!(
             "Got unsupported interface type {}: {}, ignoring",
             &base_iface.iface_type,

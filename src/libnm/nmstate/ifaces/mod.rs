@@ -7,6 +7,7 @@ mod loopback;
 mod ovs_bridge;
 mod ovs_iface;
 mod unknown;
+mod wifi;
 
 pub use self::{
     base::BaseInterface,
@@ -16,4 +17,5 @@ pub use self::{
     ovs_bridge::{OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig},
     ovs_iface::OvsInterface,
     unknown::UnknownInterface,
+    wifi::{WifiCfgInterface, WifiConfig, WifiPhyInterface},
 };
