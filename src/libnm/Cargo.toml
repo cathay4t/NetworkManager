@@ -9,6 +9,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+libnm_derive = { "path" = "../libnm-derive" }
 log = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
@@ -16,8 +17,9 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
-libnm_derive = { "path" = "../libnm-derive" }
 nispor = { workspace = true }
+rtnetlink = { workspace = true }
+futures = { workspace = true }
 
 [lib]
 name = "nm"

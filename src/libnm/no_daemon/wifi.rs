@@ -19,8 +19,8 @@ fn get_wifi_conf(np_iface: &nispor::Iface) -> Option<WifiConfig> {
     let mut ret = WifiConfig::default();
     ret.rx_bitrate_mb = np_wifi.rx_bitrate.map(|r| r / 10);
     ret.tx_bitrate_mb = np_wifi.tx_bitrate.map(|r| r / 10);
-    ret.frequency = np_wifi.frequency.clone();
-    ret.generation = np_wifi.generation.clone();
+    ret.frequency = np_wifi.frequency;
+    ret.generation = np_wifi.generation;
     ret.ssid = np_wifi.ssid.clone();
 
     Some(ret)

@@ -68,18 +68,16 @@ impl MergedInterface {
     }
 
     pub fn hide_secrets(&mut self) {
-        for state in [
+        for s in [
             self.desired.as_mut(),
             self.current.as_mut(),
             Some(&mut self.merged),
             self.for_apply.as_mut(),
             self.for_verify.as_mut(),
         ]
-        .iter_mut()
+        .iter_mut().flatten()
         {
-            if let Some(s) = state {
-                s.hide_secrets()
-            }
+            s.hide_secrets()
         }
     }
 }

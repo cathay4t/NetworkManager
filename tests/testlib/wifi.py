@@ -68,7 +68,7 @@ def get_nic_name_by_perm_mac(state, mac):
 
 def get_wifi_phy_name(nic_name):
     # TODO(Gris Ge): use libnm instead of iw here
-    (output, _) = exec_cmd(f"iw dev {nic_name} info".split())
+    output = exec_cmd(f"iw dev {nic_name} info".split())[1]
     match = re.search(r"[^a-zA-Z]wiphy ([0-9]+)", output)
     assert match
     if match:

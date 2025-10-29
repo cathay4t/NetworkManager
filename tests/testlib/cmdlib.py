@@ -13,5 +13,6 @@ def exec_cmd(cmd, check=True):
 
     stdout = p.stdout
     stderr = p.stderr
+    rc = p.returncode
 
-    return (stdout.decode("utf-8"), stderr.decode("utf-8"))
+    return (rc, stdout.decode("utf-8"), stderr.decode("utf-8"))

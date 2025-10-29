@@ -51,7 +51,7 @@ git = "https://github.com/nispor/mozim"
 default-features = false
 
 [workspace.dependencies.rtnetlink]
-version = "0.17.1"
+git = "https://github.com/rust-netlink/rtnetlink"
 
 [workspace.dependencies.futures_channel]
 version = "0.3.30"

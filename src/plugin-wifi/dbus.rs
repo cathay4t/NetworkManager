@@ -154,14 +154,14 @@ impl WpaSupDbus<'_> {
         &self,
         iface_name: &str,
     ) -> Result<String, NmError> {
-        Ok(self
+        self
             .proxy
             .create_interface(
                 WpaSupInterface::new(iface_name.to_string()).to_value(),
             )
             .await
             .map(obj_path_to_string)
-            .map_err(map_zbus_err)?)
+            .map_err(map_zbus_err)
     }
 
     pub(crate) async fn del_iface(

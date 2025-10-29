@@ -9,6 +9,7 @@ mod inter_ifaces;
 mod ip;
 mod query;
 mod wifi;
+mod watcher;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct NmNoDaemon {}
