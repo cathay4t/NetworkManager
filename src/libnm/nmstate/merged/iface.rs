@@ -75,7 +75,8 @@ impl MergedInterface {
             self.for_apply.as_mut(),
             self.for_verify.as_mut(),
         ]
-        .iter_mut().flatten()
+        .iter_mut()
+        .flatten()
         {
             s.hide_secrets()
         }

@@ -16,12 +16,14 @@ impl WifiPhyInterface {
 
 fn get_wifi_conf(np_iface: &nispor::Iface) -> Option<WifiConfig> {
     let np_wifi = np_iface.wifi.as_ref()?;
-    let mut ret = WifiConfig::default();
-    ret.rx_bitrate_mb = np_wifi.rx_bitrate.map(|r| r / 10);
-    ret.tx_bitrate_mb = np_wifi.tx_bitrate.map(|r| r / 10);
-    ret.frequency = np_wifi.frequency;
-    ret.generation = np_wifi.generation;
-    ret.ssid = np_wifi.ssid.clone();
+    let ret = WifiConfig {
+        rx_bitrate_mb: np_wifi.rx_bitrate.map(|r| r / 10),
+        tx_bitrate_mb: np_wifi.tx_bitrate.map(|r| r / 10),
+        frequency: np_wifi.frequency,
+        generation: np_wifi.generation,
+        ssid: np_wifi.ssid.clone(),
+        ..Default::default()
+    };
 
     Some(ret)
 }

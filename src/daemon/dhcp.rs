@@ -166,7 +166,17 @@ async fn dhcp_thread(
     mut quit_indicator: Receiver<()>,
     share_data: Arc<Mutex<NmDhcpShareData>>,
 ) -> Result<(), NmError> {
-    // TODO(Gris Ge): Wait link carrier
+    log::debug!(
+        "Waiting link carrier up for interface {}/{} before start DHCP",
+        base_iface.name,
+        base_iface.iface_type
+    );
+    NmNoDaemon::wait_link_carrier_up(base_iface.name.as_str()).await?;
+    log::debug!(
+        "Interface {}/{} link carrier is up, starting DHCP process",
+        base_iface.name,
+        base_iface.iface_type
+    );
     match share_data.lock() {
         Ok(mut share_data) => {
             share_data.state = DhcpState::Running;

@@ -10,6 +10,11 @@ import pytest
 
 from .cmdlib import exec_cmd
 from .retry import retry_till_true_or_timeout
+from .dhcp import start_dhcp_server
+from .dhcp import stop_dhcp_server
+from .dhcp import DHCP_SRV_IP4
+from .dhcp import DHCP_SRV_IP6
+from .dhcp import DHCP_SRV_NIC
 
 
 HWSIM0_PERM_MAC = "02:00:00:00:00:00"
@@ -19,8 +24,8 @@ TEST_WIFI_SSID = "Test-WIFI"
 TEST_WIFI_PSK = "12345678"
 HOSTAPD_PID_PATH = "/tmp/nm_test_hostapd.pid"
 HOSTAPD_CONF_PATH = "/tmp/nm_test_hostapd.conf"
-HOSTAPD_CONF_FMT = """
-interface={IFACE_NAME}
+HOSTAPD_CONF = f"""
+interface={DHCP_SRV_NIC}
 driver=nl80211
 
 hw_mode=g
@@ -33,11 +38,12 @@ wpa_pairwise=CCMP
 wpa_passphrase=12345678
 """
 TIMEOUT_SECS_SIM_WIFI_NICS = 30
-PEER_IPV4 = "203.0.113.1"
+WIFI_TEST_NIC = "test-wlan0"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def wifi_env():
+    exec_cmd("modprobe -r mac80211_hwsim".split(), check=False)
     exec_cmd(f"ip netns del {TEST_NET_NS}".split(), check=False)
     exec_cmd(f"ip netns add {TEST_NET_NS}".split())
 
@@ -48,9 +54,12 @@ def wifi_env():
 
     state = libnm.show()
     wlan1 = get_nic_name_by_perm_mac(state, HWSIM0_PERM_MAC)
+    exec_cmd(f"ip link set {wlan1} name {WIFI_TEST_NIC}".split())
     wlan2 = get_nic_name_by_perm_mac(state, HWSIM1_PERM_MAC)
-    start_hostapd(wlan2)
-    yield wlan1
+    exec_cmd(f"ip link set {wlan2} name {DHCP_SRV_NIC}".split())
+    exec
+    start_hostapd()
+    yield
     exec_cmd(f"ip netns del {TEST_NET_NS}".split())
     exec_cmd("modprobe -r mac80211_hwsim".split(), check=False)
     os.remove(HOSTAPD_CONF_PATH)
@@ -58,6 +67,7 @@ def wifi_env():
         with open(HOSTAPD_PID_PATH) as fd:
             pid = fd.read()
         os.kill(int(pid), signal.SIGTERM)
+    stop_dhcp_server()
 
 
 def get_nic_name_by_perm_mac(state, mac):
@@ -83,21 +93,19 @@ def has_sim_wifi_nics():
     return wlan1 and wlan2
 
 
-def start_hostapd(nic_name):
-    phy_id = get_wifi_phy_name(nic_name)
+def start_hostapd():
+    phy_id = get_wifi_phy_name(DHCP_SRV_NIC)
     assert phy_id
     # Move phy2 to namespace with hostpad
     exec_cmd(f"iw phy#{phy_id} set netns name {TEST_NET_NS}".split())
-    exec_cmd(f"ip netns exec {TEST_NET_NS} ip link set {nic_name} up".split())
     exec_cmd(
-        f"ip netns exec {TEST_NET_NS} "
-        f"ip addr add {PEER_IPV4}/24 dev {nic_name}".split()
+        f"ip netns exec {TEST_NET_NS} ip link set {DHCP_SRV_NIC} up".split()
     )
-
     with open(HOSTAPD_CONF_PATH, "w") as fd:
-        fd.write(HOSTAPD_CONF_FMT.format(IFACE_NAME=nic_name))
+        fd.write(HOSTAPD_CONF)
 
     exec_cmd(
         f"ip netns exec {TEST_NET_NS} "
         f"hostapd -B -d {HOSTAPD_CONF_PATH} -P {HOSTAPD_PID_PATH}".split(),
     )
+    start_dhcp_server(TEST_NET_NS)

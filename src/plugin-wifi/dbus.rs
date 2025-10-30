@@ -154,8 +154,7 @@ impl WpaSupDbus<'_> {
         &self,
         iface_name: &str,
     ) -> Result<String, NmError> {
-        self
-            .proxy
+        self.proxy
             .create_interface(
                 WpaSupInterface::new(iface_name.to_string()).to_value(),
             )
