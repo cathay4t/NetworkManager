@@ -5,11 +5,15 @@ use std::collections::HashMap;
 use nm::{ErrorKind, NmError};
 use zvariant::{ObjectPath, OwnedObjectPath};
 
-use super::{interface::WpaSupInterface, network::WpaSupNetwork};
+use super::{
+    bss::WpaSupBss, interface::WpaSupInterface, network::WpaSupNetwork,
+};
 
 const WPA_SUP_DBUS_IFACE_ROOT: &str = "fi.w1.wpa_supplicant1";
 const WPA_SUP_DBUS_IFACE_IFACE: &str = "fi.w1.wpa_supplicant1.Interface";
 const WPA_SUP_DBUS_IFACE_NETWORK: &str = "fi.w1.wpa_supplicant1.Network";
+const WPA_SUP_DBUS_IFACE_BSS: &str = "fi.w1.wpa_supplicant1.BSS";
+const DBUS_IFACE_PROPS: &str = "org.freedesktop.DBus.Properties";
 
 // These proxy() macros only generate private struct, hence it should be
 // sit with its consumer.
@@ -150,6 +154,40 @@ impl WpaSupDbus<'_> {
         Ok(ret)
     }
 
+    pub(crate) async fn get_ifaces(
+        &self,
+    ) -> Result<Vec<WpaSupInterface>, NmError> {
+        let mut ret: Vec<WpaSupInterface> = Vec::new();
+        for iface_obj_path in self.get_iface_obj_paths().await? {
+            ret.push(self.get_iface(&iface_obj_path).await?);
+        }
+        Ok(ret)
+    }
+
+    pub(crate) async fn get_iface(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<WpaSupInterface, NmError> {
+        let obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            obj_path.as_str(),
+            DBUS_IFACE_PROPS,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+        let value = proxy
+            .call::<&str, &str, HashMap<String, zvariant::OwnedValue>>(
+                "GetAll",
+                &WPA_SUP_DBUS_IFACE_IFACE,
+            )
+            .await
+            .map_err(map_zbus_err)?;
+
+        WpaSupInterface::from_value(value, obj_path)
+    }
+
     pub(crate) async fn add_iface(
         &self,
         iface_name: &str,
@@ -237,6 +275,44 @@ impl WpaSupDbus<'_> {
             .call::<&str, ObjectPath, ()>("RemoveNetwork", &network_obj_path)
             .await
             .map_err(map_zbus_err)
+    }
+
+    pub(crate) async fn get_current_bss(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<WpaSupBss, NmError> {
+        let iface_obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            iface_obj_path,
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+        let bss_obj_path = proxy
+            .get_property::<OwnedObjectPath>("CurrentBSS")
+            .await
+            .map_err(map_zbus_err)?;
+
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            bss_obj_path.as_str(),
+            DBUS_IFACE_PROPS,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+
+        let value = proxy
+            .call::<&str, &str, HashMap<String, zvariant::OwnedValue>>(
+                "GetAll",
+                &WPA_SUP_DBUS_IFACE_BSS,
+            )
+            .await
+            .map_err(map_zbus_err)?;
+
+        WpaSupBss::from_value(value, bss_obj_path)
     }
 }
 

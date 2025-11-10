@@ -44,21 +44,22 @@ impl NmDaemon {
         Ok(Self {
             api_ipc,
             plugins,
-            share_data: NmDaemonShareData::new(),
+            share_data: NmDaemonShareData::new().await?,
         })
     }
 
-    pub(crate) async fn run(&mut self) -> Result<(), NmError> {
+    /// Please run this function in a thread
+    pub(crate) async fn run(&mut self) {
         loop {
             tokio::select! {
                 result = self.api_ipc.accept() => {
                     self.handle_api_connection(result).await;
                 },
-                // TODO(Gris Ge): Handle TERM signal here
+                // TODO(Gris Ge): Handle TERM signal here:
+                //  * Request plugin to quit
                 else => break,
             }
         }
-        Ok(())
     }
 
     async fn handle_api_connection(

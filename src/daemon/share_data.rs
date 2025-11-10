@@ -1,38 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{Arc, Mutex, MutexGuard};
+use nm::NmError;
 
-use nm::{ErrorKind, NmError};
-
-use super::dhcp::NmDhcpV4Manager;
+use super::{
+    conf_manager::NmConfManager, dhcp_manager::NmDhcpV4Manager,
+    monitor_manager::NmMonitorManager,
+};
 
 /// Share data among all threads of NM daemon
 ///
-/// Clone of this object does not create new share data. The internal data is
-/// shared among all threads of NM daemon
+/// This struct is safe to clone and move to threads
 #[derive(Debug, Clone)]
 pub(crate) struct NmDaemonShareData {
-    dhcpv4_manager: Arc<Mutex<NmDhcpV4Manager>>,
+    pub(crate) dhcpv4_manager: NmDhcpV4Manager,
+    pub(crate) monitor_manager: NmMonitorManager,
+    pub(crate) conf_manager: NmConfManager,
 }
 
 impl NmDaemonShareData {
-    pub(crate) fn new() -> Self {
-        Self {
-            dhcpv4_manager: Arc::new(Mutex::new(NmDhcpV4Manager::new())),
-        }
-    }
-
-    /// Lock access to NmDhcpV4Manager
-    pub(crate) fn dhcpv4_manager<'a>(
-        &'a mut self,
-    ) -> Result<MutexGuard<'a, NmDhcpV4Manager>, NmError> {
-        self.dhcpv4_manager.lock().map_err(|e| {
-            NmError::new(
-                ErrorKind::Bug,
-                format!(
-                    "Failed to lock NmDhcpV4Manager of NmDaemonShareData: {e}"
-                ),
-            )
+    pub(crate) async fn new() -> Result<Self, NmError> {
+        Ok(Self {
+            dhcpv4_manager: NmDhcpV4Manager::new().await?,
+            monitor_manager: NmMonitorManager::new().await?,
+            conf_manager: NmConfManager::new().await?,
         })
     }
 }

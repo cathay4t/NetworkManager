@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, JsonDisplayHideSecrets, NmError,
+    BaseInterface, InterfaceType, JsonDisplay, JsonDisplayHideSecrets, NmError,
     NmstateInterface, nmstate::deserializer::option_number_as_string,
 };
 
@@ -17,14 +17,18 @@ pub struct WifiPhyInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wifi: Option<WifiConfig>,
+    pub wifi_state: Option<WifiState>,
 }
 
 impl WifiPhyInterface {
-    pub fn new(base: BaseInterface) -> Self {
+    pub fn new(name: String, wifi_state: WifiState) -> Self {
         Self {
-            base,
-            ..Default::default()
+            base: BaseInterface {
+                name: name.to_string(),
+                iface_type: InterfaceType::WifiPhy,
+                ..Default::default()
+            },
+            wifi_state: Some(wifi_state),
         }
     }
 }
@@ -36,7 +40,7 @@ impl Default for WifiPhyInterface {
                 iface_type: InterfaceType::WifiPhy,
                 ..Default::default()
             },
-            wifi: None,
+            wifi_state: None,
         }
     }
 }
@@ -53,21 +57,53 @@ impl NmstateInterface for WifiPhyInterface {
     fn is_virtual(&self) -> bool {
         false
     }
+}
 
-    fn sanitize_iface_specfic(
-        &mut self,
-        _current: Option<&Self>,
-    ) -> Result<(), NmError> {
-        if let Some(wifi_cfg) = self.wifi.as_mut() {
-            wifi_cfg.sanitize();
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+pub struct WifiState {
+    /// Service Set Identifier(SSID)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssid: Option<String>,
+    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generation: Option<u32>,
+    /// WiFi frequency in MHz. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frequency_mhz: Option<u32>,
+    /// Receive bitrate in 1mb/s. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rx_bitrate_mb: Option<u32>,
+    /// Transmit bitrate in 1mb/s. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_bitrate_mb: Option<u32>,
+    /// Signal in dBm. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signal_dbm: Option<i16>,
+    /// Signal in percentage. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signal_percent: Option<u8>,
+}
+
+// Align with Microsoft `WLAN_ASSOCIATION_ATTRIBUTES`
+const NOISE_FLOOR_DBM: i16 = -100;
+const SIGNAL_MAX_DBM: i16 = -50;
+
+impl WifiState {
+    /// Use `signal_dbm` to calculate out `signal_percent`
+    pub fn sanitize_signal(&mut self) {
+        if let Some(s) = self.signal_dbm {
+            self.signal_percent = Some(Self::signal_dbm_to_percent(s));
         }
-        Ok(())
     }
 
-    fn hide_secrets_iface_specific(&mut self) {
-        if let Some(wifi_cfg) = self.wifi.as_mut() {
-            wifi_cfg.hide_secrets();
-        }
+    pub fn signal_dbm_to_percent(dbm: i16) -> u8 {
+        let dbm = dbm.clamp(NOISE_FLOOR_DBM, SIGNAL_MAX_DBM);
+        (100.0f64 * (NOISE_FLOOR_DBM - dbm) as f64
+            / (NOISE_FLOOR_DBM - SIGNAL_MAX_DBM) as f64) as u8
     }
 }
 
@@ -90,6 +126,10 @@ impl WifiCfgInterface {
             base,
             ..Default::default()
         }
+    }
+
+    pub fn parent(&self) -> Option<&str> {
+        self.wifi.as_ref().and_then(|w| w.base_iface.as_deref())
     }
 }
 
@@ -159,28 +199,11 @@ pub struct WifiConfig {
     /// If undefined, it means any WiFi network interface can be used for
     /// connecting this WiFi.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bind_to_iface: Option<String>,
-    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub generation: Option<u32>,
-    /// WiFi frequency, For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub frequency: Option<u32>,
-    /// Receive bitrate in 1mb/s. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rx_bitrate_mb: Option<u32>,
-    /// Transmit bitrate in 1mb/s. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tx_bitrate_mb: Option<u32>,
+    pub base_iface: Option<String>,
 }
 
 impl WifiConfig {
-    pub(crate) fn sanitize(&mut self) {
-        self.rx_bitrate_mb = None;
-        self.tx_bitrate_mb = None;
-        self.generation = None;
-        self.frequency = None;
-    }
+    pub(crate) fn sanitize(&mut self) {}
 
     pub fn hide_secrets(&mut self) {
         if self.password.is_some() {
@@ -204,11 +227,7 @@ impl std::fmt::Debug for WifiConfig {
 struct WifiConfigHideSecrets {
     ssid: Option<String>,
     password: Option<String>,
-    bind_to_iface: Option<String>,
-    generation: Option<u32>,
-    frequency: Option<u32>,
-    rx_bitrate_mb: Option<u32>,
-    tx_bitrate_mb: Option<u32>,
+    base_iface: Option<String>,
 }
 
 impl From<&WifiConfig> for WifiConfigHideSecrets {
@@ -216,11 +235,7 @@ impl From<&WifiConfig> for WifiConfigHideSecrets {
         let WifiConfig {
             ssid,
             password,
-            bind_to_iface,
-            generation,
-            frequency,
-            rx_bitrate_mb,
-            tx_bitrate_mb,
+            base_iface,
         } = v.clone();
         Self {
             password: if password.is_some() {
@@ -229,11 +244,7 @@ impl From<&WifiConfig> for WifiConfigHideSecrets {
                 None
             },
             ssid,
-            bind_to_iface,
-            generation,
-            frequency,
-            rx_bitrate_mb,
-            tx_bitrate_mb,
+            base_iface,
         }
     }
 }

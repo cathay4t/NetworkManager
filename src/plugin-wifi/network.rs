@@ -25,36 +25,19 @@ impl WpaSupNetwork {
                 )
             })?;
 
-        let ssid: String = match map.remove("ssid") {
-            Some(s) => {
-                let ssid = String::try_from(s).map_err(|e| {
-                    NmError::new(
-                        ErrorKind::PluginFailure,
-                        format!(
-                            "Invalid wpa_supplicant DBUS reply of network: \
-                             expecting `ssid` property as string: {e}"
-                        ),
-                    )
-                })?;
-                // wpa_supplicant always add quote to SSID
-                match ssid.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
-                    Some(s) => s.to_string(),
-                    None => ssid,
-                }
-            }
-            None => {
-                return Err(NmError::new(
-                    ErrorKind::PluginFailure,
-                    "Invalid wpa_supplicant DBUS reply of network: not found \
-                     `ssid` property"
-                        .into(),
-                ));
-            }
-        };
         Ok(Self {
-            ssid,
-            psk: None,
             obj_path,
+            psk: None,
+            ssid: _from_map!(map, "ssid", String::try_from)?.ok_or_else(
+                || {
+                    NmError::new(
+                        ErrorKind::Bug,
+                        "ssid does not exist in wpa_spplicant DBUS network \
+                         query reply"
+                            .to_string(),
+                    )
+                },
+            )?,
         })
     }
 

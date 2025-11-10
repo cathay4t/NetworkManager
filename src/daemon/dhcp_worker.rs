@@ -5,83 +5,124 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use futures::{
+    StreamExt,
+    channel::{
+        mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
+        oneshot::Sender,
+    },
+};
 use mozim::{DhcpV4Client, DhcpV4Config, DhcpV4Lease, DhcpV4State};
 use nm::{
     BaseInterface, DhcpState, ErrorKind, Interface, InterfaceIpAddr,
-    InterfaceIpv4, MergedNetworkState, NetworkState, NmError, NmIpcConnection,
-    NmNoDaemon, NmstateApplyOption, NmstateInterface,
+    InterfaceIpv4, NetworkState, NmError, NmNoDaemon, NmstateApplyOption,
 };
-use tokio::sync::mpsc::{Receiver, Sender};
 
-use super::share_data::NmDaemonShareData;
+use super::worker::NmWorker;
 
-const MPSC_CHANNEL_BUFFER: usize = 64;
-
-#[derive(Debug, Default)]
-pub(crate) struct NmDhcpV4Manager {
-    workers: HashMap<String, NmDhcpV4Worker>,
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum NmDhcpCmd {
+    StartIfaceDhcp(Box<BaseInterface>),
+    StopIfaceDhcp(String),
+    Query,
 }
 
-// Do not add `async` function to NmDhcpV4Manager because it will be stored
-// into Mutex protected `NmDaemonShareData`. The
-// `MutexGuard` will cause function not `Send`.
-impl NmDhcpV4Manager {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
-    /// Fill the NetworkState with DHCP states
-    pub(crate) fn query(
-        &self,
-        net_state: &mut NetworkState,
-    ) -> Result<(), NmError> {
-        for (iface_name, worker) in self.workers.iter() {
-            if let Some(iface) =
-                net_state.ifaces.kernel_ifaces.get_mut(iface_name.as_str())
-            {
-                let ipv4_conf = iface
-                    .base_iface_mut()
-                    .ipv4
-                    .get_or_insert(Default::default());
-                ipv4_conf.enabled = Some(true);
-                ipv4_conf.dhcp = Some(true);
-                ipv4_conf.dhcp_state = Some(worker.get_state()?);
+impl std::fmt::Display for NmDhcpCmd {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::StartIfaceDhcp(base_iface) => {
+                write!(f, "start-iface-dhcp:{}", base_iface.name)
+            }
+            Self::StopIfaceDhcp(iface) => {
+                write!(f, "stop-iface-dhcp:{iface}")
+            }
+            Self::Query => {
+                write!(f, "query-dhcp")
             }
         }
-        Ok(())
-    }
-
-    pub(crate) fn add_dhcp_worker(&mut self, worker: NmDhcpV4Worker) {
-        self.workers
-            .insert(worker.base_iface.name.to_string(), worker);
-    }
-
-    /// Remove DHCP worker will cause DHCP thread been terminated
-    pub(crate) fn remove_dhcp_worker(&mut self, iface_name: &str) {
-        self.workers.remove(iface_name);
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum NmDhcpReply {
+    None,
+    QueryReply(HashMap<String, DhcpState>),
+}
+
+type FromManager = (NmDhcpCmd, Sender<Result<NmDhcpReply, NmError>>);
 
 #[derive(Debug)]
 pub(crate) struct NmDhcpV4Worker {
-    base_iface: BaseInterface,
-    // No need to send any data. Dropping this Sender will cause
-    // Receiver.recv() got None which trigger DHCP thread quit.
-    _quit_notifer: Sender<()>,
-    share_data: Arc<Mutex<NmDhcpShareData>>,
+    threads: HashMap<String, NmDhcpV4Thread>,
+    receiver: UnboundedReceiver<FromManager>,
+}
+
+impl NmWorker for NmDhcpV4Worker {
+    type Cmd = NmDhcpCmd;
+    type Reply = NmDhcpReply;
+
+    async fn new(
+        receiver: UnboundedReceiver<(
+            Self::Cmd,
+            Sender<Result<Self::Reply, NmError>>,
+        )>,
+    ) -> Result<Self, NmError> {
+        Ok(Self {
+            threads: HashMap::new(),
+            receiver,
+        })
+    }
+
+    fn receiver(&mut self) -> &mut UnboundedReceiver<FromManager> {
+        &mut self.receiver
+    }
+
+    async fn process_cmd(
+        &mut self,
+        cmd: NmDhcpCmd,
+    ) -> Result<NmDhcpReply, NmError> {
+        match cmd {
+            NmDhcpCmd::StartIfaceDhcp(base_iface) => {
+                let iface_name = base_iface.name.clone();
+                let thread = NmDhcpV4Thread::new(*base_iface).await?;
+                self.threads.insert(iface_name, thread);
+                Ok(NmDhcpReply::None)
+            }
+            NmDhcpCmd::StopIfaceDhcp(iface) => {
+                self.threads.remove(&iface);
+                Ok(NmDhcpReply::None)
+            }
+            NmDhcpCmd::Query => {
+                let mut ret = HashMap::new();
+                for (iface_name, thread) in self.threads.iter() {
+                    ret.insert(iface_name.to_string(), thread.get_state()?);
+                }
+
+                Ok(NmDhcpReply::QueryReply(ret))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct NmDhcpShareData {
+struct NmDhcpShareData {
     state: DhcpState,
 }
 
-impl NmDhcpV4Worker {
+#[derive(Debug)]
+pub(crate) struct NmDhcpV4Thread {
+    pub(crate) base_iface: BaseInterface,
+    // No need to send any data. Dropping this Sender will cause
+    // Receiver.recv() got None which trigger DHCP thread quit.
+    _quit_notifer: UnboundedSender<()>,
+    share_data: Arc<Mutex<NmDhcpShareData>>,
+}
+
+impl NmDhcpV4Thread {
     pub(crate) async fn new(
-        base_iface: &BaseInterface,
+        base_iface: BaseInterface,
     ) -> Result<Self, NmError> {
-        let (sender, receiver) =
-            tokio::sync::mpsc::channel::<()>(MPSC_CHANNEL_BUFFER);
+        let (sender, receiver) = unbounded();
         let ret = Self {
             base_iface: base_iface.clone(),
             _quit_notifer: sender,
@@ -137,7 +178,6 @@ impl NmDhcpV4Worker {
                 )
             })?;
 
-        let base_iface = base_iface.clone();
         let share_data = ret.share_data.clone();
         tokio::spawn(async move {
             if let Err(e) =
@@ -154,7 +194,11 @@ impl NmDhcpV4Worker {
             Ok(data) => Ok(data.state.clone()),
             Err(e) => Err(NmError::new(
                 ErrorKind::Bug,
-                format!("Failed to lock on NmDhcpV4Worker share data: {e}"),
+                format!(
+                    "Failed to lock share data of DHCP thread for interface \
+                     {}: {e}",
+                    self.base_iface.name
+                ),
             )),
         }
     }
@@ -163,7 +207,7 @@ impl NmDhcpV4Worker {
 async fn dhcp_thread(
     mut dhcp_client: DhcpV4Client,
     base_iface: BaseInterface,
-    mut quit_indicator: Receiver<()>,
+    mut quit_indicator: UnboundedReceiver<()>,
     share_data: Arc<Mutex<NmDhcpShareData>>,
 ) -> Result<(), NmError> {
     log::debug!(
@@ -191,7 +235,7 @@ async fn dhcp_thread(
             ));
         }
     }
-    if let Err(e) = loop {
+    let result = loop {
         tokio::select! {
             result = dhcp_client.run() => {
                 match result {
@@ -233,7 +277,7 @@ async fn dhcp_thread(
                     }
                 }
             }
-            _ = quit_indicator.recv() => {
+            _ = quit_indicator.next() => {
                 log::info!(
                     "DHCPv4 on {}({}) stopped",
                     base_iface.name,
@@ -242,7 +286,9 @@ async fn dhcp_thread(
                 return Ok(());
             }
         }
-    } {
+    };
+
+    if let Err(e) = result {
         match share_data.lock() {
             Ok(mut share_data) => {
                 share_data.state = DhcpState::Error(e.to_string());
@@ -261,6 +307,8 @@ async fn dhcp_thread(
     Ok(())
 }
 
+// TODO(Gris Ge): Use NmClient::notify_dhcp_lease() because in the future we
+// might need to request DNS backend (e.g. systemd-resolved) changes.
 async fn apply_lease(
     base_iface: &BaseInterface,
     lease: &DhcpV4Lease,
@@ -292,63 +340,5 @@ async fn apply_lease(
 
     let apply_opt = NmstateApplyOption::new();
     NmNoDaemon::apply_network_state(net_state, apply_opt).await?;
-    Ok(())
-}
-
-pub(crate) async fn apply_dhcp_config(
-    conn: &mut NmIpcConnection,
-    merged_state: &MergedNetworkState,
-    mut share_data: NmDaemonShareData,
-) -> Result<(), NmError> {
-    for merged_iface in merged_state
-        .ifaces
-        .kernel_ifaces
-        .values()
-        .filter(|i| i.is_changed())
-    {
-        let mut apply_iface = match merged_iface.for_apply.as_ref() {
-            Some(i) => i.clone(),
-            None => {
-                continue;
-            }
-        };
-        if apply_iface.base_iface().mac_address.is_none() {
-            apply_iface.base_iface_mut().mac_address =
-                merged_iface.merged.base_iface().mac_address.clone();
-        }
-        apply_iface.base_iface_mut().iface_index =
-            merged_iface.merged.base_iface().iface_index;
-        if apply_iface.is_up() {
-            if let Some(dhcp_enabled) =
-                apply_iface.base_iface().ipv4.as_ref().map(|i| i.is_auto())
-            {
-                if dhcp_enabled {
-                    conn.log_debug(format!(
-                        "Starting DHCPv4 on interface {}({})",
-                        apply_iface.name(),
-                        apply_iface.iface_type()
-                    ))
-                    .await;
-                    let dhcp_worker =
-                        NmDhcpV4Worker::new(apply_iface.base_iface()).await?;
-                    share_data.dhcpv4_manager()?.add_dhcp_worker(dhcp_worker);
-                } else {
-                    conn.log_debug(format!(
-                        "Stopping DHCPv4 on interface {}({})",
-                        apply_iface.name(),
-                        apply_iface.iface_type()
-                    ))
-                    .await;
-                    share_data
-                        .dhcpv4_manager()?
-                        .remove_dhcp_worker(apply_iface.name());
-                }
-            }
-        } else {
-            share_data
-                .dhcpv4_manager()?
-                .remove_dhcp_worker(apply_iface.name());
-        }
-    }
     Ok(())
 }

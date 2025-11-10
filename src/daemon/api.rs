@@ -3,8 +3,9 @@
 use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
 use super::{
-    apply::apply_network_state, plugin::NmDaemonPlugins,
-    query::query_network_state, share_data::NmDaemonShareData,
+    apply::apply_network_state, event::handle_link_event,
+    plugin::NmDaemonPlugins, query::query_network_state,
+    share_data::NmDaemonShareData,
 };
 
 pub(crate) async fn process_api_connection(
@@ -53,6 +54,9 @@ pub(crate) async fn process_api_connection(
                 )
                 .await;
                 conn.send(result).await?;
+            }
+            NmClientCmd::NotifyLinkEvent(event) => {
+                handle_link_event(*event, share_data.clone()).await?;
             }
             _ => {
                 conn.send::<Result<NetworkState, NmError>>(Err(NmError::new(

@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::collections::HashSet;
+
 use nm::{
-    MergedNetworkState, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
-    NmstateApplyOption,
+    Interface, InterfaceType, MergedInterfaces, MergedNetworkState,
+    NetworkState, NmError, NmIpcConnection, NmNoDaemon, NmstateApplyOption,
+    NmstateInterface,
 };
 
 use super::{
-    config::NmDaemonConfig, dhcp::apply_dhcp_config, plugin::NmDaemonPlugins,
-    query::query_network_state, share_data::NmDaemonShareData,
+    plugin::NmDaemonPlugins, query::query_network_state,
+    share_data::NmDaemonShareData,
 };
 
 const RETRY_COUNT: usize = 10;
@@ -18,12 +21,12 @@ pub(crate) async fn apply_network_state(
     plugins: &NmDaemonPlugins,
     mut desired_state: NetworkState,
     opt: NmstateApplyOption,
-    share_data: NmDaemonShareData,
+    mut share_data: NmDaemonShareData,
 ) -> Result<NetworkState, NmError> {
     conn.log_trace(format!("Apply {desired_state} with option {opt}"))
         .await;
 
-    let mut state_to_save = NmDaemonConfig::read_applied_state().await?;
+    let mut state_to_save = share_data.conf_manager.query_state().await?;
 
     desired_state.ifaces.unify_veth_and_ethernet();
 
@@ -62,6 +65,8 @@ pub(crate) async fn apply_network_state(
 
     // TODO(Gris Ge): discard auto IPs
 
+    // Suppress the monitor during applying
+    share_data.monitor_manager.pause().await?;
     if let Err(e) =
         apply(conn, &merged_state, plugins, &opt, share_data.clone()).await
     {
@@ -83,16 +88,47 @@ pub(crate) async fn apply_network_state(
         return Err(e);
     }
 
-    if let Err(e) = NmDaemonConfig::save_state(conn, &state_to_save).await {
+    if let Err(e) = share_data
+        .conf_manager
+        .save_state(state_to_save.clone())
+        .await
+    {
         conn.log_warn(format!(
             "BUG: Failed to persistent desired state {state_to_save}: {e}"
         ))
         .await;
     }
 
-    let diff_state = merged_state
+    let (ifaces_start_monitor, ifaces_stop_monitor) =
+        gen_iface_monitor_list(&merged_state.ifaces);
+
+    {
+        for iface in ifaces_stop_monitor.iter() {
+            share_data
+                .monitor_manager
+                .del_iface_from_monitor(iface)
+                .await?;
+        }
+        for iface in ifaces_start_monitor.iter() {
+            share_data
+                .monitor_manager
+                .add_iface_to_monitor(iface)
+                .await?;
+        }
+    }
+
+    share_data.monitor_manager.resume().await?;
+
+    let diff_state = match merged_state
         .gen_state_for_apply()
-        .gen_diff(&pre_apply_current_state)?;
+        .gen_diff(&pre_apply_current_state)
+    {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("Returning full state instead of diff state: {e}");
+            merged_state.gen_state_for_apply()
+        }
+    };
 
     Ok(diff_state)
 }
@@ -102,7 +138,7 @@ async fn apply(
     merged_state: &MergedNetworkState,
     plugins: &NmDaemonPlugins,
     opt: &NmstateApplyOption,
-    share_data: NmDaemonShareData,
+    mut share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let apply_state = merged_state.gen_state_for_apply();
 
@@ -111,7 +147,10 @@ async fn apply(
     NmNoDaemon::apply_merged_state(merged_state).await?;
     plugins.apply_network_state(&apply_state, opt, conn).await?;
 
-    apply_dhcp_config(conn, merged_state, share_data.clone()).await?;
+    share_data
+        .dhcpv4_manager
+        .apply_dhcp_config(Some(conn), merged_state)
+        .await?;
 
     let mut result: Result<(), NmError> = Ok(());
     if !opt.no_verify {
@@ -140,7 +179,7 @@ async fn rollback(
     conn: &mut NmIpcConnection,
     revert_state: NetworkState,
     plugins: &NmDaemonPlugins,
-    share_data: NmDaemonShareData,
+    mut share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let mut opt = NmstateApplyOption::default();
     opt.no_verify = true;
@@ -162,7 +201,10 @@ async fn rollback(
         .apply_network_state(&apply_state, &opt, conn)
         .await?;
 
-    apply_dhcp_config(conn, &merged_state, share_data.clone()).await?;
+    share_data
+        .dhcpv4_manager
+        .apply_dhcp_config(Some(conn), &merged_state)
+        .await?;
 
     Ok(())
 }
@@ -203,4 +245,50 @@ fn remove_undesired_ifaces(
             .user_ifaces
             .contains_key(&(key.clone()))
     });
+}
+
+/// Return iface names to start and stop monitor
+fn gen_iface_monitor_list(
+    merged_ifaces: &MergedInterfaces,
+) -> (HashSet<String>, HashSet<String>) {
+    let mut ifaces_start_monitor = HashSet::new();
+    let mut ifaces_stop_monitor = HashSet::new();
+
+    let mut has_wifi_bind_to_any = false;
+
+    for merged_iface in merged_ifaces
+        .iter()
+        .filter(|i| i.merged.iface_type() == &InterfaceType::WifiCfg)
+    {
+        let wifi_iface = if let Interface::WifiCfg(i) = &merged_iface.merged {
+            i
+        } else {
+            continue;
+        };
+        if let Some(parent) = wifi_iface.parent() {
+            if wifi_iface.is_up() {
+                ifaces_start_monitor.insert(parent.to_string());
+            } else if wifi_iface.is_absent() || wifi_iface.is_down() {
+                ifaces_stop_monitor.insert(parent.to_string());
+            }
+        } else if wifi_iface.is_up() {
+            has_wifi_bind_to_any = true;
+        }
+    }
+    if has_wifi_bind_to_any {
+        for iface_name in merged_ifaces.iter().filter_map(|merged_iface| {
+            if !merged_iface.merged.is_absent()
+                && !merged_iface.merged.is_ignore()
+                && merged_iface.merged.iface_type() == &InterfaceType::WifiPhy
+            {
+                Some(merged_iface.merged.name())
+            } else {
+                None
+            }
+        }) {
+            ifaces_start_monitor.insert(iface_name.to_string());
+        }
+    }
+
+    (ifaces_start_monitor, ifaces_stop_monitor)
 }

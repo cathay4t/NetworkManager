@@ -1,64 +1,80 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, MutexGuard},
+};
 
 use nm::{
-    ErrorKind, Interface, InterfaceState, InterfaceType, NetworkState, NmError,
+    ErrorKind, Interface, InterfaceType, NetworkState, NmError,
     NmIpcConnection, NmstateApplyOption, NmstateInterface, NmstateQueryOption,
+    WifiCfgInterface,
 };
 use nm_plugin::{NmPlugin, NmPluginInfo};
 
+#[derive(Debug, Default)]
+pub(crate) struct NmPluginWifiShareData {
+    activated_cfgs: HashMap<String, WifiCfgInterface>,
+}
+
 #[derive(Debug)]
 pub(crate) struct NmPluginWifi {
-    /// Contains active state(WiFi only)
-    pub(crate) active_state: Mutex<NetworkState>,
+    share_data: Mutex<NmPluginWifiShareData>,
 }
 
 impl NmPluginWifi {
-    /// Locked RW access to active_state
-    pub(crate) fn active_state<'a>(
+    pub(crate) fn share_data<'a>(
         &'a self,
-    ) -> Result<MutexGuard<'a, NetworkState>, NmError> {
-        self.active_state.lock().map_err(|e| {
+    ) -> Result<MutexGuard<'a, NmPluginWifiShareData>, NmError> {
+        self.share_data.lock().map_err(|e| {
             NmError::new(
                 ErrorKind::Bug,
-                format!("Failed to lock active_state of NmPluginWifi: {e}"),
+                format!("Failed to lock share_data of NmPluginWifi: {e}"),
             )
         })
     }
 
-    pub(crate) fn add_iface_to_store(
+    /// Cloned activated WiFi configurations.
+    pub(crate) fn get_activated_cfgs(
+        &self,
+    ) -> Result<HashMap<String, WifiCfgInterface>, NmError> {
+        Ok(self.share_data()?.activated_cfgs.clone())
+    }
+
+    pub(crate) async fn add_iface_to_store(
         &self,
         iface: Interface,
     ) -> Result<(), NmError> {
-        self.active_state()?.ifaces.push(iface);
+        match iface {
+            Interface::WifiCfg(iface) => {
+                self.share_data()?
+                    .activated_cfgs
+                    .insert(iface.name().to_string(), *iface);
+            }
+            _ => {
+                return Err(NmError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "NmPluginWifi::add_iface_to_activated_cfgs() got \
+                         unexpected interface {iface:?}"
+                    ),
+                ));
+            }
+        };
         Ok(())
     }
 
-    pub(crate) fn del_iface_from_store(
+    pub(crate) async fn del_iface_from_store(
         &self,
         iface_name: &str,
-        iface_type: &InterfaceType,
     ) -> Result<(), NmError> {
-        self.active_state()?
-            .ifaces
-            .remove(iface_name, Some(iface_type));
-        Ok(())
-    }
-
-    /// Silently ignore if such interface does not exist in store
-    pub(crate) fn set_iface_state_in_store(
-        &self,
-        iface_name: &str,
-        iface_state: InterfaceState,
-    ) -> Result<(), NmError> {
-        if let Some(iface) = self
-            .active_state()?
-            .ifaces
-            .get_mut(iface_name, Some(&InterfaceType::WifiPhy))
-        {
-            iface.base_iface_mut().state = iface_state;
-        }
+        self.share_data()?.activated_cfgs.retain(|_, iface| {
+            iface
+                .wifi
+                .as_ref()
+                .map(|w| w.base_iface.as_deref() == Some(iface_name))
+                != Some(true)
+        });
         Ok(())
     }
 }
@@ -68,7 +84,7 @@ impl NmPlugin for NmPluginWifi {
 
     async fn init() -> Result<Self, NmError> {
         Ok(Self {
-            active_state: Mutex::new(NetworkState::new()),
+            share_data: Mutex::new(Default::default()),
         })
     }
 

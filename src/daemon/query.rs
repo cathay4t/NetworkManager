@@ -5,10 +5,7 @@ use nm::{
     NmstateQueryOption, NmstateStateKind,
 };
 
-use super::{
-    config::NmDaemonConfig, plugin::NmDaemonPlugins,
-    share_data::NmDaemonShareData,
-};
+use super::{plugin::NmDaemonPlugins, share_data::NmDaemonShareData};
 
 pub(crate) async fn query_network_state(
     conn: &mut NmIpcConnection,
@@ -29,13 +26,16 @@ pub(crate) async fn query_network_state(
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;
             }
-            share_data.dhcpv4_manager()?.query(&mut net_state)?;
+            share_data
+                .dhcpv4_manager
+                .fill_dhcp_states(&mut net_state)
+                .await?;
 
             // TODO: Mark interface/routes not int saved state as ignored.
             Ok(net_state)
         }
         NmstateStateKind::SavedNetworkState => {
-            Ok(NmDaemonConfig::read_applied_state().await?)
+            Ok(share_data.conf_manager.query_state().await?)
         }
         _ => Err(NmError::new(
             ErrorKind::NoSupport,

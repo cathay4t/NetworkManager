@@ -2,6 +2,7 @@
 
 mod client;
 mod error;
+mod event;
 mod ipc;
 mod logging;
 mod nmstate;
@@ -14,6 +15,7 @@ pub use nmstate::*;
 pub use self::{
     client::{NmClient, NmClientCmd},
     error::{ErrorKind, NmError},
+    event::LinkEvent,
     ipc::{NmCanIpc, NmIpcConnection},
     logging::{NmLogEntry, NmLogLevel},
     no_daemon::NmNoDaemon,

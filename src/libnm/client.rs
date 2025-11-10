@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonDisplayHideSecrets, NetworkState, NmCanIpc, NmError, NmIpcConnection,
-    NmstateApplyOption, NmstateQueryOption,
+    JsonDisplayHideSecrets, LinkEvent, NetworkState, NmCanIpc, NmError,
+    NmIpcConnection, NmstateApplyOption, NmstateQueryOption,
 };
 
 impl NmCanIpc for NetworkState {
@@ -27,6 +27,7 @@ pub enum NmClientCmd {
     Ping,
     QueryNetworkState(Box<NmstateQueryOption>),
     ApplyNetworkState(Box<(NetworkState, NmstateApplyOption)>),
+    NotifyLinkEvent(Box<LinkEvent>),
 }
 
 impl NmCanIpc for NmClientCmd {
@@ -35,6 +36,7 @@ impl NmCanIpc for NmClientCmd {
             Self::Ping => "ping".to_string(),
             Self::QueryNetworkState(_) => "query-network-state".to_string(),
             Self::ApplyNetworkState(_) => "apply-network-state".to_string(),
+            Self::NotifyLinkEvent(_) => "notify-link-event".to_string(),
         }
     }
 }
@@ -53,10 +55,14 @@ impl NmClient {
 
     /// Create IPC connect to NetworkManager daemon
     pub async fn new() -> Result<Self, NmError> {
+        Self::new_with_name("client").await
+    }
+
+    pub async fn new_with_name(name: &str) -> Result<Self, NmError> {
         Ok(Self {
             ipc: NmIpcConnection::new_with_path(
                 Self::DEFAULT_SOCKET_PATH,
-                "client",
+                name,
                 "daemon",
             )
             .await?,
@@ -90,5 +96,16 @@ impl NmClient {
             )))))
             .await?;
         self.ipc.recv::<NetworkState>().await
+    }
+
+    /// Inform daemon with a link event
+    pub async fn notify_link_event(
+        &mut self,
+        link_event: LinkEvent,
+    ) -> Result<(), NmError> {
+        self.ipc
+            .send(Ok(NmClientCmd::NotifyLinkEvent(Box::new(link_event))))
+            .await?;
+        Ok(())
     }
 }
