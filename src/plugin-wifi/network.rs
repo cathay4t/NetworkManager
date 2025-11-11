@@ -28,16 +28,14 @@ impl WpaSupNetwork {
         Ok(Self {
             obj_path,
             psk: None,
-            ssid: _from_map!(map, "ssid", String::try_from)?.ok_or_else(
-                || {
-                    NmError::new(
-                        ErrorKind::Bug,
-                        "ssid does not exist in wpa_spplicant DBUS network \
-                         query reply"
-                            .to_string(),
-                    )
-                },
-            )?,
+            ssid: _from_map!(map, "ssid", parse_ssid)?.ok_or_else(|| {
+                NmError::new(
+                    ErrorKind::Bug,
+                    "ssid does not exist in wpa_spplicant DBUS network query \
+                     reply"
+                        .to_string(),
+                )
+            })?,
         })
     }
 
@@ -48,5 +46,21 @@ impl WpaSupNetwork {
             ret.insert("psk", zvariant::Value::new(v.clone()));
         }
         ret
+    }
+}
+
+fn parse_ssid(value: zvariant::OwnedValue) -> Result<String, NmError> {
+    let quoted = String::try_from(value).map_err(|e| {
+        NmError::new(
+            ErrorKind::InvalidArgument,
+            format!("Invalid SSID in wpa_supplicant network DBUS reply: {e}"),
+        )
+    })?;
+
+    if let Some(s) = quoted.strip_prefix('"').and_then(|s| s.strip_suffix('"'))
+    {
+        Ok(s.to_string())
+    } else {
+        Ok(quoted.to_string())
     }
 }

@@ -49,14 +49,16 @@ fn parse_ssid(value: zvariant::OwnedValue) -> Result<String, NmError> {
     let bytes = Vec::<u8>::try_from(value).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid SSID in BSS DBUS reply: {e}"),
+            format!("Invalid SSID in wpa_supplicant BSS DBUS reply: {e}"),
         )
     })?;
 
     String::from_utf8(bytes).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid SSID in BSS DBUS reply, not UTF-8: {e}"),
+            format!(
+                "Invalid SSID in wpa_supplicant BSS DBUS reply, not UTF-8: {e}"
+            ),
         )
     })
 }

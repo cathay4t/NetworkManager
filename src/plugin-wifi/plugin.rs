@@ -41,7 +41,7 @@ impl NmPluginWifi {
         Ok(self.share_data()?.activated_cfgs.clone())
     }
 
-    pub(crate) async fn add_iface_to_store(
+    pub(crate) async fn add_to_store(
         &self,
         iface: Interface,
     ) -> Result<(), NmError> {
@@ -64,17 +64,11 @@ impl NmPluginWifi {
         Ok(())
     }
 
-    pub(crate) async fn del_iface_from_store(
+    pub(crate) async fn del_from_store(
         &self,
         iface_name: &str,
     ) -> Result<(), NmError> {
-        self.share_data()?.activated_cfgs.retain(|_, iface| {
-            iface
-                .wifi
-                .as_ref()
-                .map(|w| w.base_iface.as_deref() == Some(iface_name))
-                != Some(true)
-        });
+        self.share_data()?.activated_cfgs.remove(iface_name);
         Ok(())
     }
 }

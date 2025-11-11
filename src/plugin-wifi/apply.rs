@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use nm::{
     ErrorKind, Interface, InterfaceType, NetworkState, NmError,
-    NmIpcConnection, NmNoDaemon, NmstateInterface, WifiConfig,
+    NmIpcConnection, NmNoDaemon, NmstateInterface, WifiCfgInterface,
+    WifiConfig,
 };
 
-use crate::{NmPluginWifi, dbus::WpaSupDbus, network::WpaSupNetwork};
+use crate::{
+    NmPluginWifi, dbus::WpaSupDbus, interface::WpaSupInterface,
+    network::WpaSupNetwork,
+};
 
 impl NmPluginWifi {
     pub(crate) async fn apply(
@@ -13,13 +19,14 @@ impl NmPluginWifi {
         desired_state: NetworkState,
         conn: &mut NmIpcConnection,
     ) -> Result<(), NmError> {
+        let cur_cfgs = self.get_activated_cfgs()?;
         let dbus = WpaSupDbus::new().await?;
         for iface in desired_state.ifaces.iter() {
             match iface {
                 Interface::WifiCfg(iface) => {
                     if iface.is_absent() || iface.is_down() {
-                        dbus.del_iface(iface.name()).await?;
-                        self.del_iface_from_store(iface.name()).await?;
+                        del_network(&dbus, iface, &cur_cfgs).await?;
+                        self.del_from_store(iface.name()).await?;
                     } else if iface.is_up() {
                         let wifi_cfg =
                             if let Some(wifi_cfg) = iface.wifi.as_ref() {
@@ -31,10 +38,13 @@ impl NmPluginWifi {
                                 ));
                             };
                         self.apply_wifi_cfg(wifi_cfg, &dbus, conn).await?;
-                        self.add_iface_to_store(Interface::WifiCfg(
-                            iface.clone(),
-                        ))
-                        .await?;
+                        self.add_to_store(Interface::WifiCfg(iface.clone()))
+                            .await?;
+                    }
+                }
+                Interface::WifiPhy(iface) => {
+                    if iface.is_down() || iface.is_absent() {
+                        dbus.del_iface(iface.name()).await?;
                     }
                 }
                 _ => {
@@ -133,4 +143,61 @@ impl NmPluginWifi {
         dbus.enable_network(network_obj_path.as_str()).await?;
         Ok(())
     }
+}
+
+async fn del_network(
+    dbus: &WpaSupDbus<'_>,
+    iface: &WifiCfgInterface,
+    cur_cfgs: &HashMap<String, WifiCfgInterface>,
+) -> Result<(), NmError> {
+    let iface = if let Some(i) = cur_cfgs.get(iface.name()) {
+        i
+    } else {
+        log::debug!(
+            "iface {}/{} does not exist, no need to delete",
+            iface.name(),
+            InterfaceType::WifiCfg
+        );
+        return Ok(());
+    };
+    let wpa_ifaces = dbus.get_ifaces().await?;
+    let ssid =
+        if let Some(s) = iface.wifi.as_ref().and_then(|w| w.ssid.as_ref()) {
+            s
+        } else {
+            return Ok(());
+        };
+    if let Some(iface_name) =
+        iface.wifi.as_ref().and_then(|w| w.base_iface.as_ref())
+    {
+        if let Some(wpa_iface) = wpa_ifaces
+            .iter()
+            .find(|wpa_iface| wpa_iface.iface_name.as_str() == iface_name)
+        {
+            del_wpa_network(dbus, wpa_iface, ssid).await?;
+        }
+    } else {
+        for wpa_iface in wpa_ifaces.iter() {
+            del_wpa_network(dbus, wpa_iface, ssid).await?;
+        }
+    }
+    Ok(())
+}
+async fn del_wpa_network(
+    dbus: &WpaSupDbus<'_>,
+    wpa_iface: &WpaSupInterface,
+    ssid: &str,
+) -> Result<(), NmError> {
+    let wpa_networks = dbus.get_networks(wpa_iface.obj_path.as_str()).await?;
+    for wpa_network in wpa_networks
+        .iter()
+        .filter(|wpa_network| wpa_network.ssid.as_str() == ssid)
+    {
+        dbus.del_network(
+            wpa_iface.obj_path.as_str(),
+            wpa_network.obj_path.as_str(),
+        )
+        .await?;
+    }
+    Ok(())
 }

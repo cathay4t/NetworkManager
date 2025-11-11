@@ -5,9 +5,7 @@ use nm::{
     WifiPhyInterface,
 };
 
-use super::{
-    dbus::WpaSupDbus, interface::WpaSupInterfaceState, plugin::NmPluginWifi,
-};
+use super::{dbus::WpaSupDbus, plugin::NmPluginWifi};
 
 impl NmPluginWifi {
     pub(crate) async fn query(
