@@ -21,7 +21,7 @@ pub(crate) async fn query_network_state(
                 NmNoDaemon::query_network_state(opt.clone()).await?;
 
             let plugins_net_states =
-                plugins.query_network_state(opt, conn).await?;
+                plugins.query_network_state(opt.clone(), conn).await?;
 
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;
@@ -31,11 +31,19 @@ pub(crate) async fn query_network_state(
                 .fill_dhcp_states(&mut net_state)
                 .await?;
 
+            if !opt.include_secrets {
+                net_state.hide_secrets();
+            }
+
             // TODO: Mark interface/routes not int saved state as ignored.
             Ok(net_state)
         }
         NmstateStateKind::SavedNetworkState => {
-            Ok(share_data.conf_manager.query_state().await?)
+            let mut state = share_data.conf_manager.query_state().await?;
+            if !opt.include_secrets {
+                state.hide_secrets();
+            }
+            Ok(state)
         }
         _ => Err(NmError::new(
             ErrorKind::NoSupport,

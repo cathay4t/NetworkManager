@@ -210,6 +210,16 @@ impl NmstateInterface for WifiCfgInterface {
         }
         Ok(())
     }
+
+    fn hide_secrets_iface_specific(&mut self) {
+        if let Some(wifi_cfg) = self.wifi.as_mut() {
+            wifi_cfg.hide_secrets();
+        }
+    }
+
+    fn sanitize_current_for_verify_iface_specfic(&mut self) {
+        self.hide_secrets_iface_specific()
+    }
 }
 
 #[derive(

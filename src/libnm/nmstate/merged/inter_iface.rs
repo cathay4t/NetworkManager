@@ -202,6 +202,7 @@ impl MergedInterfaces {
             } else {
                 continue;
             };
+            iface.hide_secrets();
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get(iface.name(), Some(iface.iface_type()))

@@ -119,7 +119,7 @@ pub(crate) async fn apply_network_state(
 
     share_data.monitor_manager.resume().await?;
 
-    let diff_state = match merged_state
+    let mut diff_state = match merged_state
         .gen_state_for_apply()
         .gen_diff(&pre_apply_current_state)
     {
@@ -129,6 +129,7 @@ pub(crate) async fn apply_network_state(
             merged_state.gen_state_for_apply()
         }
     };
+    diff_state.hide_secrets();
 
     Ok(diff_state)
 }

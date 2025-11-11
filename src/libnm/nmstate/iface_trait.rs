@@ -42,7 +42,7 @@ pub trait NmstateInterface:
 
     /// Invoke [BaseInterface::hide_secrets()] and interface specifics
     /// `hide_secrets_iface_specific()`.
-    /// Will invoke `hide_secrets_iface_spec()` at the end.
+    /// Will invoke `hide_secrets_iface_specific()` at the end.
     /// Please do not override this but implement
     /// `hide_secrets_iface_specific()` instead.
     fn hide_secrets(&mut self) {
