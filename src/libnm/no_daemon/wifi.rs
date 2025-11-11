@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, WifiPhyInterface, WifiState};
+use crate::{BaseInterface, WifiLink, WifiPhyInterface};
 
 impl WifiPhyInterface {
     pub(crate) fn new_from_nispor(
@@ -9,14 +9,14 @@ impl WifiPhyInterface {
     ) -> Self {
         Self {
             base,
-            wifi_state: get_wifi_state(np_iface),
+            wifi_link: get_wifi_link(np_iface),
         }
     }
 }
 
-fn get_wifi_state(np_iface: &nispor::Iface) -> Option<WifiState> {
+fn get_wifi_link(np_iface: &nispor::Iface) -> Option<WifiLink> {
     let np_wifi = np_iface.wifi.as_ref()?;
-    let mut ret = WifiState {
+    let mut ret = WifiLink {
         rx_bitrate_mb: np_wifi.rx_bitrate.map(|r| r / 10),
         tx_bitrate_mb: np_wifi.tx_bitrate.map(|r| r / 10),
         frequency_mhz: np_wifi.frequency,

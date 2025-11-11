@@ -17,18 +17,18 @@ pub struct WifiPhyInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wifi_state: Option<WifiState>,
+    pub wifi_link: Option<WifiLink>,
 }
 
 impl WifiPhyInterface {
-    pub fn new(name: String, wifi_state: WifiState) -> Self {
+    pub fn new(name: String, wifi_link: WifiLink) -> Self {
         Self {
             base: BaseInterface {
                 name: name.to_string(),
                 iface_type: InterfaceType::WifiPhy,
                 ..Default::default()
             },
-            wifi_state: Some(wifi_state),
+            wifi_link: Some(wifi_link),
         }
     }
 }
@@ -40,7 +40,7 @@ impl Default for WifiPhyInterface {
                 iface_type: InterfaceType::WifiPhy,
                 ..Default::default()
             },
-            wifi_state: None,
+            wifi_link: None,
         }
     }
 }
@@ -57,6 +57,47 @@ impl NmstateInterface for WifiPhyInterface {
     fn is_virtual(&self) -> bool {
         false
     }
+
+    fn sanitize_iface_specfic(
+        &mut self,
+        _current: Option<&Self>,
+    ) -> Result<(), NmError> {
+        if let Some(wifi_cfg) = self.wifi_link.as_mut() {
+            *wifi_cfg = WifiLink {
+                state: Some(WifiState::Completed),
+                ssid: wifi_cfg.ssid.clone(),
+                ..Default::default()
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonDisplay,
+)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+pub enum WifiState {
+    Disconnected,
+    Inactive,
+    Scanning,
+    Authenticating,
+    Associating,
+    Associated,
+    FourWayHandshake,
+    GroupHandshake,
+    Completed,
+    #[default]
+    Unknown,
 }
 
 #[derive(
@@ -64,7 +105,9 @@ impl NmstateInterface for WifiPhyInterface {
 )]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
-pub struct WifiState {
+pub struct WifiLink {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<WifiState>,
     /// Service Set Identifier(SSID)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssid: Option<String>,
@@ -92,7 +135,7 @@ pub struct WifiState {
 const NOISE_FLOOR_DBM: i16 = -100;
 const SIGNAL_MAX_DBM: i16 = -50;
 
-impl WifiState {
+impl WifiLink {
     /// Use `signal_dbm` to calculate out `signal_percent`
     pub fn sanitize_signal(&mut self) {
         if let Some(s) = self.signal_dbm {

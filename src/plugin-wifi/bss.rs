@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use nm::{ErrorKind, NmError, WifiState};
+use nm::{ErrorKind, NmError, WifiLink};
 use zvariant::OwnedObjectPath;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -34,9 +34,9 @@ impl WpaSupBss {
     }
 }
 
-impl From<WpaSupBss> for WifiState {
-    fn from(bss: WpaSupBss) -> WifiState {
-        let mut ret = WifiState::default();
+impl From<WpaSupBss> for WifiLink {
+    fn from(bss: WpaSupBss) -> WifiLink {
+        let mut ret = WifiLink::default();
         ret.ssid = bss.ssid;
         ret.frequency_mhz = bss.frequency_mhz.map(|f| f.into());
         ret.signal_dbm = bss.signal_dbm;

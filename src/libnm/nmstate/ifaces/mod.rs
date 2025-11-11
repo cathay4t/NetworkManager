@@ -17,5 +17,7 @@ pub use self::{
     ovs_bridge::{OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig},
     ovs_iface::OvsInterface,
     unknown::UnknownInterface,
-    wifi::{WifiCfgInterface, WifiConfig, WifiPhyInterface, WifiState},
+    wifi::{
+        WifiCfgInterface, WifiConfig, WifiLink, WifiPhyInterface, WifiState,
+    },
 };

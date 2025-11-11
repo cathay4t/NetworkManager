@@ -2,13 +2,64 @@
 
 use std::collections::HashMap;
 
-use nm::{ErrorKind, NmError};
+use nm::{ErrorKind, NmError, WifiState};
 use zvariant::OwnedObjectPath;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum WpaSupInterfaceState {
+    Disconnected,
+    Inactive,
+    Scanning,
+    Authenticating,
+    Associating,
+    Associated,
+    FourWayHandshake,
+    GroupHandshake,
+    Completed,
+    #[default]
+    Unknown,
+}
+
+impl From<String> for WpaSupInterfaceState {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "disconnected" => Self::Disconnected,
+            "inactive" => Self::Inactive,
+            "scanning" => Self::Scanning,
+            "authenticating" => Self::Authenticating,
+            "associating" => Self::Associating,
+            "associated" => Self::Associated,
+            "4way_handshake" => Self::FourWayHandshake,
+            "group_handshake" => Self::GroupHandshake,
+            "completed" => Self::Completed,
+            "unknown" => Self::Unknown,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+impl From<WpaSupInterfaceState> for WifiState {
+    fn from(v: WpaSupInterfaceState) -> Self {
+        match v {
+            WpaSupInterfaceState::Disconnected => Self::Disconnected,
+            WpaSupInterfaceState::Inactive => Self::Inactive,
+            WpaSupInterfaceState::Scanning => Self::Scanning,
+            WpaSupInterfaceState::Authenticating => Self::Authenticating,
+            WpaSupInterfaceState::Associating => Self::Associating,
+            WpaSupInterfaceState::Associated => Self::Associated,
+            WpaSupInterfaceState::FourWayHandshake => Self::FourWayHandshake,
+            WpaSupInterfaceState::GroupHandshake => Self::GroupHandshake,
+            WpaSupInterfaceState::Completed => Self::Completed,
+            WpaSupInterfaceState::Unknown => Self::Unknown,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct WpaSupInterface {
     pub(crate) obj_path: OwnedObjectPath,
     pub(crate) iface_name: String,
+    pub(crate) state: WpaSupInterfaceState,
 }
 
 impl WpaSupInterface {
@@ -16,6 +67,7 @@ impl WpaSupInterface {
         Self {
             iface_name,
             obj_path: OwnedObjectPath::default(),
+            state: WpaSupInterfaceState::Unknown,
         }
     }
 
@@ -41,6 +93,9 @@ impl WpaSupInterface {
                         ),
                     )
                 })?,
+            state: _from_map!(map, "State", String::try_from)?
+                .map(WpaSupInterfaceState::from)
+                .unwrap_or_default(),
             obj_path,
         })
     }

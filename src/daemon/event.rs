@@ -47,7 +47,7 @@ async fn handle_wifi_phy_iface(
     share_data: &mut NmDaemonShareData,
 ) -> Result<(), NmError> {
     if let Some(ssid) =
-        cur_iface.wifi_state.as_ref().and_then(|w| w.ssid.as_ref())
+        cur_iface.wifi_link.as_ref().and_then(|w| w.ssid.as_ref())
     {
         if let Some(wifi_cfg_iface) =
             saved_state.ifaces.user_ifaces.values().find_map(|i| {
@@ -80,12 +80,11 @@ async fn handle_wifi_phy_iface(
                     format!("Unsupported link event {event}"),
                 ));
             }
-            new_iface.wifi_state = None;
+            new_iface.wifi_link = None;
             let mut new_state = NetworkState::default();
             new_state
                 .ifaces
                 .push(Interface::WifiPhy(Box::new(new_iface)));
-            println!("HAHA147 {:?}", new_state);
             let merged_state = MergedNetworkState::new(
                 new_state,
                 cur_state.clone(),
