@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::os::unix::fs::PermissionsExt;
+
 use futures::channel::{mpsc::UnboundedReceiver, oneshot::Sender};
 use nm::{ErrorKind, InterfaceType, NetworkState, NmError, NmstateInterface};
 use tokio::{fs::File, io::AsyncWriteExt};
@@ -91,7 +93,9 @@ async fn save_state_to_file(net_state: &NetworkState) -> Result<(), NmError> {
         )
     })?;
     let mut fd = File::create(APPLIED_STATE_PATH).await?;
+    fd.set_permissions(PermissionsExt::from_mode(0o600)).await?;
     fd.write_all(yaml_str.as_bytes()).await?;
+
     Ok(())
 }
 
