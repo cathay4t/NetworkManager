@@ -92,6 +92,9 @@ async fn save_state_to_file(net_state: &NetworkState) -> Result<(), NmError> {
             format!("Failed to generate YAML for {net_state}: {e}"),
         )
     })?;
+    // We should remove the file first to make sure newly created
+    // `APPLIED_STATE_PATH` is own by daemon uid.
+    std::fs::remove_file(APPLIED_STATE_PATH).ok();
     let mut fd = File::create(APPLIED_STATE_PATH).await?;
     fd.set_permissions(PermissionsExt::from_mode(0o600)).await?;
     fd.write_all(yaml_str.as_bytes()).await?;
