@@ -51,7 +51,7 @@ async fn apply_ifaces_link_changes(
         let mut net_conf = nispor::NetConf::default();
         net_conf.ifaces = Some(np_ifaces);
 
-        log::debug!(
+        log::trace!(
             "Pending nispor changes {}",
             serde_json::to_string(&net_conf).unwrap_or_default()
         );

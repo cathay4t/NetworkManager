@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{base_iface::np_iface_to_base_iface, error::np_error_to_nmstate};
+use super::{
+    base_iface::np_iface_to_base_iface, error::np_error_to_nmstate,
+    route::get_routes,
+};
 use crate::{
     ErrorKind, EthernetInterface, Interface, InterfaceType, LoopbackInterface,
     NetworkState, NmError, NmNoDaemon, NmstateQueryOption, UnknownInterface,
@@ -73,6 +76,12 @@ impl NmNoDaemon {
             };
             net_state.ifaces.push(iface);
         }
+
+        net_state.routes = get_routes(&net_state.ifaces).await;
+
+        net_state
+            .routes
+            .mark_route_as_ignored_ifaces(&net_state.ifaces);
         Ok(net_state)
     }
 }

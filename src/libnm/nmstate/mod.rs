@@ -10,6 +10,7 @@ mod ip;
 mod merged;
 mod net_state;
 mod revert;
+mod route;
 mod state_options;
 mod value;
 mod version;
@@ -31,8 +32,11 @@ pub use self::{
         WifiCfgInterface, WifiConfig, WifiLink, WifiPhyInterface, WifiState,
     },
     ip::{DhcpState, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
-    merged::{MergedInterface, MergedInterfaces, MergedNetworkState},
+    merged::{
+        MergedInterface, MergedInterfaces, MergedNetworkState, MergedRoutes,
+    },
     net_state::NetworkState,
+    route::{RouteEntry, RouteState, RouteType, Routes},
     state_options::{NmstateApplyOption, NmstateQueryOption, NmstateStateKind},
     version::CUR_SCHEMA_VERSION,
 };

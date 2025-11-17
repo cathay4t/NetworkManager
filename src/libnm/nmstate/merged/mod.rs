@@ -7,8 +7,9 @@ mod inter_iface;
 mod ip;
 mod loopback;
 mod net_state;
+mod route;
 
 pub use self::{
     iface::MergedInterface, inter_iface::MergedInterfaces,
-    net_state::MergedNetworkState,
+    net_state::MergedNetworkState, route::MergedRoutes,
 };

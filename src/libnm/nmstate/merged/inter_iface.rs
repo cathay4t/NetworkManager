@@ -356,14 +356,18 @@ impl MergedInterfaces {
             }
         }
 
-        log::debug!("Pending kernel up priority changes {pending_changes:?}");
-        for (iface_name, priority) in pending_changes.iter() {
-            if let Some(iface) = self
-                .kernel_ifaces
-                .get_mut(iface_name)
-                .and_then(|i| i.for_apply.as_mut())
-            {
-                iface.base_iface_mut().up_priority = *priority;
+        if !pending_changes.is_empty() {
+            log::debug!(
+                "Pending kernel up priority changes {pending_changes:?}"
+            );
+            for (iface_name, priority) in pending_changes.iter() {
+                if let Some(iface) = self
+                    .kernel_ifaces
+                    .get_mut(iface_name)
+                    .and_then(|i| i.for_apply.as_mut())
+                {
+                    iface.base_iface_mut().up_priority = *priority;
+                }
             }
         }
 

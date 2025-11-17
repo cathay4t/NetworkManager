@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CUR_SCHEMA_VERSION, ErrorKind, Interfaces, JsonDisplayHideSecrets, NmError,
+    Routes,
 };
 
 #[derive(
@@ -18,6 +19,9 @@ pub struct NetworkState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Description for the whole desire state.
     pub description: Option<String>,
+    /// Routes
+    #[serde(default)]
+    pub routes: Routes,
     /// Network interfaces
     #[serde(default, rename = "interfaces")]
     pub ifaces: Interfaces,
@@ -29,6 +33,7 @@ impl Default for NetworkState {
             version: Some(CUR_SCHEMA_VERSION),
             description: None,
             ifaces: Default::default(),
+            routes: Default::default(),
         }
     }
 }

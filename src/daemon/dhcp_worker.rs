@@ -16,9 +16,12 @@ use mozim::{DhcpV4Client, DhcpV4Config, DhcpV4Lease, DhcpV4State};
 use nm::{
     BaseInterface, DhcpState, ErrorKind, Interface, InterfaceIpAddr,
     InterfaceIpv4, NetworkState, NmError, NmNoDaemon, NmstateApplyOption,
+    RouteEntry, Routes,
 };
 
 use super::worker::NmWorker;
+
+const DEFAULT_ROUTE_TABLE_ID: u32 = 254;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum NmDhcpCmd {
@@ -257,7 +260,11 @@ async fn dhcp_thread(
                                 ));
                             }
                         }
-                        if let Err(e) = apply_lease(&base_iface, &lease).await {
+                        if let Err(e) = apply_lease(
+                            &base_iface,
+                            &lease,
+                            share_data.clone()
+                        ).await {
                             break Err(e);
                         }
                     }
@@ -307,11 +314,11 @@ async fn dhcp_thread(
     Ok(())
 }
 
-// TODO(Gris Ge): Use NmClient::notify_dhcp_lease() because in the future we
-// might need to request DNS backend (e.g. systemd-resolved) changes.
 async fn apply_lease(
     base_iface: &BaseInterface,
     lease: &DhcpV4Lease,
+    // TODO: Support hostname, systemd-resolved, /etc/resolv.conf
+    _share_data: Arc<Mutex<NmDhcpShareData>>,
 ) -> Result<(), NmError> {
     log::debug!(
         "Applying DHCPv4 lease {}/{} to interface {}({})",
@@ -334,11 +341,45 @@ async fn apply_lease(
     let mut apply_base_iface = base_iface.clone_name_type_only();
 
     apply_base_iface.ipv4 = Some(ipv4_conf);
+    if let Some(mtu) = lease.mtu {
+        apply_base_iface.mtu = Some(mtu.into());
+    }
+
     let iface_state: Interface = apply_base_iface.into();
     let mut net_state = NetworkState::new();
     net_state.ifaces.push(iface_state);
 
+    net_state.routes = gen_routes(lease, base_iface);
+
     let apply_opt = NmstateApplyOption::new();
     NmNoDaemon::apply_network_state(net_state, apply_opt).await?;
     Ok(())
+}
+
+// TODO:
+//  * Handle `auto-routes: false`
+//  * Handle `auto-gateways: false`
+//  * Handle `classless_routes`
+fn gen_routes(lease: &DhcpV4Lease, base_iface: &BaseInterface) -> Routes {
+    let mut conf_routes: Vec<RouteEntry> = Vec::new();
+    // TODO: Handle multiple addresses of router
+    if let Some(gateways) = lease.gateways.as_ref() {
+        for (index, gateway) in gateways.iter().enumerate() {
+            let mut route = RouteEntry::default();
+            route.destination = Some("0.0.0.0/0".to_string());
+            route.next_hop_iface = Some(base_iface.name.to_string());
+            route.next_hop_addr = Some(gateway.to_string());
+            route.table_id = Some(DEFAULT_ROUTE_TABLE_ID);
+            // TODO: Be consistent on metric?
+            // TODO: Priority ethernet over wifi/VPN/etc ?
+            route.metric = base_iface
+                .iface_index
+                .map(|iface_index| 100i64 * iface_index as i64 + index as i64);
+            conf_routes.push(route);
+        }
+    }
+
+    let mut routes = Routes::default();
+    routes.config = Some(conf_routes);
+    routes
 }

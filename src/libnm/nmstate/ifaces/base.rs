@@ -160,6 +160,14 @@ impl BaseInterface {
     pub(crate) fn include_extra_for_apply(&mut self, current: Option<&Self>) {
         self.iface_index = current.and_then(|c| c.iface_index);
     }
+
+    pub(crate) fn is_ipv4_enabled(&self) -> bool {
+        self.ipv4.as_ref().map(|i| i.is_enabled()) == Some(true)
+    }
+
+    pub(crate) fn is_ipv6_enabled(&self) -> bool {
+        self.ipv6.as_ref().map(|i| i.is_enabled()) == Some(true)
+    }
 }
 
 impl BaseInterface {

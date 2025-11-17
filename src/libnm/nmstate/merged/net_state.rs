@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonDisplayHideSecrets, MergedInterfaces, NetworkState, NmError,
-    NmstateApplyOption,
+    JsonDisplayHideSecrets, MergedInterfaces, MergedRoutes, NetworkState,
+    NmError, NmstateApplyOption,
 };
 
 #[derive(
@@ -21,6 +21,7 @@ pub struct MergedNetworkState {
     pub version: Option<u32>,
     pub description: Option<String>,
     pub ifaces: MergedInterfaces,
+    pub routes: MergedRoutes,
     pub option: NmstateApplyOption,
 }
 
@@ -30,10 +31,16 @@ impl MergedNetworkState {
         current: NetworkState,
         option: NmstateApplyOption,
     ) -> Result<Self, NmError> {
+        let merged_ifaces =
+            MergedInterfaces::new(desired.ifaces, current.ifaces)?;
+        let merged_routes =
+            MergedRoutes::new(desired.routes, current.routes, &merged_ifaces)?;
+
         Ok(Self {
             version: desired.version,
             description: desired.description.clone(),
-            ifaces: MergedInterfaces::new(desired.ifaces, current.ifaces)?,
+            ifaces: merged_ifaces,
+            routes: merged_routes,
             option,
         })
     }
@@ -45,6 +52,7 @@ impl MergedNetworkState {
     pub fn gen_state_for_apply(&self) -> NetworkState {
         NetworkState {
             ifaces: self.ifaces.gen_state_for_apply(),
+            routes: self.routes.gen_state_for_apply(),
             version: self.version,
             description: self.description.clone(),
         }
@@ -64,6 +72,7 @@ impl NetworkState {
                 .clone()
                 .or_else(|| self.description.clone()),
             ifaces: self.ifaces.merge(&new_state.ifaces)?,
+            routes: self.routes.merge(&new_state.routes)?,
         };
         Ok(())
     }

@@ -8,7 +8,10 @@
 //  * Íñigo Huguet <ihuguet@redhat.com>
 //  * Quique Llorente <ellorent@redhat.com>
 
-use std::{net::IpAddr, str::FromStr};
+use std::{
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -498,5 +501,107 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             valid_life_time: None,
             preferred_life_time: None,
         })
+    }
+}
+
+pub(crate) fn sanitize_ip_network(ip_net: &str) -> Result<String, NmError> {
+    let ip_nets: Vec<&str> = ip_net.split('/').collect();
+    match ip_nets.len() {
+        0 => Err(NmError::new(
+            ErrorKind::InvalidArgument,
+            "Invalid IP network string, got empty string".into(),
+        )),
+        1 => {
+            let ip = IpAddr::from_str(ip_nets[0]).map_err(|e| {
+                NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Invalid IP network '{ip_net}': {e}",),
+                )
+            })?;
+            Ok(if ip.is_ipv6() {
+                format!("{ip}/{IPV6_ADDR_LEN}")
+            } else {
+                format!("{ip}/{IPV4_ADDR_LEN}")
+            })
+        }
+        2 => {
+            let prefix_len = ip_nets[1].parse::<usize>().map_err(|e| {
+                NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid IP network prefix length '{}' in '{ip_net}': \
+                         {e}",
+                        ip_nets[1]
+                    ),
+                )
+            })?;
+            let ip =
+                apply_ip_prefix_len(IpAddr::from_str(ip_nets[0])?, prefix_len);
+            if ip.is_ipv6() {
+                if prefix_len > IPV6_ADDR_LEN {
+                    Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Invalid IPv6 network prefix length '{}' in \
+                             '{ip_net}', should be smaller than \
+                             {IPV6_ADDR_LEN}'",
+                            ip_nets[1],
+                        ),
+                    ))
+                } else {
+                    Ok(format!("{ip}/{prefix_len}"))
+                }
+            } else if prefix_len > IPV4_ADDR_LEN {
+                Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid IPv4 network prefix length '{}' in \
+                         '{ip_net}', should be smaller than {IPV4_ADDR_LEN}'",
+                        ip_nets[1],
+                    ),
+                ))
+            } else {
+                Ok(format!("{ip}/{prefix_len}"))
+            }
+        }
+        _ => Err(NmError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Invalid IP network string: '{ip_net}', expecting 'ip/prefix' \
+                 or 'ip' format, for example: 192.0.2.0/24 or 2001:db8:1::/64 \
+                 or 192.0.2.1"
+            ),
+        )),
+    }
+}
+
+pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
+    addr.contains(':')
+}
+
+fn apply_ip_prefix_len(ip: IpAddr, prefix_length: usize) -> IpAddr {
+    if prefix_length == 0 {
+        return if ip.is_ipv6() {
+            IpAddr::V6(0.into())
+        } else {
+            IpAddr::V4(0.into())
+        };
+    }
+
+    if (ip.is_ipv6() && prefix_length >= IPV6_ADDR_LEN)
+        || (ip.is_ipv4() && prefix_length >= IPV4_ADDR_LEN)
+    {
+        return ip;
+    }
+
+    match ip {
+        IpAddr::V6(i) => Ipv6Addr::from(
+            u128::from(i) & (u128::MAX << (IPV6_ADDR_LEN - prefix_length)),
+        )
+        .into(),
+        IpAddr::V4(i) => Ipv4Addr::from(
+            u32::from(i) & (u32::MAX << (IPV4_ADDR_LEN - prefix_length)),
+        )
+        .into(),
     }
 }

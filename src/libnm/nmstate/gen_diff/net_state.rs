@@ -29,6 +29,7 @@ impl NetworkState {
         }
 
         ret.ifaces = merged_state.ifaces.gen_diff()?;
+        ret.routes = merged_state.routes.gen_diff();
         Ok(ret)
     }
 }

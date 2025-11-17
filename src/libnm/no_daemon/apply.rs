@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::inter_ifaces::apply_ifaces;
+use super::{inter_ifaces::apply_ifaces, route::apply_routes};
 use crate::{
     MergedNetworkState, NetworkState, NmError, NmNoDaemon, NmstateApplyOption,
 };
@@ -34,6 +34,10 @@ impl NmNoDaemon {
                 log::trace!(
                     "Post apply network state: {post_apply_current_state}"
                 );
+                if cur_retry_count == RETRY_COUNT / 2 {
+                    log::info!("Apply the desired state again");
+                    Self::apply_merged_state(&merged_state).await?;
+                }
                 result = merged_state.verify(&post_apply_current_state);
                 if let Err(e) = &result {
                     log::info!(
@@ -62,6 +66,7 @@ impl NmNoDaemon {
         merged_state: &MergedNetworkState,
     ) -> Result<(), NmError> {
         apply_ifaces(&merged_state.ifaces).await?;
+        apply_routes(&merged_state.routes).await?;
         Ok(())
     }
 }

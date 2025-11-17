@@ -8,6 +8,7 @@ mod iface;
 mod inter_ifaces;
 mod ip;
 mod query;
+mod route;
 mod watcher;
 mod wifi;
 

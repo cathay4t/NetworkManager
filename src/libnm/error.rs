@@ -76,3 +76,12 @@ impl From<std::io::Error> for NmError {
         Self::new(ErrorKind::Bug, format!("std::io::Error: {e}"))
     }
 }
+
+impl From<std::net::AddrParseError> for NmError {
+    fn from(e: std::net::AddrParseError) -> Self {
+        Self::new(
+            ErrorKind::InvalidArgument,
+            format!("Invalid IP address: {e}"),
+        )
+    }
+}
