@@ -4,6 +4,7 @@ use nm::NmError;
 
 use super::{
     conf::NmConfManager, dhcp::NmDhcpV4Manager, monitor::NmMonitorManager,
+    plugin::NmPluginManager,
 };
 
 /// Share data among all threads of NM daemon
@@ -14,6 +15,7 @@ pub(crate) struct NmDaemonShareData {
     pub(crate) dhcpv4_manager: NmDhcpV4Manager,
     pub(crate) monitor_manager: NmMonitorManager,
     pub(crate) conf_manager: NmConfManager,
+    pub(crate) plugin_manager: NmPluginManager,
 }
 
 impl NmDaemonShareData {
@@ -22,6 +24,7 @@ impl NmDaemonShareData {
             dhcpv4_manager: NmDhcpV4Manager::new().await?,
             monitor_manager: NmMonitorManager::new().await?,
             conf_manager: NmConfManager::new().await?,
+            plugin_manager: NmPluginManager::new().await?,
         })
     }
 }

@@ -5,11 +5,10 @@ use nm::{
     NmstateQueryOption, NmstateStateKind,
 };
 
-use super::{plugin::NmDaemonPlugins, share_data::NmDaemonShareData};
+use super::share_data::NmDaemonShareData;
 
 pub(crate) async fn query_network_state(
     conn: &mut NmIpcConnection,
-    plugins: &NmDaemonPlugins,
     opt: NmstateQueryOption,
     mut share_data: NmDaemonShareData,
 ) -> Result<NetworkState, NmError> {
@@ -20,8 +19,10 @@ pub(crate) async fn query_network_state(
             let mut net_state =
                 NmNoDaemon::query_network_state(opt.clone()).await?;
 
-            let plugins_net_states =
-                plugins.query_network_state(opt.clone(), conn).await?;
+            let plugins_net_states = share_data
+                .plugin_manager
+                .query_network_state(opt.clone())
+                .await?;
 
             for plugins_net_state in plugins_net_states {
                 net_state.merge(&plugins_net_state)?;

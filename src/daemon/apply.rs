@@ -8,17 +8,13 @@ use nm::{
     NmstateInterface,
 };
 
-use super::{
-    plugin::NmDaemonPlugins, query::query_network_state,
-    share_data::NmDaemonShareData,
-};
+use super::{query::query_network_state, share_data::NmDaemonShareData};
 
 const RETRY_COUNT: usize = 10;
 const RETRY_INTERVAL_MS: u64 = 500;
 
 pub(crate) async fn apply_network_state(
     conn: &mut NmIpcConnection,
-    plugins: &NmDaemonPlugins,
     mut desired_state: NetworkState,
     opt: NmstateApplyOption,
     mut share_data: NmDaemonShareData,
@@ -39,13 +35,9 @@ pub(crate) async fn apply_network_state(
          {state_to_apply}"
     ))
     .await;
-    let mut pre_apply_current_state = query_network_state(
-        conn,
-        plugins,
-        Default::default(),
-        share_data.clone(),
-    )
-    .await?;
+    let mut pre_apply_current_state =
+        query_network_state(conn, Default::default(), share_data.clone())
+            .await?;
 
     pre_apply_current_state.ifaces.unify_veth_and_ethernet();
 
@@ -67,9 +59,7 @@ pub(crate) async fn apply_network_state(
 
     // Suppress the monitor during applying
     share_data.monitor_manager.pause().await?;
-    if let Err(e) =
-        apply(conn, &merged_state, plugins, &opt, share_data.clone()).await
-    {
+    if let Err(e) = apply(conn, &merged_state, &opt, share_data.clone()).await {
         conn.log_warn(format!("Failed to apply desired state: {e}"))
             .await;
         conn.log_warn(format!("Failed to apply merged state: {merged_state}"))
@@ -80,9 +70,7 @@ pub(crate) async fn apply_network_state(
             "Rollback to state before apply {revert_state}"
         ))
         .await;
-        if let Err(e) =
-            rollback(conn, revert_state, plugins, share_data.clone()).await
-        {
+        if let Err(e) = rollback(conn, revert_state, share_data.clone()).await {
             log::error!("Failed to rollback: {e}");
         }
         return Err(e);
@@ -137,7 +125,6 @@ pub(crate) async fn apply_network_state(
 async fn apply(
     conn: &mut NmIpcConnection,
     merged_state: &MergedNetworkState,
-    plugins: &NmDaemonPlugins,
     opt: &NmstateApplyOption,
     mut share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
@@ -146,7 +133,10 @@ async fn apply(
     conn.log_trace(format!("apply_state {apply_state}")).await;
 
     NmNoDaemon::apply_merged_state(merged_state).await?;
-    plugins.apply_network_state(&apply_state, opt, conn).await?;
+    share_data
+        .plugin_manager
+        .apply_network_state(&apply_state, opt)
+        .await?;
 
     share_data
         .dhcpv4_manager
@@ -156,8 +146,7 @@ async fn apply(
     let mut result: Result<(), NmError> = Ok(());
     if !opt.no_verify {
         for cur_retry_count in 1..(RETRY_COUNT + 1) {
-            result =
-                verify(conn, merged_state, plugins, share_data.clone()).await;
+            result = verify(conn, merged_state, share_data.clone()).await;
             if let Err(e) = &result {
                 conn.log_info(format!(
                     "Retrying({cur_retry_count}/{RETRY_COUNT}) on \
@@ -179,27 +168,23 @@ async fn apply(
 async fn rollback(
     conn: &mut NmIpcConnection,
     revert_state: NetworkState,
-    plugins: &NmDaemonPlugins,
     mut share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let mut opt = NmstateApplyOption::default();
     opt.no_verify = true;
 
-    let current_state = query_network_state(
-        conn,
-        plugins,
-        Default::default(),
-        share_data.clone(),
-    )
-    .await?;
+    let current_state =
+        query_network_state(conn, Default::default(), share_data.clone())
+            .await?;
     let merged_state =
         MergedNetworkState::new(revert_state, current_state, opt.clone())?;
 
     let apply_state = merged_state.gen_state_for_apply();
 
     NmNoDaemon::apply_merged_state(&merged_state).await?;
-    plugins
-        .apply_network_state(&apply_state, &opt, conn)
+    share_data
+        .plugin_manager
+        .apply_network_state(&apply_state, &opt)
         .await?;
 
     share_data
@@ -213,12 +198,10 @@ async fn rollback(
 async fn verify(
     conn: &mut NmIpcConnection,
     merged_state: &MergedNetworkState,
-    plugins: &NmDaemonPlugins,
     share_data: NmDaemonShareData,
 ) -> Result<(), NmError> {
     let post_apply_current_state =
-        query_network_state(conn, plugins, Default::default(), share_data)
-            .await?;
+        query_network_state(conn, Default::default(), share_data).await?;
     conn.log_trace(format!(
         "Post apply network state: {post_apply_current_state}"
     ))

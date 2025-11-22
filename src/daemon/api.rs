@@ -4,14 +4,12 @@ use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
 use super::{
     apply::apply_network_state, event::handle_link_event,
-    plugin::NmDaemonPlugins, query::query_network_state,
-    share_data::NmDaemonShareData,
+    query::query_network_state, share_data::NmDaemonShareData,
 };
 
 pub(crate) async fn process_api_connection(
     mut conn: NmIpcConnection,
     share_data: NmDaemonShareData,
-    plugins: NmDaemonPlugins,
 ) -> Result<(), NmError> {
     let peer_uid = get_peer_uid(&conn)?;
 
@@ -34,20 +32,15 @@ pub(crate) async fn process_api_connection(
             NmClientCmd::Ping => conn.send(Ok("pong".to_string())).await?,
             NmClientCmd::QueryNetworkState(opt) => {
                 // TODO(Gris Ge): Forbid non-root user to query secrets
-                let result = query_network_state(
-                    &mut conn,
-                    &plugins,
-                    *opt,
-                    share_data.clone(),
-                )
-                .await;
+                let result =
+                    query_network_state(&mut conn, *opt, share_data.clone())
+                        .await;
                 conn.send(result).await?;
             }
             NmClientCmd::ApplyNetworkState(opt) => {
                 let (desired_state, opt) = *opt;
                 let result = apply_network_state(
                     &mut conn,
-                    &plugins,
                     desired_state,
                     opt,
                     share_data.clone(),
