@@ -19,7 +19,7 @@ use nm::{
     RouteEntry, Routes,
 };
 
-use super::worker::NmWorker;
+use crate::TaskWorker;
 
 const DEFAULT_ROUTE_TABLE_ID: u32 = 254;
 
@@ -60,7 +60,7 @@ pub(crate) struct NmDhcpV4Worker {
     receiver: UnboundedReceiver<FromManager>,
 }
 
-impl NmWorker for NmDhcpV4Worker {
+impl TaskWorker for NmDhcpV4Worker {
     type Cmd = NmDhcpCmd;
     type Reply = NmDhcpReply;
 

@@ -2,18 +2,17 @@
 
 mod api;
 mod apply;
-mod conf_manager;
-mod conf_worker;
+mod conf;
 mod daemon;
-mod dhcp_manager;
-mod dhcp_worker;
+mod dhcp;
 mod event;
-mod monitor_manager;
-mod monitor_worker;
+mod monitor;
 mod plugin;
 mod query;
 mod share_data;
-mod worker;
+mod task;
+
+pub(crate) use self::task::{TaskManager, TaskWorker};
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
 async fn main() -> Result<(), nm::NmError> {

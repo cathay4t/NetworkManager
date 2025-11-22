@@ -3,8 +3,7 @@
 use nm::NmError;
 
 use super::{
-    conf_manager::NmConfManager, dhcp_manager::NmDhcpV4Manager,
-    monitor_manager::NmMonitorManager,
+    conf::NmConfManager, dhcp::NmDhcpV4Manager, monitor::NmMonitorManager,
 };
 
 /// Share data among all threads of NM daemon

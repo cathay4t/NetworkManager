@@ -2,20 +2,18 @@
 
 use nm::{ErrorKind, NetworkState, NmError};
 
-use super::{
-    conf_worker::{NmConfCmd, NmConfReply, NmConfWorker},
-    worker::NmManager,
-};
+use super::{NmConfCmd, NmConfReply, NmConfWorker};
+use crate::TaskManager;
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmConfManager {
-    mgr: NmManager<NmConfCmd, NmConfReply>,
+    mgr: TaskManager<NmConfCmd, NmConfReply>,
 }
 
 impl NmConfManager {
     pub(crate) async fn new() -> Result<Self, NmError> {
         Ok(Self {
-            mgr: NmManager::new::<NmConfWorker>("conf").await?,
+            mgr: TaskManager::new::<NmConfWorker>("conf").await?,
         })
     }
 

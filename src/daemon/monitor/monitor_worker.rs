@@ -17,7 +17,7 @@ use rtnetlink::{
     sys::SocketAddr,
 };
 
-use super::worker::NmWorker;
+use crate::TaskWorker;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum NmMonitorCmd {
@@ -66,7 +66,7 @@ pub(crate) struct NmMonitorWorker {
     iface_monitor_list: HashSet<String>,
 }
 
-impl NmWorker for NmMonitorWorker {
+impl TaskWorker for NmMonitorWorker {
     type Cmd = NmMonitorCmd;
     type Reply = NmMonitorReply;
 

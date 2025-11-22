@@ -5,14 +5,12 @@ use nm::{
     NmstateInterface,
 };
 
-use super::{
-    dhcp_worker::{NmDhcpCmd, NmDhcpReply, NmDhcpV4Worker},
-    worker::NmManager,
-};
+use super::{NmDhcpCmd, NmDhcpReply, NmDhcpV4Worker};
+use crate::TaskManager;
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmDhcpV4Manager {
-    mgr: NmManager<NmDhcpCmd, NmDhcpReply>,
+    mgr: TaskManager<NmDhcpCmd, NmDhcpReply>,
 }
 
 // Do not add `async` function to NmDhcpV4Manager because it will be stored
@@ -21,7 +19,7 @@ pub(crate) struct NmDhcpV4Manager {
 impl NmDhcpV4Manager {
     pub(crate) async fn new() -> Result<Self, NmError> {
         Ok(Self {
-            mgr: NmManager::new::<NmDhcpV4Worker>("dhcp").await?,
+            mgr: TaskManager::new::<NmDhcpV4Worker>("dhcp").await?,
         })
     }
 

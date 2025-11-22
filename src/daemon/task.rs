@@ -9,7 +9,7 @@ use futures::{
 };
 use nm::{ErrorKind, NmError};
 
-pub(crate) trait NmWorker: Sized + Send {
+pub(crate) trait TaskWorker: Sized + Send {
     type Cmd: std::fmt::Display + Send;
     type Reply: Send;
     // Once `associated_type_defaults` feature is stable, we should use this:
@@ -63,7 +63,7 @@ pub(crate) trait NmWorker: Sized + Send {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct NmManager<C, R>
+pub(crate) struct TaskManager<C, R>
 where
     C: std::fmt::Display + Clone,
 {
@@ -71,13 +71,13 @@ where
     sender: UnboundedSender<(C, Sender<Result<R, NmError>>)>,
 }
 
-impl<C, R> NmManager<C, R>
+impl<C, R> TaskManager<C, R>
 where
     C: std::fmt::Display + Clone,
 {
     pub(crate) async fn new<W>(name: &'static str) -> Result<Self, NmError>
     where
-        W: NmWorker<Cmd = C, Reply = R> + 'static,
+        W: TaskWorker<Cmd = C, Reply = R> + 'static,
     {
         let (sender, receiver) = unbounded::<(C, Sender<Result<R, NmError>>)>();
 

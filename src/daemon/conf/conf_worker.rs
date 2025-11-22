@@ -6,7 +6,7 @@ use futures::channel::{mpsc::UnboundedReceiver, oneshot::Sender};
 use nm::{ErrorKind, InterfaceType, NetworkState, NmError, NmstateInterface};
 use tokio::{fs::File, io::AsyncWriteExt};
 
-use super::worker::NmWorker;
+use crate::TaskWorker;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum NmConfCmd {
@@ -46,7 +46,7 @@ pub(crate) struct NmConfWorker {
     saved_state: NetworkState,
 }
 
-impl NmWorker for NmConfWorker {
+impl TaskWorker for NmConfWorker {
     type Cmd = NmConfCmd;
     type Reply = NmConfReply;
 

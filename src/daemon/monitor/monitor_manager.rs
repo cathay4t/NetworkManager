@@ -2,20 +2,18 @@
 
 use nm::NmError;
 
-use super::{
-    monitor_worker::{NmMonitorCmd, NmMonitorReply, NmMonitorWorker},
-    worker::NmManager,
-};
+use super::{NmMonitorCmd, NmMonitorReply, NmMonitorWorker};
+use crate::TaskManager;
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmMonitorManager {
-    mgr: NmManager<NmMonitorCmd, NmMonitorReply>,
+    mgr: TaskManager<NmMonitorCmd, NmMonitorReply>,
 }
 
 impl NmMonitorManager {
     pub(crate) async fn new() -> Result<Self, NmError> {
         Ok(Self {
-            mgr: NmManager::new::<NmMonitorWorker>("monitor").await?,
+            mgr: TaskManager::new::<NmMonitorWorker>("monitor").await?,
         })
     }
 
