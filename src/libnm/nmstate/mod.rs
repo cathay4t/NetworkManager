@@ -26,10 +26,11 @@ pub use self::{
     iface_trait::NmstateInterface,
     iface_type::InterfaceType,
     ifaces::{
-        BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-        Interfaces, LoopbackInterface, OvsBridgeConfig, OvsBridgeInterface,
-        OvsBridgePortConfig, OvsInterface, UnknownInterface, VethConfig,
-        WifiCfgInterface, WifiConfig, WifiLink, WifiPhyInterface, WifiState,
+        BaseInterface, DummyInterface, EthernetConfig, EthernetDuplex,
+        EthernetInterface, Interfaces, LoopbackInterface, OvsBridgeConfig,
+        OvsBridgeInterface, OvsBridgePortConfig, OvsInterface,
+        UnknownInterface, VethConfig, WifiCfgInterface, WifiConfig, WifiLink,
+        WifiPhyInterface, WifiState,
     },
     ip::{DhcpState, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
     merged::{

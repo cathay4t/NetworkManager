@@ -5,15 +5,15 @@ use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use nm::{ErrorKind, NmClient, NmError, NmIpcConnection};
 use nm_plugin::NmIpcListener;
 
-use super::{api::process_api_connection, share_data::NmDaemonShareData};
+use super::{api::process_api_connection, commander::NmCommander};
 
 #[derive(Debug)]
 pub(crate) struct NmDaemon {
     api_ipc: NmIpcListener,
     // Daemon will fork(tokio is controlling maximum threads) new thread for
-    // each client connection, this share data will shared along all forked
-    // threads.
-    share_data: NmDaemonShareData,
+    // each client connection, this commander will be cloned and move to all
+    // forked threads.
+    commander: NmCommander,
 }
 
 impl NmDaemon {
@@ -35,10 +35,14 @@ impl NmDaemon {
             )
         })?;
 
-        Ok(Self {
-            api_ipc,
-            share_data: NmDaemonShareData::new().await?,
-        })
+        let mut commander = NmCommander::new().await?;
+        if let Err(e) = commander.load_saved_state().await {
+            log::error!(
+                "Failed to load saved state: {e}, starting with empty state"
+            );
+        }
+
+        Ok(Self { api_ipc, commander })
     }
 
     /// Please run this function in a thread
@@ -61,9 +65,9 @@ impl NmDaemon {
     ) {
         match result {
             Ok(conn) => {
-                let share_data = self.share_data.clone();
+                let commander = self.commander.clone();
                 tokio::spawn(async move {
-                    process_api_connection(conn, share_data).await
+                    process_api_connection(conn, commander).await
                 });
             }
             Err(e) => {

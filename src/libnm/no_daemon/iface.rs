@@ -16,6 +16,7 @@ fn nmstate_iface_type_to_nispor(
         InterfaceType::Loopback => nispor::IfaceType::Loopback,
         InterfaceType::Veth => nispor::IfaceType::Veth,
         InterfaceType::WifiPhy => nispor::IfaceType::Wifi,
+        InterfaceType::Dummy => nispor::IfaceType::Dummy,
         _ => {
             log::warn!(
                 "BUG: Requesting unsupported interface type {iface_type}"

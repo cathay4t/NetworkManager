@@ -17,6 +17,7 @@ impl NmConfManager {
         })
     }
 
+    /// Override saved state
     pub(crate) async fn save_state(
         &mut self,
         state: NetworkState,

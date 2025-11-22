@@ -2,6 +2,7 @@
 
 mod api;
 mod apply;
+mod commander;
 mod conf;
 mod daemon;
 mod dhcp;
@@ -9,7 +10,6 @@ mod event;
 mod monitor;
 mod plugin;
 mod query;
-mod share_data;
 mod task;
 
 pub(crate) use self::task::{TaskManager, TaskWorker};

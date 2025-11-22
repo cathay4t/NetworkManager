@@ -5,9 +5,9 @@ use super::{
     route::get_routes,
 };
 use crate::{
-    ErrorKind, EthernetInterface, Interface, InterfaceType, LoopbackInterface,
-    NetworkState, NmError, NmNoDaemon, NmstateQueryOption, UnknownInterface,
-    WifiPhyInterface,
+    DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
+    LoopbackInterface, NetworkState, NmError, NmNoDaemon, NmstateQueryOption,
+    UnknownInterface, WifiPhyInterface,
 };
 
 impl NmNoDaemon {
@@ -63,6 +63,11 @@ impl NmNoDaemon {
                 InterfaceType::WifiPhy => Interface::WifiPhy(Box::new(
                     WifiPhyInterface::new_from_nispor(base_iface, np_iface),
                 )),
+                InterfaceType::Dummy => {
+                    Interface::Dummy(Box::new(DummyInterface {
+                        base: base_iface,
+                    }))
+                }
                 _ => {
                     log::trace!(
                         "Got unsupported interface {} type {:?}",

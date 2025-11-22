@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod base;
+mod dummy;
 mod ethernet;
 mod inter_ifaces;
 mod loopback;
@@ -11,6 +12,7 @@ mod wifi;
 
 pub use self::{
     base::BaseInterface,
+    dummy::DummyInterface,
     ethernet::{EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig},
     inter_ifaces::Interfaces,
     loopback::LoopbackInterface,

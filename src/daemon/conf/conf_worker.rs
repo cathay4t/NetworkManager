@@ -55,7 +55,7 @@ impl TaskWorker for NmConfWorker {
     ) -> Result<Self, NmError> {
         Ok(Self {
             receiver,
-            saved_state: NetworkState::default(),
+            saved_state: read_state_from_file()?,
         })
     }
 
@@ -78,6 +78,34 @@ impl TaskWorker for NmConfWorker {
             NmConfCmd::QueryState => {
                 Ok(NmConfReply::State(Box::new(self.saved_state.clone())))
             }
+        }
+    }
+}
+
+fn read_state_from_file() -> Result<NetworkState, NmError> {
+    let content = if std::path::Path::new(APPLIED_STATE_PATH).exists() {
+        match std::fs::read_to_string(APPLIED_STATE_PATH) {
+            Ok(s) => s,
+            Err(e) => {
+                log::debug!(
+                    "Failed to load saved state from {APPLIED_STATE_PATH}: {e}"
+                );
+                return Ok(NetworkState::default());
+            }
+        }
+    } else {
+        log::debug!("Saved state file {APPLIED_STATE_PATH} does not exist");
+        return Ok(NetworkState::default());
+    };
+
+    match serde_yaml::from_str::<NetworkState>(&content) {
+        Ok(s) => Ok(s),
+        Err(e) => {
+            log::debug!(
+                "Deleting corrupted saved state file {APPLIED_STATE_PATH}: {e}"
+            );
+            std::fs::remove_file(APPLIED_STATE_PATH).ok();
+            Ok(NetworkState::default())
         }
     }
 }

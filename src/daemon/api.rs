@@ -2,14 +2,11 @@
 
 use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
-use super::{
-    apply::apply_network_state, event::handle_link_event,
-    query::query_network_state, share_data::NmDaemonShareData,
-};
+use super::commander::NmCommander;
 
 pub(crate) async fn process_api_connection(
     mut conn: NmIpcConnection,
-    share_data: NmDaemonShareData,
+    mut commander: NmCommander,
 ) -> Result<(), NmError> {
     let peer_uid = get_peer_uid(&conn)?;
 
@@ -33,23 +30,18 @@ pub(crate) async fn process_api_connection(
             NmClientCmd::QueryNetworkState(opt) => {
                 // TODO(Gris Ge): Forbid non-root user to query secrets
                 let result =
-                    query_network_state(&mut conn, *opt, share_data.clone())
-                        .await;
+                    commander.query_network_state(Some(&mut conn), *opt).await;
                 conn.send(result).await?;
             }
             NmClientCmd::ApplyNetworkState(opt) => {
                 let (desired_state, opt) = *opt;
-                let result = apply_network_state(
-                    &mut conn,
-                    desired_state,
-                    opt,
-                    share_data.clone(),
-                )
-                .await;
+                let result = commander
+                    .apply_network_state(Some(&mut conn), desired_state, opt)
+                    .await;
                 conn.send(result).await?;
             }
             NmClientCmd::NotifyLinkEvent(event) => {
-                handle_link_event(*event, share_data.clone()).await?;
+                commander.handle_link_event(*event).await?;
             }
             _ => {
                 conn.send::<Result<NetworkState, NmError>>(Err(NmError::new(
