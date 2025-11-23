@@ -8,6 +8,7 @@ members = [
     "src/libnm-derive",
     "src/plugin-ovs",
     "src/plugin-wifi",
+    "src/plugin-demo",
 ]
 
 [workspace.package]
