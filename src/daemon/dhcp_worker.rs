@@ -19,7 +19,7 @@ use nm::{
     RouteEntry, Routes,
 };
 
-use crate::TaskWorker;
+use super::worker::NmWorker;
 
 const DEFAULT_ROUTE_TABLE_ID: u32 = 254;
 
@@ -60,7 +60,7 @@ pub(crate) struct NmDhcpV4Worker {
     receiver: UnboundedReceiver<FromManager>,
 }
 
-impl TaskWorker for NmDhcpV4Worker {
+impl NmWorker for NmDhcpV4Worker {
     type Cmd = NmDhcpCmd;
     type Reply = NmDhcpReply;
 
@@ -351,7 +351,7 @@ async fn apply_lease(
 
     net_state.routes = gen_routes(lease, base_iface);
 
-    let apply_opt = NmstateApplyOption::new().no_verify();
+    let apply_opt = NmstateApplyOption::new();
     NmNoDaemon::apply_network_state(net_state, apply_opt).await?;
     Ok(())
 }

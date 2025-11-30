@@ -48,16 +48,11 @@ impl NmCommander {
         saved_state: &NetworkState,
         cur_state: &NetworkState,
     ) -> Result<(), NmError> {
-        if let Some(ssid) =
-            cur_iface.wifi_link.as_ref().and_then(|w| w.ssid.as_ref())
-        {
+        if let Some(ssid) = cur_iface.wifi.as_ref().map(|w| w.ssid.as_str()) {
             if let Some(wifi_cfg_iface) =
                 saved_state.ifaces.user_ifaces.values().find_map(|i| {
                     if let Interface::WifiCfg(wifi_cfg_iface) = i {
-                        if wifi_cfg_iface
-                            .wifi
-                            .as_ref()
-                            .and_then(|w| w.ssid.as_deref())
+                        if wifi_cfg_iface.wifi.as_ref().map(|w| w.ssid.as_str())
                             == Some(ssid)
                         {
                             Some(wifi_cfg_iface)
@@ -82,7 +77,7 @@ impl NmCommander {
                         format!("Unsupported link event {event}"),
                     ));
                 }
-                new_iface.wifi_link = None;
+                new_iface.wifi = None;
                 let mut new_state = NetworkState::default();
                 new_state
                     .ifaces

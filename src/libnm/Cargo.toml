@@ -20,6 +20,8 @@ uuid = { workspace = true }
 nispor = { workspace = true }
 rtnetlink = { workspace = true }
 futures = { workspace = true }
+zbus = { workspace = true }
+zvariant = { workspace = true }
 
 [lib]
 name = "nm"

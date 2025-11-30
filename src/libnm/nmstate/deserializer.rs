@@ -330,3 +330,18 @@ where
 
     deserializer.deserialize_any(NumberOrString(PhantomData))
 }
+
+pub(crate) fn number_as_string<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    option_number_as_string(deserializer).and_then(|i| {
+        if let Some(i) = i {
+            Ok(i)
+        } else {
+            Err(de::Error::custom("Required filed undefined"))
+        }
+    })
+}

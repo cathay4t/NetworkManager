@@ -3,8 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, InterfaceType, JsonDisplay, JsonDisplayHideSecrets, NmError,
-    NmstateInterface, nmstate::deserializer::option_number_as_string,
+    BaseInterface, ErrorKind, InterfaceType, JsonDisplay,
+    JsonDisplayHideSecrets, NmError, NmstateInterface,
+    nmstate::{
+        deserializer::{number_as_string, option_number_as_string},
+        value::copy_undefined_value,
+    },
 };
 
 #[derive(
@@ -17,18 +21,18 @@ pub struct WifiPhyInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wifi_link: Option<WifiLink>,
+    pub wifi: Option<WifiConfig>,
 }
 
 impl WifiPhyInterface {
-    pub fn new(name: String, wifi_link: WifiLink) -> Self {
+    pub fn new(name: String, wifi: WifiConfig) -> Self {
         Self {
             base: BaseInterface {
                 name: name.to_string(),
                 iface_type: InterfaceType::WifiPhy,
                 ..Default::default()
             },
-            wifi_link: Some(wifi_link),
+            wifi: Some(wifi),
         }
     }
 }
@@ -40,7 +44,7 @@ impl Default for WifiPhyInterface {
                 iface_type: InterfaceType::WifiPhy,
                 ..Default::default()
             },
-            wifi_link: None,
+            wifi: None,
         }
     }
 }
@@ -62,12 +66,50 @@ impl NmstateInterface for WifiPhyInterface {
         &mut self,
         _current: Option<&Self>,
     ) -> Result<(), NmError> {
-        if let Some(wifi_cfg) = self.wifi_link.as_mut() {
-            *wifi_cfg = WifiLink {
-                state: Some(WifiState::Completed),
-                ssid: wifi_cfg.ssid.clone(),
-                ..Default::default()
+        let iface_name = self.name().to_string();
+        if let Some(wifi_cfg) = self.wifi.as_mut() {
+            wifi_cfg.sanitize();
+            if let Some(base_iface_name) = wifi_cfg.base_iface.as_ref()
+                && base_iface_name != &iface_name
+            {
+                return Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "The wifi-phy interface {iface_name} is holding WIFI \
+                         configuration with base-iface pointing to other \
+                         interface {base_iface_name}",
+                    ),
+                ));
+            } else {
+                wifi_cfg.base_iface = Some(iface_name);
             }
+        }
+        Ok(())
+    }
+
+    fn hide_secrets_iface_specific(&mut self) {
+        if let Some(wifi_cfg) = self.wifi.as_mut() {
+            wifi_cfg.hide_secrets();
+        }
+    }
+
+    fn include_diff_context_iface_specific(
+        &mut self,
+        desired: &Self,
+        _current: &Self,
+    ) {
+        if let Some(ssid) = desired.wifi.as_ref().map(|w| w.ssid.as_str()) {
+            if !ssid.is_empty() {
+                self.wifi = desired.wifi.clone();
+            }
+        }
+    }
+
+    fn post_merge_iface_specific(&mut self, old: &Self) -> Result<(), NmError> {
+        if let Some(wifi) = self.wifi.as_mut()
+            && let Some(old_wifi) = old.wifi.as_ref()
+        {
+            wifi.post_merge(old_wifi);
         }
         Ok(())
     }
@@ -87,67 +129,68 @@ impl NmstateInterface for WifiPhyInterface {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub enum WifiState {
+    /// BSS disconnected
     Disconnected,
-    Inactive,
+    /// Scanning SSID
     Scanning,
-    Authenticating,
-    Associating,
-    Associated,
-    FourWayHandshake,
-    GroupHandshake,
+    /// SSID Found, trying to associate and authenticate with a BSS/SSID
+    Connecting,
+    /// Data connection is fully configured
     Completed,
     #[default]
     Unknown,
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    JsonDisplay,
 )]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
-pub struct WifiLink {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<WifiState>,
-    /// Service Set Identifier(SSID)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ssid: Option<String>,
-    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub generation: Option<u32>,
-    /// WiFi frequency in MHz. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub frequency_mhz: Option<u32>,
-    /// Receive bitrate in 1mb/s. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rx_bitrate_mb: Option<u32>,
-    /// Transmit bitrate in 1mb/s. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tx_bitrate_mb: Option<u32>,
-    /// Signal in dBm. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signal_dbm: Option<i16>,
-    /// Signal in percentage. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signal_percent: Option<u8>,
-}
-
-// Align with Microsoft `WLAN_ASSOCIATION_ATTRIBUTES`
-const NOISE_FLOOR_DBM: i16 = -100;
-const SIGNAL_MAX_DBM: i16 = -50;
-
-impl WifiLink {
-    /// Use `signal_dbm` to calculate out `signal_percent`
-    pub fn sanitize_signal(&mut self) {
-        if let Some(s) = self.signal_dbm {
-            self.signal_percent = Some(Self::signal_dbm_to_percent(s));
-        }
-    }
-
-    pub fn signal_dbm_to_percent(dbm: i16) -> u8 {
-        let dbm = dbm.clamp(NOISE_FLOOR_DBM, SIGNAL_MAX_DBM);
-        (100.0f64 * (NOISE_FLOOR_DBM - dbm) as f64
-            / (NOISE_FLOOR_DBM - SIGNAL_MAX_DBM) as f64) as u8
-    }
+pub enum WifiAuthType {
+    /// No authentication
+    #[serde(rename = "OPEN")]
+    Open,
+    /// WEP (depreacated)
+    #[serde(rename = "WEP")]
+    Wep,
+    /// WPA 1(deprecated)
+    #[serde(rename = "WPA1")]
+    Wpa1,
+    /// WPS(deprecated)
+    #[serde(rename = "WPS")]
+    Wps,
+    /// WPA 2 Pre-share Key
+    #[serde(rename = "WPA2-PSK")]
+    Wpa2PreShareKey,
+    /// WPA 2/3 EAP(Extensible Authentication Protocol)
+    /// Including OSEN(OSU Server-Only Authenticated L2 Encryption Network)
+    #[serde(rename = "EAP")]
+    Enterprise,
+    /// WPA 3 Pre-share key using SAE(Simultaneous Authentication of Equals)
+    #[serde(rename = "WPA3-PSK")]
+    Wpa3PreShareKey,
+    /// WPA 3 open network using OWE(Opportunistic Wireless Encryption)
+    #[serde(rename = "WPA3-OPEN")]
+    Wpa3Open,
+    /// IEEE 802.11ai -- Fast Initial Link Setup
+    #[serde(rename = "FILS")]
+    FastInitialLinkSetup,
+    /// Easy Connect, also known as DPP(Device Provisioning Protocol).
+    #[serde(rename = "DPP")]
+    EasyConnect,
+    #[default]
+    Unknown,
 }
 
 #[derive(
@@ -173,6 +216,18 @@ impl WifiCfgInterface {
 
     pub fn parent(&self) -> Option<&str> {
         self.wifi.as_ref().and_then(|w| w.base_iface.as_deref())
+    }
+}
+
+impl From<WifiConfig> for WifiCfgInterface {
+    fn from(config: WifiConfig) -> Self {
+        Self {
+            base: BaseInterface::new(
+                config.ssid.to_string(),
+                InterfaceType::WifiCfg,
+            ),
+            wifi: Some(config),
+        }
     }
 }
 
@@ -220,6 +275,26 @@ impl NmstateInterface for WifiCfgInterface {
     fn sanitize_current_for_verify_iface_specfic(&mut self) {
         self.hide_secrets_iface_specific()
     }
+
+    fn sanitize_desired_for_verify_iface_specfic(&mut self) {
+        // The IP stack and WIFI password is for daemon storage only and cannot
+        // be query during applying(only stored after apply succeeded), hence
+        // we remove ipv4 and ipv6 for `wifi-cfg` interface.
+        self.base.ipv4 = None;
+        self.base.ipv6 = None;
+        if let Some(wifi_cfg) = self.wifi.as_mut() {
+            wifi_cfg.remove_secrets();
+        }
+    }
+
+    fn post_merge_iface_specific(&mut self, old: &Self) -> Result<(), NmError> {
+        if let Some(wifi) = self.wifi.as_mut()
+            && let Some(old_wifi) = old.wifi.as_ref()
+        {
+            wifi.post_merge(old_wifi);
+        }
+        Ok(())
+    }
 }
 
 #[derive(
@@ -234,13 +309,22 @@ impl NmstateInterface for WifiCfgInterface {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct WifiConfig {
+    /// WiFi state. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<WifiState>,
+    /// Current authentication type. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_type: Option<WifiAuthType>,
+    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generation: Option<u32>,
     /// SSID (Service Set Identifier)
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "option_number_as_string"
-    )]
-    pub ssid: Option<String>,
+    #[serde(default, deserialize_with = "number_as_string")]
+    pub ssid: String,
+    /// BSSID (Basic Service Set Identifier), if defined, will only connect to
+    /// desired AP.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bssid: Option<String>,
     /// Password for authentication
     #[serde(
         default,
@@ -253,15 +337,81 @@ pub struct WifiConfig {
     /// connecting this WiFi.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_iface: Option<String>,
+    /// WiFi frequency in MHz. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frequency_mhz: Option<u32>,
+    /// Receive bitrate in 1mb/s. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rx_bitrate_mb: Option<u32>,
+    /// Transmit bitrate in 1mb/s. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_bitrate_mb: Option<u32>,
+    /// Signal in dBm. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signal_dbm: Option<i16>,
+    /// Signal in percentage. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signal_percent: Option<u8>,
 }
 
+// Align with Microsoft `WLAN_ASSOCIATION_ATTRIBUTES`
+const NOISE_FLOOR_DBM: i16 = -100;
+const SIGNAL_MAX_DBM: i16 = -50;
+
 impl WifiConfig {
-    pub(crate) fn sanitize(&mut self) {}
+    /// Use `signal_dbm` to calculate out `signal_percent`
+    pub fn sanitize_signal(&mut self) {
+        if let Some(s) = self.signal_dbm {
+            self.signal_percent = Some(Self::signal_dbm_to_percent(s));
+        }
+    }
+
+    pub fn signal_dbm_to_percent(dbm: i16) -> u8 {
+        let dbm = dbm.clamp(NOISE_FLOOR_DBM, SIGNAL_MAX_DBM);
+        (100.0f64 * (NOISE_FLOOR_DBM - dbm) as f64
+            / (NOISE_FLOOR_DBM - SIGNAL_MAX_DBM) as f64) as u8
+    }
+
+    /// Set all query only properties to None
+    /// Change BSSID to upper case
+    pub(crate) fn sanitize(&mut self) {
+        self.state = None;
+        self.generation = None;
+        self.frequency_mhz = None;
+        self.tx_bitrate_mb = None;
+        self.rx_bitrate_mb = None;
+        self.signal_dbm = None;
+        self.signal_percent = None;
+        if let Some(mac) = self.bssid.as_ref() {
+            self.bssid = Some(mac.to_uppercase());
+        }
+    }
 
     pub fn hide_secrets(&mut self) {
         if self.password.is_some() {
             self.password =
                 Some(crate::NetworkState::HIDE_PASSWORD_STR.to_string());
+        }
+    }
+
+    pub fn remove_secrets(&mut self) {
+        self.password = None;
+    }
+
+    pub(crate) fn merge(&self, new: &Self) -> Result<Self, NmError> {
+        let mut new_value = serde_json::to_value(new)?;
+        let old_value = serde_json::to_value(self)?;
+        copy_undefined_value(&mut new_value, &old_value);
+
+        let mut merged: Self = serde_json::from_value(new_value)?;
+        merged.post_merge(self);
+
+        Ok(merged)
+    }
+
+    pub(crate) fn post_merge(&mut self, old: &Self) {
+        if self.ssid.is_empty() {
+            self.ssid = old.ssid.to_string();
         }
     }
 }
@@ -278,17 +428,35 @@ impl std::fmt::Debug for WifiConfig {
 #[allow(dead_code)]
 #[derive(Debug)]
 struct WifiConfigHideSecrets {
-    ssid: Option<String>,
+    state: Option<WifiState>,
+    generation: Option<u32>,
+    ssid: String,
+    bssid: Option<String>,
     password: Option<String>,
+    auth_type: Option<WifiAuthType>,
     base_iface: Option<String>,
+    frequency_mhz: Option<u32>,
+    rx_bitrate_mb: Option<u32>,
+    tx_bitrate_mb: Option<u32>,
+    signal_dbm: Option<i16>,
+    signal_percent: Option<u8>,
 }
 
 impl From<&WifiConfig> for WifiConfigHideSecrets {
     fn from(v: &WifiConfig) -> Self {
         let WifiConfig {
             ssid,
+            bssid,
             password,
+            auth_type,
             base_iface,
+            state,
+            generation,
+            frequency_mhz,
+            rx_bitrate_mb,
+            tx_bitrate_mb,
+            signal_dbm,
+            signal_percent,
         } = v.clone();
         Self {
             password: if password.is_some() {
@@ -297,7 +465,16 @@ impl From<&WifiConfig> for WifiConfigHideSecrets {
                 None
             },
             ssid,
+            bssid,
             base_iface,
+            auth_type,
+            state,
+            generation,
+            frequency_mhz,
+            rx_bitrate_mb,
+            tx_bitrate_mb,
+            signal_dbm,
+            signal_percent,
         }
     }
 }

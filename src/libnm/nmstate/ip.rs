@@ -217,6 +217,17 @@ impl InterfaceIpv4 {
             self.addresses = Some(Vec::new());
         }
     }
+
+    /// Remove `valid_life_time` and `preferred_life_time` because there might
+    /// be latency after applied and query back.
+    pub fn sanitize_desired_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs {
+                addr.valid_life_time = None;
+                addr.preferred_life_time = None;
+            }
+        }
+    }
 }
 
 /// IPv6 configurations of interface.
@@ -387,6 +398,17 @@ impl InterfaceIpv6 {
         }
         if self.addresses.is_none() {
             self.addresses = Some(Vec::new());
+        }
+    }
+
+    /// Remove `valid_life_time` and `preferred_life_time` because there might
+    /// be latency after applied and query back.
+    pub fn sanitize_desired_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs {
+                addr.valid_life_time = None;
+                addr.preferred_life_time = None;
+            }
         }
     }
 }

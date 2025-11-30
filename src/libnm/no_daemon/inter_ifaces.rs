@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{iface::apply_iface_link_changes, ip::apply_iface_ip_changes};
+use super::{
+    iface::apply_iface_link_changes, ip::apply_iface_ip_changes,
+    wifi::NmWpaConn,
+};
 use crate::{
-    ErrorKind, MergedInterface, MergedInterfaces, NmError, NmstateInterface,
+    ErrorKind, Interface, InterfaceType, MergedInterface, MergedInterfaces,
+    NmError, NmstateInterface,
 };
 
 pub(crate) async fn apply_ifaces(
@@ -24,6 +28,7 @@ async fn apply_ifaces_link_changes(
     let mut sorted_changed_mergd_ifaces: Vec<&MergedInterface> = merged_ifaces
         .kernel_ifaces
         .values()
+        .chain(merged_ifaces.user_ifaces.values())
         .filter(|i| i.for_apply.is_some())
         .collect();
     sorted_changed_mergd_ifaces.sort_unstable_by_key(|i| {
@@ -33,20 +38,36 @@ async fn apply_ifaces_link_changes(
             .unwrap_or(u32::MAX)
     });
 
+    let mut changed_wifi_ifaces: Vec<&Interface> = Vec::new();
+
     for merged_iface in sorted_changed_mergd_ifaces {
         let apply_iface = if let Some(i) = merged_iface.for_apply.as_ref() {
             i
         } else {
             continue;
         };
-        if let Some(np_iface) = apply_iface_link_changes(
-            apply_iface,
-            merged_iface.current.as_ref(),
-            merged_ifaces,
-        )? {
+
+        if apply_iface.iface_type() == &InterfaceType::WifiCfg
+            || apply_iface.iface_type() == &InterfaceType::WifiPhy
+        {
+            changed_wifi_ifaces.push(apply_iface);
+        }
+
+        if !apply_iface.iface_type().is_userspace()
+            && let Some(np_iface) = apply_iface_link_changes(
+                apply_iface,
+                merged_iface.current.as_ref(),
+                merged_ifaces,
+            )?
+        {
             np_ifaces.push(np_iface);
         }
     }
+
+    if !changed_wifi_ifaces.is_empty() {
+        NmWpaConn::apply(changed_wifi_ifaces.as_slice(), merged_ifaces).await?;
+    }
+
     if !np_ifaces.is_empty() {
         let mut net_conf = nispor::NetConf::default();
         net_conf.ifaces = Some(np_ifaces);

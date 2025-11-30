@@ -20,6 +20,6 @@ pub use self::{
     ovs_iface::OvsInterface,
     unknown::UnknownInterface,
     wifi::{
-        WifiCfgInterface, WifiConfig, WifiLink, WifiPhyInterface, WifiState,
+        WifiAuthType, WifiCfgInterface, WifiConfig, WifiPhyInterface, WifiState,
     },
 };

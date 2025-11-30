@@ -81,4 +81,10 @@ impl MergedInterface {
             s.hide_secrets()
         }
     }
+
+    pub fn mark_as_changed(&mut self) {
+        self.for_apply = self.current.as_ref().map(|iface| {
+            Interface::from(iface.base_iface().clone_name_type_only())
+        });
+    }
 }

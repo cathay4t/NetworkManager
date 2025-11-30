@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use nm::{NmClient, NmNoDaemon, NmstateApplyOption};
+use nm::{NetworkState, NmClient, NmNoDaemon, NmstateApplyOption};
 
 use super::{CliError, state::state_from_file};
 
@@ -16,6 +16,7 @@ impl CommandApply {
             .arg(
                 clap::Arg::new("STATE_FILE")
                     .required(false)
+                    .num_args(0..)
                     .index(1)
                     .help("Network state file"),
             )
@@ -43,12 +44,18 @@ impl CommandApply {
         let mut opt = NmstateApplyOption::default();
         opt.no_verify = matches.get_flag("NO_VERIFY");
 
-        let desired_state =
-            if let Some(file_path) = matches.get_one::<String>("STATE_FILE") {
-                state_from_file(file_path)?
-            } else {
-                state_from_file("-")?
-            };
+        let desired_state = if let Some(file_paths) =
+            matches.get_many::<String>("STATE_FILE")
+        {
+            let mut net_state = NetworkState::default();
+            for file_path in file_paths {
+                let next_state = state_from_file(file_path)?;
+                net_state.merge(&next_state)?;
+            }
+            net_state
+        } else {
+            state_from_file("-")?
+        };
 
         let mut diff_net_state = if matches.get_flag("NO_DAEMON") {
             NmNoDaemon::apply_network_state(desired_state, opt).await?

@@ -203,6 +203,7 @@ impl MergedInterfaces {
                 continue;
             };
             iface.hide_secrets();
+            iface.sanitize_desired_for_verify();
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get(iface.name(), Some(iface.iface_type()))
@@ -244,6 +245,7 @@ impl MergedInterfaces {
         }
 
         self.post_merge_sanitize_veth();
+        self.post_merge_sanitize_wifi();
 
         Ok(())
     }

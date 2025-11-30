@@ -9,6 +9,9 @@ mod nmstate;
 mod no_daemon;
 mod uuid;
 
+#[cfg(test)]
+mod tests;
+
 pub use libnm_derive::{JsonDisplay, JsonDisplayHideSecrets};
 pub use nmstate::*;
 

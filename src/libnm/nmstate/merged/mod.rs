@@ -8,6 +8,7 @@ mod ip;
 mod loopback;
 mod net_state;
 mod route;
+mod wifi;
 
 pub use self::{
     iface::MergedInterface, inter_iface::MergedInterfaces,

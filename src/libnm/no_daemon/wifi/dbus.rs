@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 
-use nm::{ErrorKind, NmError};
 use zvariant::{ObjectPath, OwnedObjectPath};
 
 use super::{
     bss::WpaSupBss, interface::WpaSupInterface, network::WpaSupNetwork,
 };
+use crate::{ErrorKind, NmError};
 
 const WPA_SUP_DBUS_IFACE_ROOT: &str = "fi.w1.wpa_supplicant1";
 const WPA_SUP_DBUS_IFACE_IFACE: &str = "fi.w1.wpa_supplicant1.Interface";
@@ -26,6 +26,9 @@ trait WpaSupplicant {
     #[zbus(property)]
     fn interfaces(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
 
+    #[zbus(property)]
+    fn capabilities(&self) -> zbus::Result<Vec<String>>;
+
     fn create_interface(
         &self,
         iface: HashMap<&str, zvariant::Value<'_>>,
@@ -36,12 +39,12 @@ trait WpaSupplicant {
     fn get_interface(&self, iface_name: &str) -> zbus::Result<OwnedObjectPath>;
 }
 
-pub(crate) struct WpaSupDbus<'a> {
+pub(crate) struct NmWpaSupDbus<'a> {
     pub(crate) connection: zbus::Connection,
     proxy: WpaSupplicantProxy<'a>,
 }
 
-impl WpaSupDbus<'_> {
+impl NmWpaSupDbus<'_> {
     pub(crate) async fn new() -> Result<Self, NmError> {
         let connection = zbus::Connection::system().await.map_err(|e| {
             NmError::new(
@@ -58,6 +61,27 @@ impl WpaSupDbus<'_> {
                     ),
                 )
             })?;
+        // Test connection
+        proxy.capabilities().await.map_err(|e| {
+            if let zbus::Error::MethodError(error_name, ..) = &e
+                && error_name.as_str()
+                    == "org.freedesktop.DBus.Error.AccessDenied"
+            {
+                NmError::new(
+                    ErrorKind::PermissionDeny,
+                    "Permission deny when connecting wpa_supplicant DBUS \
+                     interface"
+                        .to_string(),
+                )
+            } else {
+                NmError::new(
+                    ErrorKind::PluginFailure,
+                    format!(
+                        "Failed to connect wpa_supplicant DBUS interface: {e}"
+                    ),
+                )
+            }
+        })?;
 
         Ok(Self { connection, proxy })
     }
@@ -192,6 +216,7 @@ impl WpaSupDbus<'_> {
         &self,
         iface_name: &str,
     ) -> Result<String, NmError> {
+        log::trace!("Enabled WPA interface {iface_name}");
         self.proxy
             .create_interface(
                 WpaSupInterface::new(iface_name.to_string()).to_value(),
@@ -205,6 +230,7 @@ impl WpaSupDbus<'_> {
         &self,
         iface_name: &str,
     ) -> Result<(), NmError> {
+        log::trace!("Deleting WPA interface {iface_name}");
         let iface_obj_path = self
             .proxy
             .get_interface(iface_name)
@@ -221,6 +247,7 @@ impl WpaSupDbus<'_> {
         iface_obj_path: &str,
         network: &WpaSupNetwork,
     ) -> Result<String, NmError> {
+        log::trace!("Adding WPA network {iface_obj_path} {}", network.ssid);
         let proxy = zbus::Proxy::new(
             &self.connection,
             WPA_SUP_DBUS_IFACE_ROOT,
@@ -243,6 +270,7 @@ impl WpaSupDbus<'_> {
         &self,
         network_obj_path: &str,
     ) -> Result<(), NmError> {
+        log::trace!("Enable WIFI network {network_obj_path}");
         let proxy = zbus::Proxy::new(
             &self.connection,
             WPA_SUP_DBUS_IFACE_ROOT,
@@ -262,6 +290,11 @@ impl WpaSupDbus<'_> {
         iface_obj_path: &str,
         network_obj_path: &str,
     ) -> Result<(), NmError> {
+        log::trace!(
+            "Deleting WPA network {} {}",
+            iface_obj_path,
+            network_obj_path
+        );
         let network_obj_path = str_to_obj_path(network_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
@@ -313,6 +346,47 @@ impl WpaSupDbus<'_> {
             .map_err(map_zbus_err)?;
 
         WpaSupBss::from_value(value, bss_obj_path)
+    }
+
+    pub(crate) async fn get_bsses(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<Vec<WpaSupBss>, NmError> {
+        let iface_obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            iface_obj_path,
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+        let bss_obj_paths = proxy
+            .get_property::<Vec<OwnedObjectPath>>("BSSs")
+            .await
+            .map_err(map_zbus_err)?;
+
+        let mut ret: Vec<WpaSupBss> = Vec::new();
+        for bss_obj_path in bss_obj_paths {
+            let proxy = zbus::Proxy::new(
+                &self.connection,
+                WPA_SUP_DBUS_IFACE_ROOT,
+                bss_obj_path.as_str(),
+                DBUS_IFACE_PROPS,
+            )
+            .await
+            .map_err(map_zbus_err)?;
+
+            let value = proxy
+                .call::<&str, &str, HashMap<String, zvariant::OwnedValue>>(
+                    "GetAll",
+                    &WPA_SUP_DBUS_IFACE_BSS,
+                )
+                .await
+                .map_err(map_zbus_err)?;
+            ret.push(WpaSupBss::from_value(value, bss_obj_path)?);
+        }
+        Ok(ret)
     }
 }
 

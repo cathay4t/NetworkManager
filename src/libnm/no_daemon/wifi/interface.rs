@@ -2,8 +2,9 @@
 
 use std::collections::HashMap;
 
-use nm::{ErrorKind, NmError, WifiState};
 use zvariant::OwnedObjectPath;
+
+use crate::{ErrorKind, NmError, WifiAuthType, WifiState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum WpaSupInterfaceState {
@@ -41,14 +42,14 @@ impl From<String> for WpaSupInterfaceState {
 impl From<WpaSupInterfaceState> for WifiState {
     fn from(v: WpaSupInterfaceState) -> Self {
         match v {
-            WpaSupInterfaceState::Disconnected => Self::Disconnected,
-            WpaSupInterfaceState::Inactive => Self::Inactive,
+            WpaSupInterfaceState::Disconnected
+            | WpaSupInterfaceState::Inactive => Self::Disconnected,
             WpaSupInterfaceState::Scanning => Self::Scanning,
-            WpaSupInterfaceState::Authenticating => Self::Authenticating,
-            WpaSupInterfaceState::Associating => Self::Associating,
-            WpaSupInterfaceState::Associated => Self::Associated,
-            WpaSupInterfaceState::FourWayHandshake => Self::FourWayHandshake,
-            WpaSupInterfaceState::GroupHandshake => Self::GroupHandshake,
+            WpaSupInterfaceState::Authenticating
+            | WpaSupInterfaceState::Associating
+            | WpaSupInterfaceState::Associated
+            | WpaSupInterfaceState::FourWayHandshake
+            | WpaSupInterfaceState::GroupHandshake => Self::Connecting,
             WpaSupInterfaceState::Completed => Self::Completed,
             WpaSupInterfaceState::Unknown => Self::Unknown,
         }
@@ -60,6 +61,7 @@ pub(crate) struct WpaSupInterface {
     pub(crate) obj_path: OwnedObjectPath,
     pub(crate) iface_name: String,
     pub(crate) state: WpaSupInterfaceState,
+    pub(crate) cur_auth_mode: Option<String>,
 }
 
 impl WpaSupInterface {
@@ -68,6 +70,7 @@ impl WpaSupInterface {
             iface_name,
             obj_path: OwnedObjectPath::default(),
             state: WpaSupInterfaceState::Unknown,
+            cur_auth_mode: None,
         }
     }
 
@@ -96,7 +99,46 @@ impl WpaSupInterface {
             state: _from_map!(map, "State", String::try_from)?
                 .map(WpaSupInterfaceState::from)
                 .unwrap_or_default(),
+            cur_auth_mode: _from_map!(
+                map,
+                "CurrentAuthMode",
+                String::try_from
+            )?,
             obj_path,
         })
+    }
+
+    pub(crate) fn get_cur_auth_mode(&self) -> Option<WifiAuthType> {
+        match self.cur_auth_mode.as_deref()? {
+            "WPA2-PSK+WPA-PSK" | "WPA2-PSK" | "FT-PSK" | "WPA2-PSK-SHA256" => {
+                Some(WifiAuthType::Wpa2PreShareKey)
+            }
+            "WPA-PSK" => Some(WifiAuthType::Wpa1),
+            "NONE" => Some(WifiAuthType::Open),
+            "WPA-NONE" => Some(WifiAuthType::Open),
+            "FT-EAP"
+            | "WPA2-EAP-SHA256"
+            | "OSEN"
+            | "WPA2-EAP-SUITE-B"
+            | "WPA2-EAP-SUITE-B-192"
+            | "FT-EAP-SHA384"
+            | "WPA2-EAP-SHA384" => Some(WifiAuthType::Enterprise),
+            "SAE" | "SAE-EXT-KEY" | "FT-SAE" | "FT-SAE-EXT-KEY" => {
+                Some(WifiAuthType::Wpa3PreShareKey)
+            }
+            "FILS-SHA256" | "FILS-SHA384" | "FT-FILS-SHA256"
+            | "FT-FILS-SHA384" => Some(WifiAuthType::FastInitialLinkSetup),
+            "OWE" => Some(WifiAuthType::Wpa3Open),
+            "WPS" => Some(WifiAuthType::Wps),
+            "DPP" => Some(WifiAuthType::EasyConnect),
+            auth if auth.starts_with("EAP-") => Some(WifiAuthType::Enterprise),
+            "INACTIVE" => None,
+            auth => {
+                log::warn!(
+                    "Unknown wpa_supplicant authentication method {auth}"
+                );
+                None
+            }
+        }
     }
 }

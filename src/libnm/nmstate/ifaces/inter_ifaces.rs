@@ -83,7 +83,12 @@ impl Interfaces {
         for iface in self.user_ifaces.values() {
             ifaces.push(iface);
         }
-        ifaces.sort_unstable_by_key(|iface| iface.name());
+        ifaces.sort_unstable_by_key(|iface| {
+            (
+                iface.base_iface().iface_index.unwrap_or(u32::MAX),
+                iface.name(),
+            )
+        });
         // Use sort_by_key() instead of unstable one, do we can alphabet
         // activation order which is required to simulate the OS boot-up.
         ifaces.sort_by_key(|iface| iface.base_iface().up_priority);

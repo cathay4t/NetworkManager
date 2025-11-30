@@ -216,6 +216,7 @@ impl NmstateInterface for Interface {
         (base_iface_mut, &mut BaseInterface),
         (hide_secrets_iface_specific, ()),
         (sanitize_current_for_verify_iface_specfic, ()),
+        (sanitize_desired_for_verify_iface_specfic, ()),
     );
 
     fn sanitize_iface_specfic(
@@ -339,6 +340,45 @@ impl NmstateInterface for Interface {
                      Unexpected input desired {desired:?} pre_apply \
                      {pre_apply:?}"
                 );
+            }
+        }
+    }
+
+    fn post_merge_iface_specific(
+        &mut self,
+        old_state: &Self,
+    ) -> Result<(), NmError> {
+        match (self, old_state) {
+            (Self::Ethernet(i), Self::Ethernet(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::OvsBridge(i), Self::OvsBridge(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::OvsInterface(i), Self::OvsInterface(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::Loopback(i), Self::Loopback(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::WifiPhy(i), Self::WifiPhy(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::WifiCfg(i), Self::WifiCfg(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::Dummy(i), Self::Dummy(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (Self::Unknown(i), Self::Unknown(old_state)) => {
+                i.post_merge_iface_specific(old_state)
+            }
+            (merged, old) => {
+                log::error!(
+                    "BUG: Interface::include_revert_context_iface_specific() \
+                     Unexpected input merged {merged:?} old_state {old:?}"
+                );
+                Ok(())
             }
         }
     }

@@ -42,11 +42,17 @@ pub enum ErrorKind {
 
 // Try not implement From for NmError here unless you are sure this
 // error should always convert to certain type of ErrorKind.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct NmError {
     pub kind: ErrorKind,
     pub msg: String,
+}
+
+impl std::fmt::Display for NmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.kind, self.msg)
+    }
 }
 
 impl NmError {

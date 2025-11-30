@@ -2,10 +2,12 @@
 
 use super::{inter_ifaces::apply_ifaces, route::apply_routes};
 use crate::{
-    MergedNetworkState, NetworkState, NmError, NmNoDaemon, NmstateApplyOption,
+    InterfaceType, MergedNetworkState, NetworkState, NmError, NmNoDaemon,
+    NmstateApplyOption, NmstateInterface,
 };
 
-const RETRY_COUNT: usize = 10;
+const RETRY_COUNT_COMMON: usize = 10;
+const RETRY_COUNT_WIFI: usize = 20;
 const RETRY_INTERVAL_MS: u64 = 500;
 
 impl NmNoDaemon {
@@ -24,24 +26,30 @@ impl NmNoDaemon {
             option.clone(),
         )?;
 
+        // TODO(Gris Ge): Special sanitize for NoDaemon mode:
+        //  * DHCP not supported
+        //  * controller and IP setting for `wifi-cfg` interface
+
         Self::apply_merged_state(&merged_state).await?;
+
+        let max_retry_count = get_max_retry_count(&merged_state);
 
         let mut result: Result<(), NmError> = Ok(());
         if !option.no_verify {
-            for cur_retry_count in 1..(RETRY_COUNT + 1) {
+            for cur_retry_count in 1..(max_retry_count + 1) {
                 let post_apply_current_state =
                     Self::query_network_state(Default::default()).await?;
                 log::trace!(
                     "Post apply network state: {post_apply_current_state}"
                 );
-                if cur_retry_count == RETRY_COUNT / 2 {
+                if cur_retry_count == max_retry_count / 2 {
                     log::info!("Apply the desired state again");
                     Self::apply_merged_state(&merged_state).await?;
                 }
                 result = merged_state.verify(&post_apply_current_state);
                 if let Err(e) = &result {
                     log::info!(
-                        "Retrying({cur_retry_count}/{RETRY_COUNT}) on \
+                        "Retrying({cur_retry_count}/{max_retry_count}) on \
                          verification error: {e}"
                     );
                     tokio::time::sleep(std::time::Duration::from_millis(
@@ -68,5 +76,24 @@ impl NmNoDaemon {
         apply_ifaces(&merged_state.ifaces).await?;
         apply_routes(&merged_state.routes).await?;
         Ok(())
+    }
+}
+
+fn get_max_retry_count(merged_state: &MergedNetworkState) -> usize {
+    if merged_state
+        .ifaces
+        .kernel_ifaces
+        .values()
+        .any(|merged_iface| {
+            merged_iface.for_apply.is_some()
+                && matches!(
+                    merged_iface.merged.iface_type(),
+                    InterfaceType::WifiPhy | InterfaceType::WifiCfg
+                )
+        })
+    {
+        RETRY_COUNT_WIFI
+    } else {
+        RETRY_COUNT_COMMON
     }
 }

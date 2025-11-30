@@ -2,7 +2,7 @@
 
 use super::{
     base_iface::np_iface_to_base_iface, error::np_error_to_nmstate,
-    route::get_routes,
+    route::get_routes, wifi::NmWpaConn,
 };
 use crate::{
     DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
@@ -34,6 +34,8 @@ impl NmNoDaemon {
             .await
             .map_err(np_error_to_nmstate)?;
 
+        let mut has_wifi_nic = false;
+
         for (_, np_iface) in np_state.ifaces.iter() {
             // The `ovs-system` is reserved for OVS kernel datapath
             if np_iface.name == "ovs-system" {
@@ -60,9 +62,12 @@ impl NmNoDaemon {
                 InterfaceType::Loopback => Interface::Loopback(Box::new(
                     LoopbackInterface::new(base_iface),
                 )),
-                InterfaceType::WifiPhy => Interface::WifiPhy(Box::new(
-                    WifiPhyInterface::new_from_nispor(base_iface, np_iface),
-                )),
+                InterfaceType::WifiPhy => {
+                    has_wifi_nic = true;
+                    Interface::WifiPhy(Box::new(
+                        WifiPhyInterface::new_from_nispor(base_iface, np_iface),
+                    ))
+                }
                 InterfaceType::Dummy => {
                     Interface::Dummy(Box::new(DummyInterface {
                         base: base_iface,
@@ -80,6 +85,10 @@ impl NmNoDaemon {
                 }
             };
             net_state.ifaces.push(iface);
+        }
+
+        if has_wifi_nic {
+            NmWpaConn::fill_wifi_cfg(&mut net_state.ifaces).await?;
         }
 
         net_state.routes = get_routes(&net_state.ifaces).await;
