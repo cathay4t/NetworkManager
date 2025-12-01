@@ -99,13 +99,13 @@ async fn add_networks(
         return Ok(());
     }
 
-    let existing_bsses = bss_active_scan(&dbus, &ifaces_to_scan).await?;
+    let existing_bsses = bss_active_scan(dbus, &ifaces_to_scan).await?;
 
     for (iface_name, wifi_cfg) in wifi_cfg_to_add {
         add_wifi_cfg(
             iface_name,
             wifi_cfg,
-            &dbus,
+            dbus,
             existing_bsses
                 .get(&(iface_name.to_string(), wifi_cfg.ssid.to_string())),
         )
@@ -165,8 +165,9 @@ async fn add_wifi_cfg(
                 if network.ssid == ssid {
                     log::debug!(
                         "Deactivating existing WIFI network {ssid} on \
-                         interface {}",
-                        iface_name
+                         interface {}: {}",
+                        iface_name,
+                        network.obj_path.as_str(),
                     );
                     dbus.del_network(
                         iface_obj_path.as_str(),
@@ -186,8 +187,7 @@ async fn add_wifi_cfg(
     };
     if let Some(bss) = bss {
         if bss.is_wpa3_psk() {
-            wpa_network.ieee80211w = Some(2);
-            wpa_network.key_mgmt = Some("SAE FT-SAE".to_string());
+            wpa_network.change_to_wpa3_psk();
         }
     }
     log::debug!("Adding WIFI network {ssid} to interface {}", iface_name);

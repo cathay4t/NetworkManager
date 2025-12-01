@@ -104,13 +104,15 @@ fn parse_ssid(value: zvariant::OwnedValue) -> Result<String, NmError> {
 
 impl From<WpaSupBss> for WifiConfig {
     fn from(bss: WpaSupBss) -> WifiConfig {
-        let mut ret = WifiConfig::default();
-        ret.ssid = bss.ssid.clone().unwrap_or_default();
-        ret.frequency_mhz = bss.frequency_mhz.map(|f| f.into());
-        ret.signal_dbm = bss.signal_dbm;
-        ret.bssid = bss.bssid.as_ref().map(|b| mac_to_string(b.as_slice()));
-        ret.auth_types = Some(bss.get_auth_types());
-        ret.generation = bss.generation.clone();
+        let mut ret = WifiConfig {
+            ssid: bss.ssid.clone().unwrap_or_default(),
+            frequency_mhz: bss.frequency_mhz.map(|f| f.into()),
+            signal_dbm: bss.signal_dbm,
+            bssid: bss.bssid.as_ref().map(|b| mac_to_string(b.as_slice())),
+            auth_types: Some(bss.get_auth_types()),
+            generation: bss.generation,
+            ..Default::default()
+        };
         ret.sanitize_signal();
         ret
     }

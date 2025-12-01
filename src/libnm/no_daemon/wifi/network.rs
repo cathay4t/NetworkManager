@@ -12,6 +12,7 @@ pub(crate) struct WpaSupNetwork {
     pub(crate) ssid: String,
     pub(crate) bssid: Option<String>,
     pub(crate) psk: Option<String>,
+    pub(crate) sae_password: Option<String>,
     pub(crate) key_mgmt: Option<String>,
     pub(crate) ieee80211w: Option<i32>,
 }
@@ -41,7 +42,6 @@ impl WpaSupNetwork {
 
         Ok(Self {
             obj_path,
-            psk: None,
             bssid: _from_map!(map, "bssid", String::try_from)?
                 .map(|b| b.to_uppercase()),
             ssid: _from_map!(map, "ssid", parse_ssid)?.ok_or_else(|| {
@@ -54,15 +54,18 @@ impl WpaSupNetwork {
             })?,
             ieee80211w: _from_map!(map, "ieee80211w", parse_ieee80211w)?,
             key_mgmt: _from_map!(map, "key_mgmt", String::try_from)?,
+            ..Default::default()
         })
     }
 
     pub(crate) fn to_value(&self) -> HashMap<&str, zvariant::Value<'_>> {
         let mut ret = HashMap::new();
         ret.insert("ssid", zvariant::Value::new(self.ssid.clone()));
-        ret.insert("mem_only_psk", zvariant::Value::new(1u32));
         if let Some(v) = &self.psk {
             ret.insert("psk", zvariant::Value::new(v.clone()));
+        }
+        if let Some(v) = &self.sae_password {
+            ret.insert("sae_password", zvariant::Value::new(v.clone()));
         }
         if let Some(v) = &self.bssid {
             ret.insert("bssid", zvariant::Value::new(v.to_lowercase()));
@@ -74,6 +77,12 @@ impl WpaSupNetwork {
             ret.insert("key_mgmt", zvariant::Value::new(v.to_string()));
         }
         ret
+    }
+
+    pub(crate) fn change_to_wpa3_psk(&mut self) {
+        self.ieee80211w = Some(2);
+        self.key_mgmt = Some("SAE FT-SAE".to_string());
+        self.sae_password = self.psk.take();
     }
 }
 
