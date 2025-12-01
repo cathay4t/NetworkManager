@@ -40,7 +40,8 @@ impl NmWpaConn {
                         )
                     }) {
                         wifi_cfg.password = Some(
-                            crate::NetworkState::HIDE_PASSWORD_STR.to_string(),
+                            crate::NetworkState::UNKNOWN_PASSWRD_STR
+                                .to_string(),
                         );
                     }
                 }

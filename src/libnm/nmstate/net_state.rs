@@ -40,6 +40,8 @@ impl Default for NetworkState {
 
 impl NetworkState {
     pub const HIDE_PASSWORD_STR: &str = "<_password_hidden_by_nmstate>";
+    /// Nmstate cannot retrieve password
+    pub const UNKNOWN_PASSWRD_STR: &str ="<_password_unknown_to_nmstate>";
 
     pub fn hide_secrets(&mut self) {
         self.ifaces.hide_secrets();
