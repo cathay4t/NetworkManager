@@ -183,6 +183,7 @@ async fn add_wifi_cfg(
     let mut wpa_network = WpaSupNetwork {
         ssid: ssid.to_string(),
         psk: wifi_cfg.password.clone(),
+        bssid: wifi_cfg.bssid.clone(),
         ..Default::default()
     };
     if let Some(bss) = bss {
