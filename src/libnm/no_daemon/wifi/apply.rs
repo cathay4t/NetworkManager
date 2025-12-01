@@ -2,7 +2,10 @@
 
 use std::collections::HashSet;
 
-use super::{NmWpaConn, dbus::NmWpaSupDbus, network::WpaSupNetwork};
+use super::{
+    NmWpaConn, bss::WpaSupBss, dbus::NmWpaSupDbus, network::WpaSupNetwork,
+    scan::bss_active_scan,
+};
 use crate::{
     ErrorKind, Interface, InterfaceType, MergedInterfaces, NmError,
     NmstateInterface, WifiConfig,
@@ -14,8 +17,10 @@ impl NmWpaConn {
         merged_ifaces: &MergedInterfaces,
     ) -> Result<(), NmError> {
         let dbus = NmWpaSupDbus::new().await?;
+
         let mut ssids_to_delete: HashSet<&str> = HashSet::new();
         let mut iface_names_to_delete: HashSet<&str> = HashSet::new();
+        let mut wifi_cfg_to_add: Vec<(&str, &WifiConfig)> = Vec::new();
         for iface in ifaces {
             let wifi_cfg = match iface {
                 Interface::WifiCfg(iface) => iface.wifi.as_ref(),
@@ -43,9 +48,9 @@ impl NmWpaConn {
                 };
                 log::trace!("Applying {wifi_cfg}");
                 if iface.iface_type() == &InterfaceType::WifiPhy {
-                    add_wifi_cfg(iface.name(), wifi_cfg, &dbus).await?;
+                    wifi_cfg_to_add.push((iface.name(), wifi_cfg));
                 } else if let Some(iface_name) = wifi_cfg.base_iface.as_ref() {
-                    add_wifi_cfg(iface_name, wifi_cfg, &dbus).await?;
+                    wifi_cfg_to_add.push((iface_name, wifi_cfg));
                 } else {
                     // Bind to any WIFI NICs
                     for merged_iface in
@@ -58,12 +63,8 @@ impl NmWpaConn {
                                     == &InterfaceType::WifiPhy
                         })
                     {
-                        add_wifi_cfg(
-                            merged_iface.merged.name(),
-                            wifi_cfg,
-                            &dbus,
-                        )
-                        .await?;
+                        wifi_cfg_to_add
+                            .push((merged_iface.merged.name(), wifi_cfg));
                     }
                 }
             } else {
@@ -79,9 +80,38 @@ impl NmWpaConn {
 
         del_interfaces(&dbus, &iface_names_to_delete).await?;
         del_networks(&dbus, &ssids_to_delete).await?;
+        add_networks(&dbus, &wifi_cfg_to_add).await?;
 
         Ok(())
     }
+}
+
+async fn add_networks(
+    dbus: &NmWpaSupDbus<'_>,
+    wifi_cfg_to_add: &[(&str, &WifiConfig)],
+) -> Result<(), NmError> {
+    let ifaces_to_scan: Vec<&str> = wifi_cfg_to_add
+        .iter()
+        .map(|(iface_name, _)| *iface_name)
+        .collect();
+
+    if ifaces_to_scan.is_empty() {
+        return Ok(());
+    }
+
+    let existing_bsses = bss_active_scan(&dbus, &ifaces_to_scan).await?;
+
+    for (iface_name, wifi_cfg) in wifi_cfg_to_add {
+        add_wifi_cfg(
+            iface_name,
+            wifi_cfg,
+            &dbus,
+            existing_bsses
+                .get(&(iface_name.to_string(), wifi_cfg.ssid.to_string())),
+        )
+        .await?;
+    }
+    Ok(())
 }
 
 async fn del_interfaces(
@@ -124,6 +154,7 @@ async fn add_wifi_cfg(
     iface_name: &str,
     wifi_cfg: &WifiConfig,
     dbus: &NmWpaSupDbus<'_>,
+    bss: Option<&WpaSupBss>,
 ) -> Result<(), NmError> {
     let ssid = wifi_cfg.ssid.as_str();
     let iface_obj_path = match dbus.get_iface_obj_path(iface_name).await? {
@@ -147,46 +178,23 @@ async fn add_wifi_cfg(
             iface_obj_path
         }
     };
-    log::debug!("Adding WIFI network {ssid} to interface {}", iface_name);
-    let network_obj_path = dbus
-        .add_network(
-            iface_obj_path.as_str(),
-            &WpaSupNetwork {
-                ssid: ssid.to_string(),
-                psk: wifi_cfg.password.clone(),
-                ..Default::default()
-            },
-        )
-        .await?;
-    dbus.enable_network(network_obj_path.as_str()).await?;
-    // Wait 2 second for BSS to show up
-    // TODO(Gris Ge): Should trigger a scan and wait scan to finish.
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-    // For WPA3, we need to set ieee80211w explicitly
-    for bss in dbus.get_bsses(iface_obj_path.as_str()).await? {
-        if bss.ssid.as_deref() == Some(wifi_cfg.ssid.as_str()) && bss.is_wpa3()
-        {
-            log::debug!("Enable WPA3");
-            dbus.del_network(
-                iface_obj_path.as_str(),
-                network_obj_path.as_str(),
-            )
-            .await?;
-            let network_obj_path = dbus
-                .add_network(
-                    iface_obj_path.as_str(),
-                    &WpaSupNetwork {
-                        ssid: ssid.to_string(),
-                        psk: wifi_cfg.password.clone(),
-                        ieee80211w: Some(2),
-                        key_mgmt: Some("SAE FT-SAE".to_string()),
-                        ..Default::default()
-                    },
-                )
-                .await?;
-            dbus.enable_network(network_obj_path.as_str()).await?;
+
+    let mut wpa_network = WpaSupNetwork {
+        ssid: ssid.to_string(),
+        psk: wifi_cfg.password.clone(),
+        ..Default::default()
+    };
+    if let Some(bss) = bss {
+        if bss.is_wpa3_psk() {
+            wpa_network.ieee80211w = Some(2);
+            wpa_network.key_mgmt = Some("SAE FT-SAE".to_string());
         }
     }
+    log::debug!("Adding WIFI network {ssid} to interface {}", iface_name);
+    let network_obj_path = dbus
+        .add_network(iface_obj_path.as_str(), &wpa_network)
+        .await?;
+    dbus.enable_network(network_obj_path.as_str()).await?;
 
     Ok(())
 }

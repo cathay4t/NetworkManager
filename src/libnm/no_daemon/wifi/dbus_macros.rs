@@ -4,7 +4,7 @@ macro_rules! _from_map {
     ($map: ident, $remove: expr, $convert: expr) => {
         $map.remove($remove).map($convert).transpose().map_err(|e| {
             NmError::new(
-                ErrorKind::PluginFailure,
+                ErrorKind::Bug,
                 format!(
                     "Invalid wpa_supplicant DBUS reply of `{}` property: {e}",
                     $remove

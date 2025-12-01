@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use futures::StreamExt;
 use zvariant::{ObjectPath, OwnedObjectPath};
 
 use super::{
@@ -48,14 +49,14 @@ impl NmWpaSupDbus<'_> {
     pub(crate) async fn new() -> Result<Self, NmError> {
         let connection = zbus::Connection::system().await.map_err(|e| {
             NmError::new(
-                ErrorKind::PluginFailure,
+                ErrorKind::Bug,
                 format!("Failed to create system DBUS connection: {e}"),
             )
         })?;
         let proxy =
             WpaSupplicantProxy::new(&connection).await.map_err(|e| {
                 NmError::new(
-                    ErrorKind::PluginFailure,
+                    ErrorKind::Bug,
                     format!(
                         "Failed to create DBUS proxy to wpa_supplicant: {e}"
                     ),
@@ -75,7 +76,7 @@ impl NmWpaSupDbus<'_> {
                 )
             } else {
                 NmError::new(
-                    ErrorKind::PluginFailure,
+                    ErrorKind::Bug,
                     format!(
                         "Failed to connect wpa_supplicant DBUS interface: {e}"
                     ),
@@ -388,6 +389,72 @@ impl NmWpaSupDbus<'_> {
         }
         Ok(ret)
     }
+
+    pub(crate) async fn scan(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<(), NmError> {
+        log::trace!("Starting WIFI active scan on {iface_obj_path}",);
+        let obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            obj_path.as_str(),
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+
+        let mut scan_args = HashMap::new();
+        scan_args.insert("Type", zvariant::Value::new("active".to_string()));
+
+        proxy
+            .call::<&str, HashMap<&str, zvariant::Value<'_>>, ()>(
+                "Scan", &scan_args,
+            )
+            .await
+            .map_err(map_zbus_err)
+    }
+
+    pub(crate) async fn is_iface_scanning(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<bool, NmError> {
+        let obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            obj_path.as_str(),
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+        proxy
+            .get_property::<bool>("Scanning")
+            .await
+            .map_err(map_zbus_err)
+    }
+
+    pub(crate) async fn wait_scan(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<(), NmError> {
+        let obj_path = str_to_obj_path(iface_obj_path)?;
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            obj_path.as_str(),
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+        let mut stream = proxy
+            .receive_signal("ScanDone")
+            .await
+            .map_err(map_zbus_err)?;
+        stream.next().await;
+        Ok(())
+    }
 }
 
 fn obj_path_to_string(obj_path: OwnedObjectPath) -> String {
@@ -407,15 +474,9 @@ fn str_to_obj_path(obj_path_str: &str) -> Result<OwnedObjectPath, NmError> {
 }
 
 pub(crate) fn map_zbus_err(e: zbus::Error) -> NmError {
-    NmError::new(
-        ErrorKind::PluginFailure,
-        format!("DBUS error of wpa_supplicant: {e}"),
-    )
+    NmError::new(ErrorKind::Bug, format!("DBUS error of wpa_supplicant: {e}"))
 }
 
 pub(crate) fn map_zbus_fdo_err(e: zbus::fdo::Error) -> NmError {
-    NmError::new(
-        ErrorKind::PluginFailure,
-        format!("DBUS error of wpa_supplicant: {e}"),
-    )
+    NmError::new(ErrorKind::Bug, format!("DBUS error of wpa_supplicant: {e}"))
 }

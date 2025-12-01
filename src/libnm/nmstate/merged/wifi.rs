@@ -12,13 +12,10 @@ impl MergedInterfaces {
             for merged_iface in
                 self.kernel_ifaces.values_mut().filter(|merged_iface| {
                     merged_iface.merged.iface_type() == &InterfaceType::WifiPhy
-                        && merged_iface
-                            .for_apply
-                            .as_ref()
-                            .map(|i| i.is_absent() || i.is_down())
-                            != Some(true)
-                        && merged_iface.current.as_ref().map(|i| i.is_up())
-                            == Some(false)
+                        && merged_iface.desired.as_ref().map(|i| {
+                            i.is_absent() || i.is_down() || i.is_ignore()
+                        }) != Some(true)
+                        && merged_iface.current.is_some()
                 })
             {
                 merged_iface.mark_as_changed();
@@ -29,7 +26,7 @@ impl MergedInterfaces {
         }
     }
 
-    fn has_any_bind_wifi(&self) -> bool {
+    pub(crate) fn has_any_bind_wifi(&self) -> bool {
         self.user_ifaces.values().any(|merged_iface| {
             if let Some(Interface::WifiCfg(iface)) =
                 merged_iface.for_apply.as_ref()

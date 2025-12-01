@@ -172,23 +172,23 @@ pub enum WifiAuthType {
     Wps,
     /// WPA 2 Pre-share Key
     #[serde(rename = "WPA2-PSK")]
-    Wpa2PreShareKey,
+    Wpa2Personal,
     /// WPA 2/3 EAP(Extensible Authentication Protocol)
     /// Including OSEN(OSU Server-Only Authenticated L2 Encryption Network)
     #[serde(rename = "EAP")]
     Enterprise,
     /// WPA 3 Pre-share key using SAE(Simultaneous Authentication of Equals)
     #[serde(rename = "WPA3-PSK")]
-    Wpa3PreShareKey,
+    Wpa3Personal,
     /// WPA 3 open network using OWE(Opportunistic Wireless Encryption)
     #[serde(rename = "WPA3-OPEN")]
     Wpa3Open,
     /// IEEE 802.11ai -- Fast Initial Link Setup
     #[serde(rename = "FILS")]
-    FastInitialLinkSetup,
-    /// Easy Connect, also known as DPP(Device Provisioning Protocol).
+    Fils,
+    /// Device Provisioning Protoco, also known as Easy Connect.
     #[serde(rename = "DPP")]
-    EasyConnect,
+    Dpp,
     #[default]
     Unknown,
 }
@@ -309,18 +309,23 @@ impl NmstateInterface for WifiCfgInterface {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct WifiConfig {
-    /// WiFi state. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<WifiState>,
-    /// Current authentication type. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth_type: Option<WifiAuthType>,
-    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub generation: Option<u32>,
     /// SSID (Service Set Identifier)
     #[serde(default, deserialize_with = "number_as_string")]
     pub ssid: String,
+    /// WiFi state. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<WifiState>,
+    /// Authentication type
+    /// When querying network state, it only contains single value for current
+    /// authentication type.
+    /// When showing WIFI scan results, it contains the authentication types
+    /// supported by AP.
+    /// Ignored when applying.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_types: Option<Vec<WifiAuthType>>,
+    /// WiFi generation, e.g. 6 for WiFi-6. For query only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generation: Option<u32>,
     /// BSSID (Basic Service Set Identifier), if defined, will only connect to
     /// desired AP.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -433,7 +438,7 @@ struct WifiConfigHideSecrets {
     ssid: String,
     bssid: Option<String>,
     password: Option<String>,
-    auth_type: Option<WifiAuthType>,
+    auth_types: Option<Vec<WifiAuthType>>,
     base_iface: Option<String>,
     frequency_mhz: Option<u32>,
     rx_bitrate_mb: Option<u32>,
@@ -448,7 +453,7 @@ impl From<&WifiConfig> for WifiConfigHideSecrets {
             ssid,
             bssid,
             password,
-            auth_type,
+            auth_types,
             base_iface,
             state,
             generation,
@@ -467,7 +472,7 @@ impl From<&WifiConfig> for WifiConfigHideSecrets {
             ssid,
             bssid,
             base_iface,
-            auth_type,
+            auth_types,
             state,
             generation,
             frequency_mhz,

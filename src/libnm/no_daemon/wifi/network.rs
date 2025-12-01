@@ -34,7 +34,7 @@ impl WpaSupNetwork {
         let mut map: HashMap<String, zvariant::OwnedValue> =
             value.try_into().map_err(|e| {
                 NmError::new(
-                    ErrorKind::PluginFailure,
+                    ErrorKind::Bug,
                     format!("Invalid DBUS reply, expecting map, error: {e}"),
                 )
             })?;

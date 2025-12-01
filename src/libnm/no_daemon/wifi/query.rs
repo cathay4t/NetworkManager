@@ -27,15 +27,18 @@ impl NmWpaConn {
             {
                 let mut wifi_cfg = WifiConfig::from(network);
                 wifi_cfg.base_iface = Some(wpa_iface.iface_name.to_string());
-                wifi_cfg.auth_type = wpa_iface.get_cur_auth_mode();
-                if let Some(auth_type) = wifi_cfg.auth_type.as_ref() {
-                    if matches!(
-                        auth_type,
-                        WifiAuthType::Wpa2PreShareKey
-                            | WifiAuthType::Wpa3PreShareKey
-                            | WifiAuthType::Wpa1
-                            | WifiAuthType::Wep
-                    ) {
+                wifi_cfg.auth_types =
+                    wpa_iface.get_cur_auth_mode().map(|c| vec![c]);
+                if let Some(auth_types) = wifi_cfg.auth_types.as_ref() {
+                    if auth_types.iter().any(|auth_type| {
+                        matches!(
+                            auth_type,
+                            WifiAuthType::Wpa2Personal
+                                | WifiAuthType::Wpa3Personal
+                                | WifiAuthType::Wpa1
+                                | WifiAuthType::Wep
+                        )
+                    }) {
                         wifi_cfg.password = Some(
                             crate::NetworkState::HIDE_PASSWORD_STR.to_string(),
                         );

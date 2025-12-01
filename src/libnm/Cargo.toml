@@ -22,6 +22,7 @@ rtnetlink = { workspace = true }
 futures = { workspace = true }
 zbus = { workspace = true }
 zvariant = { workspace = true }
+wl-nl80211 = { workspace = true }
 
 [lib]
 name = "nm"

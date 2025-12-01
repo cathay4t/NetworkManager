@@ -9,6 +9,7 @@ mod dbus;
 mod interface;
 mod network;
 mod query;
+mod scan;
 mod wifi_nispor;
 
 #[derive(Debug)]

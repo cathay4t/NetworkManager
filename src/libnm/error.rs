@@ -91,3 +91,12 @@ impl From<std::net::AddrParseError> for NmError {
         )
     }
 }
+
+// TODO: Properly handle cases like:
+//  * Permission deny
+//  * Invalid argument
+impl From<nispor::NisporError> for NmError {
+    fn from(e: nispor::NisporError) -> Self {
+        Self::new(ErrorKind::Bug, format!("{}: {}", e.kind, e.msg))
+    }
+}

@@ -6,13 +6,14 @@ mod merge;
 mod show;
 mod state;
 mod wait;
+mod wifi;
 
 use nm::NmClient;
 
 pub(crate) use self::error::CliError;
 use self::{
     apply::CommandApply, merge::CommandMerge, show::CommandShow,
-    wait::CommandWait,
+    wait::CommandWait, wifi::CommandWifi,
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -39,6 +40,7 @@ async fn main() -> Result<(), CliError> {
         .subcommand(CommandWait::new_cmd())
         .subcommand(CommandShow::new_cmd())
         .subcommand(CommandApply::new_cmd())
+        .subcommand(CommandWifi::new_cmd())
         .subcommand(CommandMerge::new_cmd());
 
     let matches = cli_cmd.get_matches_mut();
@@ -90,6 +92,9 @@ async fn call_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     } else if let Some(matches) = matches.subcommand_matches(CommandMerge::CMD)
     {
         CommandMerge::handle(matches).await?;
+        Ok(())
+    } else if let Some(matches) = matches.subcommand_matches(CommandWifi::CMD) {
+        CommandWifi::handle(matches).await?;
         Ok(())
     } else {
         Err(CliError::from("Unknown command"))

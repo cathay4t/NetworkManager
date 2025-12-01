@@ -111,7 +111,7 @@ impl WpaSupInterface {
     pub(crate) fn get_cur_auth_mode(&self) -> Option<WifiAuthType> {
         match self.cur_auth_mode.as_deref()? {
             "WPA2-PSK+WPA-PSK" | "WPA2-PSK" | "FT-PSK" | "WPA2-PSK-SHA256" => {
-                Some(WifiAuthType::Wpa2PreShareKey)
+                Some(WifiAuthType::Wpa2Personal)
             }
             "WPA-PSK" => Some(WifiAuthType::Wpa1),
             "NONE" => Some(WifiAuthType::Open),
@@ -124,13 +124,13 @@ impl WpaSupInterface {
             | "FT-EAP-SHA384"
             | "WPA2-EAP-SHA384" => Some(WifiAuthType::Enterprise),
             "SAE" | "SAE-EXT-KEY" | "FT-SAE" | "FT-SAE-EXT-KEY" => {
-                Some(WifiAuthType::Wpa3PreShareKey)
+                Some(WifiAuthType::Wpa3Personal)
             }
             "FILS-SHA256" | "FILS-SHA384" | "FT-FILS-SHA256"
-            | "FT-FILS-SHA384" => Some(WifiAuthType::FastInitialLinkSetup),
+            | "FT-FILS-SHA384" => Some(WifiAuthType::Fils),
             "OWE" => Some(WifiAuthType::Wpa3Open),
             "WPS" => Some(WifiAuthType::Wps),
-            "DPP" => Some(WifiAuthType::EasyConnect),
+            "DPP" => Some(WifiAuthType::Dpp),
             auth if auth.starts_with("EAP-") => Some(WifiAuthType::Enterprise),
             "INACTIVE" => None,
             auth => {

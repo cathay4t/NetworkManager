@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    base_iface::np_iface_to_base_iface, error::np_error_to_nmstate,
-    route::get_routes, wifi::NmWpaConn,
+    base_iface::np_iface_to_base_iface, route::get_routes, wifi::NmWpaConn,
 };
 use crate::{
     DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
@@ -30,9 +29,8 @@ impl NmNoDaemon {
         // Do not query routes in order to prevent BGP routes consuming too much
         // CPU time, we let `get_routes()` do the query by itself.
         filter.route = None;
-        let np_state = nispor::NetState::retrieve_with_filter_async(&filter)
-            .await
-            .map_err(np_error_to_nmstate)?;
+        let np_state =
+            nispor::NetState::retrieve_with_filter_async(&filter).await?;
 
         let mut has_wifi_nic = false;
 
