@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nm::{
-    ErrorKind, Interface, LinkEvent, MergedNetworkState, NetworkState, NmError,
-    NmNoDaemon, NmstateApplyOption, NmstateQueryOption, WifiPhyInterface,
+    ErrorKind, Interface, InterfaceState, LinkEvent, MergedNetworkState,
+    NetworkState, NmError, NmNoDaemon, NmstateApplyOption, NmstateInterface,
+    NmstateQueryOption, WifiPhyInterface,
 };
 
 use super::commander::NmCommander;
@@ -65,6 +66,7 @@ impl NmCommander {
                 })
             {
                 let mut new_iface = cur_iface.clone();
+                new_iface.base_iface_mut().state = InterfaceState::Up;
                 if event.is_link_up() {
                     new_iface.base.ipv4 = wifi_cfg_iface.base.ipv4.clone();
                     new_iface.base.ipv6 = wifi_cfg_iface.base.ipv6.clone();

@@ -55,12 +55,10 @@ impl NmWpaConn {
                     // Bind to any WIFI NICs
                     for merged_iface in
                         merged_ifaces.kernel_ifaces.values().filter(|i| {
-                            i.for_apply
-                                .as_ref()
-                                .map(|i| i.is_absent() || i.is_down())
-                                != Some(true)
-                                && i.merged.iface_type()
-                                    == &InterfaceType::WifiPhy
+                            i.for_apply.as_ref().map(|i| {
+                                i.iface_type() == &InterfaceType::WifiPhy
+                                    && i.is_up()
+                            }) == Some(true)
                         })
                     {
                         wifi_cfg_to_add
