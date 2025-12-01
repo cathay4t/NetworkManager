@@ -269,9 +269,9 @@ impl Routes {
     /// Return new Routes data contains the merged data.
     pub(crate) fn merge(&self, new_routes: &Self) -> Result<Self, NmError> {
         new_routes.validate()?;
-        let mut route_sets: HashSet<RouteEntry> = HashSet::new();
 
         if let Some(new_routes) = new_routes.config.as_ref() {
+            let mut route_sets: HashSet<RouteEntry> = HashSet::new();
             for new_route in new_routes.iter().filter(|r| !r.is_absent()) {
                 route_sets.insert(new_route.clone());
             }
@@ -289,14 +289,15 @@ impl Routes {
                     }
                 }
             }
+            let mut routes: Vec<RouteEntry> = route_sets.into_iter().collect();
+            routes.sort_unstable();
+
+            Ok(Routes {
+                config: Some(routes),
+                ..Default::default()
+            })
+        } else {
+            Ok(self.clone())
         }
-
-        let mut routes: Vec<RouteEntry> = route_sets.into_iter().collect();
-        routes.sort_unstable();
-
-        Ok(Routes {
-            config: Some(routes),
-            ..Default::default()
-        })
     }
 }
