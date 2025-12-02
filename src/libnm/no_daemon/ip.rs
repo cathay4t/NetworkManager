@@ -242,6 +242,10 @@ fn nmstate_ip_addrs_to_nispor(
                 ret.push(nmstate_ip_addr_to_nispor(des_addr, false));
             }
         }
+    } else if is_replacing(des_addrs, cur_addrs) {
+        for des_addr in des_addrs {
+            ret.push(nmstate_ip_addr_to_nispor(des_addr, false));
+        }
     } else {
         // Purge all current IP address, so we get expected IP address order.
         for cur_addr in cur_addrs {
@@ -261,4 +265,17 @@ fn is_appending(
 ) -> bool {
     cur_addrs.len() < des_addrs.len()
         && &des_addrs[..cur_addrs.len()] == cur_addrs
+}
+
+fn is_replacing(
+    des_addrs: &[InterfaceIpAddr],
+    cur_addrs: &[InterfaceIpAddr],
+) -> bool {
+    cur_addrs.len() == des_addrs.len()
+        && des_addrs.iter().all(|des_addr| {
+            cur_addrs.iter().any(|cur_addr| {
+                des_addr.ip == cur_addr.ip
+                    && des_addr.prefix_length == cur_addr.prefix_length
+            })
+        })
 }
