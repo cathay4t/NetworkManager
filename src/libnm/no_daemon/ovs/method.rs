@@ -8,7 +8,7 @@
 
 use serde_json::{Map, Value};
 
-use super::OvsDbOperation;
+use super::operation::OvsDbOperation;
 
 /// OVS DB Echo Method
 /// used by both clients and servers to verify the liveness of a database

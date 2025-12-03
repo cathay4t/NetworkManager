@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    base_iface::np_iface_to_base_iface, route::get_routes, wifi::NmWpaConn,
+    base_iface::np_iface_to_base_iface, ovs::NmOvsDb, route::get_routes,
+    wifi::NmWpaConn,
 };
 use crate::{
     DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
@@ -33,10 +34,12 @@ impl NmNoDaemon {
             nispor::NetState::retrieve_with_filter_async(&filter).await?;
 
         let mut has_wifi_nic = false;
+        let mut has_ovs_datapath_nic = false;
 
         for (_, np_iface) in np_state.ifaces.iter() {
             // The `ovs-system` is reserved for OVS kernel datapath
             if np_iface.name == "ovs-system" {
+                has_ovs_datapath_nic = true;
                 continue;
             }
             // The `ovs-netdev` is reserved for OVS netdev datapath
@@ -87,6 +90,10 @@ impl NmNoDaemon {
 
         if has_wifi_nic {
             NmWpaConn::fill_wifi_cfg(&mut net_state.ifaces).await?;
+        }
+
+        if has_ovs_datapath_nic {
+            NmOvsDb::fill_ovs_cfg(&mut net_state).await?;
         }
 
         net_state.routes = get_routes(&net_state.ifaces).await;

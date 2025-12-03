@@ -5,10 +5,11 @@
 //  * Gris Ge <fge@redhat.com>
 //  * Fernando Fernandez Mancera <ffmancera@riseup.net>
 
-use nm::{ErrorKind, NmError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::{io::AsyncWriteExt, net::UnixStream};
+
+use crate::{ErrorKind, NmError};
 
 // This buffer size is hard code in OpenvSwitch code `struct jsonrpc` of
 // `lib/jsonrpc.c`. Changing it will impact `OvsDbJsonRpc::recv()`.

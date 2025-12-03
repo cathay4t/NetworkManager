@@ -7,13 +7,14 @@
 
 use std::collections::HashMap;
 
-use nm::{ErrorKind, NmError};
 use serde_json::Value;
 
 use super::{
-    OvsDbMethodEcho, OvsDbMethodTransact, OvsDbOperation, OvsDbSelect,
     json_rpc::OvsDbJsonRpc,
+    method::{OvsDbMethodEcho, OvsDbMethodTransact},
+    operation::{OvsDbOperation, OvsDbSelect},
 };
+use crate::{ErrorKind, NmError};
 
 pub(crate) const OVS_DB_NAME: &str = "Open_vSwitch";
 const NM_RESERVED_EXTERNAL_ID: &str = "NM.connection.uuid";

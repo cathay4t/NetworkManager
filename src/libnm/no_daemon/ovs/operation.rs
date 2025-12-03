@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use super::OvsDbCondition;
+use super::db::OvsDbCondition;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum OvsDbOperation {

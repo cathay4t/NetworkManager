@@ -134,6 +134,8 @@ impl InterfaceType {
         matches!(
             self,
             InterfaceType::Ethernet
+                | InterfaceType::OvsBridge
+                | InterfaceType::OvsInterface
                 | InterfaceType::Veth
                 | InterfaceType::Loopback
                 | InterfaceType::Dummy

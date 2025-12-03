@@ -6,6 +6,7 @@ mod ethernet;
 mod iface;
 mod inter_ifaces;
 mod ip;
+mod ovs;
 mod query;
 mod route;
 mod watcher;
