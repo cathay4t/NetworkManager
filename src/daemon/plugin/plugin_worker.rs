@@ -65,6 +65,14 @@ impl TaskWorker for NmPluginWorker {
 
         let mut expected_plugin_count = 0;
         for plugin_path in plugin_paths {
+            if std::path::Path::new(&plugin_path)
+                .file_name()
+                .and_then(|p| p.to_str())
+                == Some("NetworkManager-plugin-demo")
+            {
+                log::debug!("Ignored demo plugin");
+                continue;
+            }
             log::debug!("Starting NetworkManager plugin {}", plugin_path);
             if let Err(e) = std::process::Command::new(&plugin_path).spawn() {
                 log::info!("Ignoring plugin {plugin_path} due to error: {e}");
