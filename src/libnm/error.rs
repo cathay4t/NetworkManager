@@ -61,6 +61,14 @@ impl NmError {
     pub fn new(kind: ErrorKind, msg: String) -> Self {
         Self { kind, msg }
     }
+
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
+
+    pub fn msg(&self) -> &str {
+        self.msg.as_str()
+    }
 }
 
 impl std::error::Error for NmError {}

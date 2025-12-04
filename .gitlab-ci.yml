@@ -1,0 +1,30 @@
+stages:
+  - lint
+  - unit-test
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PROJECT_PATH != 'nmt/gris-play-nm2'
+      when: never
+
+test:format:
+  stage: lint
+  image: "registry.fedoraproject.org/fedora:latest"
+  script:
+    - dnf install rustup cc -y
+    - rustup-init --default-toolchain nightly -c clippy,rustfmt -y
+    - source /root/.cargo/env
+    - rustc --version && cargo --version
+    - cargo fmt -- --check
+    - cargo clippy -- -D warnings
+
+test:unit-test:
+  stage: unit-test
+  image: "registry.fedoraproject.org/fedora:latest"
+  script:
+    - dnf install rustup cc -y
+    - rustup-init --default-toolchain stable -c clippy,rustfmt -y
+    - source /root/.cargo/env
+    - rustc --version && cargo --version
+    - cargo test -- --show-output

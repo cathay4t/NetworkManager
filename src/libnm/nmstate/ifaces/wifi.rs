@@ -492,7 +492,7 @@ mod test {
     #[test]
     fn test_hide_secrets_in_debug_wificfg() {
         let wifi_cfg = WifiConfig {
-            ssid: Some("test-wifi".into()),
+            ssid: "test-wifi".into(),
             password: Some("12345678".into()),
             ..Default::default()
         };
@@ -504,7 +504,7 @@ mod test {
     #[test]
     fn test_hide_secrets_in_display_wificfg() {
         let wifi_cfg = WifiConfig {
-            ssid: Some("test-wifi".into()),
+            ssid: "test-wifi".into(),
             password: Some("12345678".into()),
             ..Default::default()
         };
@@ -518,7 +518,7 @@ mod test {
         let wifi_iface = WifiPhyInterface {
             base: Default::default(),
             wifi: Some(WifiConfig {
-                ssid: Some("test-wifi".into()),
+                ssid: "test-wifi".into(),
                 password: Some("12345678".into()),
                 ..Default::default()
             }),
@@ -533,7 +533,7 @@ mod test {
         let iface = Interface::WifiPhy(Box::new(WifiPhyInterface {
             base: Default::default(),
             wifi: Some(WifiConfig {
-                ssid: Some("test-wifi".into()),
+                ssid: "test-wifi".into(),
                 password: Some("12345678".into()),
                 ..Default::default()
             }),
@@ -548,7 +548,7 @@ mod test {
         let iface = Interface::WifiPhy(Box::new(WifiPhyInterface {
             base: Default::default(),
             wifi: Some(WifiConfig {
-                ssid: Some("test-wifi".into()),
+                ssid: "test-wifi".into(),
                 password: Some("12345678".into()),
                 ..Default::default()
             }),
