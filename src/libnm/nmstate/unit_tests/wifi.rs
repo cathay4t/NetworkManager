@@ -16,11 +16,11 @@ fn test_wifi_phy_hold_wifi_cfg_with_other_base_iface() {
     )
     .unwrap();
 
-    let result = iface.sanitize();
+    let result = iface.sanitize(None);
     assert!(result.is_err());
 
     if let Err(e) = result {
-        assert_eq!(e.kind, ErrorKind::InvalidArgument);
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
         assert!(e.msg.contains("wlan1"));
     }
 }
