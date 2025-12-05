@@ -2,16 +2,17 @@
 
 use crate::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    Interface, NmError, VethConfig,
+    Interface, NmError, NmstateInterface, VethConfig,
 };
 
 pub(crate) fn apply_ethernet_conf(
     np_iface: &mut nispor::IfaceConf,
     apply_iface: &EthernetInterface,
     cur_iface: Option<&Interface>,
-) -> Result<(), NmError> {
+) -> Result<Option<nispor::IfaceConf>, NmError> {
     // TODO(Gris Ge): Change veth peer
-    if cur_iface.is_none()
+    if apply_iface.is_up()
+        && cur_iface.is_none()
         && let Some(peer) =
             // Create new veth, already sanitized, so no need to validate
             apply_iface.veth.as_ref().map(|v| v.peer.as_str())
@@ -20,8 +21,18 @@ pub(crate) fn apply_ethernet_conf(
         let mut np_veth_conf = nispor::VethConf::default();
         np_veth_conf.peer = peer.to_string();
         np_iface.veth = Some(np_veth_conf);
+
+        let mut peer_np_iface = nispor::IfaceConf::default();
+        peer_np_iface.name = peer.to_string();
+        peer_np_iface.iface_type = Some(nispor::IfaceType::Veth);
+        peer_np_iface.state = nispor::IfaceState::Up;
+        let mut np_veth_conf = nispor::VethConf::default();
+        np_veth_conf.peer = apply_iface.name().to_string();
+        peer_np_iface.veth = Some(np_veth_conf);
+        Ok(Some(peer_np_iface))
+    } else {
+        Ok(None)
     }
-    Ok(())
 }
 
 impl EthernetInterface {

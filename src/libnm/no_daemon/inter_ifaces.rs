@@ -53,14 +53,14 @@ async fn apply_ifaces_link_changes(
             changed_wifi_ifaces.push(apply_iface);
         }
 
-        if !apply_iface.iface_type().is_userspace()
-            && let Some(np_iface) = apply_iface_link_changes(
+        if !apply_iface.iface_type().is_userspace() {
+            for np_iface in apply_iface_link_changes(
                 apply_iface,
                 merged_iface.current.as_ref(),
                 merged_ifaces,
-            )?
-        {
-            np_ifaces.push(np_iface);
+            )? {
+                np_ifaces.push(np_iface);
+            }
         }
     }
 

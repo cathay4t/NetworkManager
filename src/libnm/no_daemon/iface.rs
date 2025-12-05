@@ -55,9 +55,10 @@ pub(crate) fn apply_iface_link_changes(
     apply_iface: &Interface,
     cur_iface: Option<&Interface>,
     merged_ifaces: &MergedInterfaces,
-) -> Result<Option<nispor::IfaceConf>, NmError> {
+) -> Result<Vec<nispor::IfaceConf>, NmError> {
+    let mut ret: Vec<nispor::IfaceConf> = Vec::new();
     if should_skip_link_change(apply_iface, cur_iface, merged_ifaces) {
-        return Ok(None);
+        return Ok(ret);
     }
 
     let mut np_conf = init_np_iface(apply_iface.base_iface());
@@ -65,15 +66,17 @@ pub(crate) fn apply_iface_link_changes(
 
     apply_base_iface_link_changes(&mut np_conf, apply_iface.base_iface())?;
 
-    if let Interface::Ethernet(apply_iface) = apply_iface {
-        apply_ethernet_conf(&mut np_conf, apply_iface, cur_iface)?;
+    if let Interface::Ethernet(apply_iface) = apply_iface
+        && let Some(peer_np_conf) =
+            apply_ethernet_conf(&mut np_conf, apply_iface, cur_iface)?
+    {
+        ret.push(peer_np_conf);
     }
 
     if np_conf != init_np_conf || cur_iface.is_none() {
-        Ok(Some(np_conf))
-    } else {
-        Ok(None)
+        ret.insert(0, np_conf);
     }
+    Ok(ret)
 }
 
 /// Skip link:
