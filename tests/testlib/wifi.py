@@ -4,6 +4,7 @@ import json
 import os
 import re
 import signal
+import time
 
 import libnm
 import pytest
@@ -30,12 +31,12 @@ driver=nl80211
 
 hw_mode=g
 channel=1
-ssid=Test-WIFI
+ssid={TEST_WIFI_SSID}
 
 wpa=2
 wpa_key_mgmt=WPA-PSK
 wpa_pairwise=CCMP
-wpa_passphrase=12345678
+wpa_passphrase={TEST_WIFI_PSK}
 """
 TIMEOUT_SECS_SIM_WIFI_NICS = 30
 WIFI_TEST_NIC = "test-wlan0"
@@ -57,7 +58,7 @@ def wifi_env():
     exec_cmd(f"ip link set {wlan1} name {WIFI_TEST_NIC}".split())
     wlan2 = get_nic_name_by_perm_mac(state, HWSIM1_PERM_MAC)
     exec_cmd(f"ip link set {wlan2} name {DHCP_SRV_NIC}".split())
-    exec
+    exec_cmd(f"ip link set {WIFI_TEST_NIC} up".split())
     start_hostapd()
     yield
     exec_cmd(f"ip netns del {TEST_NET_NS}".split())
@@ -108,4 +109,11 @@ def start_hostapd():
         f"ip netns exec {TEST_NET_NS} "
         f"hostapd -B -d {HOSTAPD_CONF_PATH} -P {HOSTAPD_PID_PATH}".split(),
     )
+
+    retry_till_true_or_timeout(2, hostapd_is_up)
+
     start_dhcp_server(TEST_NET_NS)
+
+def hostapd_is_up():
+    output = exec_cmd(f"iw {WIFI_TEST_NIC} scan".split())[1]
+    return "Test-WIFI" in output
