@@ -64,6 +64,7 @@ pub(crate) struct NmMonitorWorker {
         UnboundedReceiver<(NetlinkMessage<RouteNetlinkMessage>, SocketAddr)>,
     >,
     iface_monitor_list: HashSet<String>,
+    manual_paused: bool,
 }
 
 impl TaskWorker for NmMonitorWorker {
@@ -78,6 +79,7 @@ impl TaskWorker for NmMonitorWorker {
             iface_monitor_list: HashSet::new(),
             netlink_handle: None,
             netlink_msg: None,
+            manual_paused: false,
         })
     }
 
@@ -93,7 +95,7 @@ impl TaskWorker for NmMonitorWorker {
         match cmd {
             NmMonitorCmd::AddIface(iface) => {
                 self.iface_monitor_list.insert(iface);
-                if self.netlink_msg.is_none() {
+                if self.netlink_msg.is_none() && !self.manual_paused {
                     self.resume().await?;
                 }
             }
@@ -104,10 +106,14 @@ impl TaskWorker for NmMonitorWorker {
                 }
             }
             NmMonitorCmd::Pause => {
+                self.manual_paused = true;
                 self.pause();
             }
             NmMonitorCmd::Resume => {
-                self.resume().await?;
+                self.manual_paused = false;
+                if !self.iface_monitor_list.is_empty() {
+                    self.resume().await?;
+                }
             }
         }
         Ok(NmMonitorReply::None)
@@ -141,7 +147,9 @@ impl TaskWorker for NmMonitorWorker {
                         }
                     }
                 }
-                self.netlink_msg = Some(netlink_msg);
+                if !self.manual_paused {
+                    self.netlink_msg = Some(netlink_msg);
+                }
             } else if let Some((cmd, sender)) = self.recv_cmd().await {
                 let cmd_str = cmd.to_string();
                 let result = self.process_cmd(cmd).await;

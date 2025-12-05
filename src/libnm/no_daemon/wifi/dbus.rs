@@ -149,6 +149,7 @@ impl NmWpaSupDbus<'_> {
         &self,
         network_obj_path: &str,
     ) -> Result<WpaSupNetwork, NmError> {
+        log::trace!("NmWpaSupDbus::get_network(): {network_obj_path}");
         let obj_path = str_to_obj_path(network_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
@@ -170,6 +171,7 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<Vec<WpaSupNetwork>, NmError> {
+        log::trace!("NmWpaSupDbus::get_networks(): {iface_obj_path}");
         let mut ret: Vec<WpaSupNetwork> = Vec::new();
         for network_obj_path in
             self.get_network_obj_paths(iface_obj_path).await?
@@ -182,9 +184,18 @@ impl NmWpaSupDbus<'_> {
     pub(crate) async fn get_ifaces(
         &self,
     ) -> Result<Vec<WpaSupInterface>, NmError> {
+        log::trace!("NmWpaSupDbus::get_ifaces()");
         let mut ret: Vec<WpaSupInterface> = Vec::new();
         for iface_obj_path in self.get_iface_obj_paths().await? {
-            ret.push(self.get_iface(&iface_obj_path).await?);
+            match self.get_iface(&iface_obj_path).await {
+                Ok(iface) => ret.push(iface),
+                Err(e) => {
+                    // Interface might just been deleted
+                    log::trace!(
+                        "Ignoring WPA interface {iface_obj_path} for error {e}"
+                    );
+                }
+            }
         }
         Ok(ret)
     }
@@ -193,6 +204,7 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<WpaSupInterface, NmError> {
+        log::trace!("NmWpaSupDbus::get_iface(): {iface_obj_path}");
         let obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
@@ -240,7 +252,10 @@ impl NmWpaSupDbus<'_> {
         self.proxy
             .remove_interface(iface_obj_path)
             .await
-            .map_err(map_zbus_err)
+            .map_err(map_zbus_err)?;
+        log::trace!("Deleted WPA interface {iface_name}");
+
+        Ok(())
     }
 
     pub(crate) async fn add_network(
@@ -315,6 +330,7 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<WpaSupBss, NmError> {
+        log::trace!("NmWpaSupDbus::get_current_bss(): {iface_obj_path}");
         let iface_obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
@@ -353,6 +369,7 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<Vec<WpaSupBss>, NmError> {
+        log::trace!("NmWpaSupDbus::get_bsses(): {iface_obj_path}");
         let iface_obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
