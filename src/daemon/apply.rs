@@ -37,12 +37,11 @@ impl NmCommander {
             log::trace!("Apply {desired_state} with option {opt}");
         }
 
-        let mut state_to_save = self.conf_manager.query_state().await?;
-
         desired_state.ifaces.unify_veth_and_ethernet();
 
-        state_to_save.merge(&desired_state)?;
+        let mut state_to_save = self.conf_manager.query_state().await?;
         let mut state_to_apply = state_to_save.clone();
+        state_to_apply.merge(&desired_state)?;
         remove_undesired_ifaces(&mut state_to_apply, &desired_state);
 
         if let Some(ref mut conn) = conn {
@@ -72,14 +71,18 @@ impl NmCommander {
             log::debug!("Pre-apply current state {pre_apply_current_state}");
         }
 
-        let revert_state =
-            state_to_apply.generate_revert(&pre_apply_current_state)?;
-
         let merged_state = MergedNetworkState::new(
             state_to_apply,
             pre_apply_current_state.clone(),
             opt.clone(),
         )?;
+
+        let state_to_apply = merged_state.gen_state_for_apply();
+
+        state_to_save.merge(&state_to_apply)?;
+
+        let revert_state =
+            state_to_apply.generate_revert(&pre_apply_current_state)?;
 
         // TODO(Gris Ge): discard auto IPs
 
