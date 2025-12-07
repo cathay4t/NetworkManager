@@ -1,0 +1,29 @@
+variables:
+  FDO_UPSTREAM_REPO: 'nmt/gris-play-nm2'
+
+.nm.centos.container:c10s:
+  variables:
+    FDO_DISTRIBUTION_VERSION: '10'
+    FDO_DISTRIBUTION_TAG: 'c10s-container-20251205'
+
+.nm.centos.vm:c10s:
+  variables:
+    FDO_DISTRIBUTION_VERSION: '10'
+    FDO_DISTRIBUTION_TAG: 'c10s-vm-20251205'
+
+build-centos-container:
+  extends:
+  - .fdo.container-build@centos
+  - .nm.centos.container:c10s
+  stage: prep
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: 'rust-toolset gcc'
+
+build-centos-vm:
+  extends:
+  - .fdo.qemu-build@centos@x86_64
+  - .nm.centos.vm:c10s
+  stage: prep
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: |
+      python3-pytest rust-toolset gcc iproute dnsmasq iw

@@ -1,0 +1,64 @@
+stages:
+  - prep
+  - lint
+  - unit-test
+  - integ
+
+include:
+- project: 'cathay4t/ci-templates'
+  ref: for_nm2
+  file: '/templates/centos.yml'
+- local: '.gitlab/centos.yml'
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PROJECT_PATH != 'nmt/gris-play-nm2'
+      when: never
+
+test:format:
+  extends:
+  - .fdo.distribution-image@centos
+  - .nm.centos.container:c10s
+  stage: lint
+  script:
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup
+    - chmod +x rustup
+    - ./rustup --default-toolchain nightly -c clippy,rustfmt -y
+    - source /root/.cargo/env
+    - rustc --version && cargo --version
+    - cargo fmt -- --check
+    - cargo clippy -- -D warnings
+
+test:unit-test:
+  extends:
+  - .fdo.distribution-image@centos
+  - .nm.centos.container:c10s
+  stage: unit-test
+  script:
+    - rustc --version && cargo --version
+    - cargo build
+    - cargo test -- --show-output
+  artifacts:
+    paths:
+      - target/debug/NetworkManager
+      - target/debug/nmc
+
+test:integ:centos:
+  extends:
+  - .fdo.distribution-image@centos
+  - .nm.centos.vm:c10s
+  stage: integ
+
+  script:
+    - /app/vmctl start -cpu host
+    - scp -r $PWD "vm:"
+    - set +e
+    - /app/vmctl exec "cd $CI_PROJECT_NAME; tests/run-tests.sh" && touch .pass
+    - scp -r vm:/tmp/nm-test .
+    - /app/vmctl stop
+    - set -e
+    - test -e .pass
+  artifacts:
+    paths:
+      - nm-test
