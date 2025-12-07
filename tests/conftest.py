@@ -7,6 +7,7 @@ import time
 
 import pytest
 
+from .testlib.cmdlib import exec_cmd
 from .testlib.retry import retry_till_true_or_timeout
 
 project_dir = pathlib.Path(__file__).parent.parent.resolve()
@@ -15,6 +16,7 @@ sys.path.insert(0, f"{project_dir}/src/python-libnm")
 from libnm import NmClient
 
 DAEMON_LOG = "/tmp/nm_test_daemon.log"
+CLI_PATH = f"{project_dir}/target/debug/nmc"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -44,3 +46,27 @@ def check_daemon_connection():
         return client.ping() == "pong"
     except:
         return false
+
+
+REPORT_HEADER = """OS: {osname}
+Kernel: {kernel_ver}
+"""
+
+
+def _get_osname():
+    with open("/etc/os-release") as os_release:
+        for line in os_release.readlines():
+            if line.startswith("PRETTY_NAME="):
+                return line.split("=", maxsplit=1)[1].strip().strip('"')
+    return ""
+
+
+def _get_kernel_ver():
+    return exec_cmd("uname -r".split())[1]
+
+
+def pytest_report_header(config):
+    return REPORT_HEADER.format(
+        osname=_get_osname(),
+        kernel_ver=_get_kernel_ver(),
+    )

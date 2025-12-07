@@ -86,6 +86,7 @@ impl BaseInterface {
         if let Some(ipv6) = self.ipv6.as_mut() {
             ipv6.sanitize(current.and_then(|c| c.ipv6.as_ref()))?;
         }
+        self.iface_index = None;
         self.validate_mtu(current)?;
         Ok(())
     }

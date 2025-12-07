@@ -96,6 +96,7 @@ async fn add_networks(
     if ifaces_to_scan.is_empty() {
         return Ok(());
     }
+    log::trace!("Adding WIFI network {:?}", wifi_cfg_to_add);
 
     let existing_bsses = bss_active_scan(dbus, &ifaces_to_scan).await?;
 
