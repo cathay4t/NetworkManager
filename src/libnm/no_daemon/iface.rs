@@ -2,13 +2,14 @@
 
 use super::{
     base_iface::apply_base_iface_link_changes, ethernet::apply_ethernet_conf,
+    vlan::apply_vlan_conf,
 };
 use crate::{
     BaseInterface, Interface, InterfaceState, InterfaceType, MergedInterfaces,
     NmError, NmstateInterface,
 };
 
-fn nmstate_iface_type_to_nispor(
+pub(crate) fn nmstate_iface_type_to_nispor(
     iface_type: &InterfaceType,
 ) -> nispor::IfaceType {
     match iface_type {
@@ -17,6 +18,7 @@ fn nmstate_iface_type_to_nispor(
         InterfaceType::Veth => nispor::IfaceType::Veth,
         InterfaceType::WifiPhy => nispor::IfaceType::Wifi,
         InterfaceType::Dummy => nispor::IfaceType::Dummy,
+        InterfaceType::Vlan => nispor::IfaceType::Vlan,
         _ => {
             log::warn!(
                 "BUG: Requesting unsupported interface type {iface_type}"
@@ -61,20 +63,26 @@ pub(crate) fn apply_iface_link_changes(
         return Ok(ret);
     }
 
-    let mut np_conf = init_np_iface(apply_iface.base_iface());
-    let init_np_conf = np_conf.clone();
+    let mut np_iface = init_np_iface(apply_iface.base_iface());
+    let init_np_iface = np_iface.clone();
 
-    apply_base_iface_link_changes(&mut np_conf, apply_iface.base_iface())?;
+    apply_base_iface_link_changes(&mut np_iface, apply_iface.base_iface())?;
 
     if let Interface::Ethernet(apply_iface) = apply_iface
-        && let Some(peer_np_conf) =
-            apply_ethernet_conf(&mut np_conf, apply_iface, cur_iface)?
+        && let Some(peer_np_iface) =
+            apply_ethernet_conf(&mut np_iface, apply_iface, cur_iface)?
     {
-        ret.push(peer_np_conf);
+        ret.push(peer_np_iface);
+    }
+    if let Interface::Vlan(apply_iface) = apply_iface {
+        apply_vlan_conf(&mut np_iface, apply_iface);
     }
 
-    if np_conf != init_np_conf || cur_iface.is_none() {
-        ret.insert(0, np_conf);
+    if np_iface != init_np_iface
+        || cur_iface.is_none()
+        || apply_iface.is_absent()
+    {
+        ret.insert(0, np_iface);
     }
     Ok(ret)
 }

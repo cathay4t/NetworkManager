@@ -242,6 +242,9 @@ impl MergedInterfaces {
             if iface.merged.iface_type() == &InterfaceType::Loopback {
                 iface.post_merge_sanitize_loopback();
             }
+            if iface.merged.iface_type() == &InterfaceType::Vlan {
+                iface.post_merge_sanitize_vlan();
+            }
         }
 
         self.post_merge_sanitize_veth();

@@ -16,7 +16,7 @@ use crate::{
     BaseInterface, DummyInterface, ErrorKind, EthernetInterface,
     InterfaceState, InterfaceType, JsonDisplayHideSecrets, LoopbackInterface,
     NmError, NmstateInterface, OvsBridgeInterface, OvsInterface,
-    UnknownInterface, WifiCfgInterface, WifiPhyInterface,
+    UnknownInterface, VlanInterface, WifiCfgInterface, WifiPhyInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplayHideSecrets)]
@@ -38,6 +38,8 @@ pub enum Interface {
     WifiCfg(Box<WifiCfgInterface>),
     /// Dummy Interface
     Dummy(Box<DummyInterface>),
+    /// VLAN Interface
+    Vlan(Box<VlanInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -114,6 +116,11 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Dummy(Box::new(inner)))
             }
+            Some(InterfaceType::Vlan) => {
+                let inner = VlanInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Vlan(Box::new(inner)))
+            }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
@@ -151,7 +158,85 @@ macro_rules! gen_sanitize_iface_specfic {
     };
 }
 
-macro_rules! gen_iface_fun {
+macro_rules! gen_include_diff_context_iface_specific {
+    ( $diff:ident, $current:ident, $($variant:path,)+ ) => {
+        match ($diff, $current) {
+            $(
+                (
+                    $variant(i),
+                    $variant(current),
+                ) => i.include_diff_context_iface_specific(current),
+            )+
+            (diff, current) => {
+                log::error!(
+                    "BUG: Interface::include_diff_context_iface_specific() \
+                     Unexpected diff {:?} current {:?}",
+                     diff, current,
+                );
+            }
+        }
+    };
+}
+
+macro_rules! gen_include_revert_context_iface_specific{
+    ( $revert:ident, $desired:ident, $pre_apply:ident, $($variant:path,)+ ) => {
+        match ($revert, $desired, $pre_apply) {
+            $(
+                (
+                    $variant(i),
+                    $variant(desired),
+                    $variant(pre_apply),
+                ) => i.include_revert_context_iface_specific(
+                    desired,
+                    pre_apply,
+                ),
+            )+
+            _ => {
+                log::error!(
+                    "BUG: Interface::include_revert_context_iface_specific() \
+                     Unexpected input desired {:?} pre_apply {:?}",
+                     $desired, $pre_apply
+                );
+            }
+        }
+    };
+}
+
+macro_rules! gen_post_merge_iface_specific{
+    ( $merged:ident, $old:ident, $($variant:path,)+ ) => {
+        match ($merged, $old) {
+            $(
+                ($variant(i), $variant(o)) => i.post_merge_iface_specific(o),
+            )+
+            (merged, old) => {
+                log::error!(
+                    "BUG: Interface::post_merge_iface_specific() \
+                     Unexpected input merged {merged:?} old_state {old:?}"
+                );
+                Ok(())
+            }
+        }
+    };
+}
+
+macro_rules! gen_need_delete_before_change {
+    ( $desired:ident, $current:ident, $($variant:path,)+ ) => {
+        match ($desired, $current) {
+            $(
+                ($variant(d), $variant(c)) => d.need_delete_before_change(c),
+            )+
+            (desired, current) => {
+                log::error!(
+                    "BUG: Interface::include_revert_context_iface_specific() \
+                     Unexpected input merged {desired:?} old_state {current:?}"
+                );
+                false
+            }
+        }
+    };
+}
+
+macro_rules! gen_iface_no_arg {
     ( $self:ident, $func:ident, $($variant:path,)+ ) => {
         match $self {
             $(
@@ -165,7 +250,7 @@ macro_rules! gen_iface_trait_impl {
     ( $(($func:ident, $return:ty),)+ ) => {
         $(
             fn $func(&self) -> $return {
-                gen_iface_fun!(
+                gen_iface_no_arg!(
                     self,
                     $func,
                     Self::Ethernet,
@@ -175,6 +260,7 @@ macro_rules! gen_iface_trait_impl {
                     Self::WifiPhy,
                     Self::WifiCfg,
                     Self::Dummy,
+                    Self::Vlan,
                     Self::Unknown,
                 )
             }
@@ -186,7 +272,7 @@ macro_rules! gen_iface_trait_impl_mut {
     ( $(($func:ident, $return:ty),)+ ) => {
         $(
             fn $func(&mut self) -> $return {
-                gen_iface_fun!(
+                gen_iface_no_arg!(
                     self,
                     $func,
                     Self::Ethernet,
@@ -196,6 +282,7 @@ macro_rules! gen_iface_trait_impl_mut {
                     Self::WifiPhy,
                     Self::WifiCfg,
                     Self::Dummy,
+                    Self::Vlan,
                     Self::Unknown,
                 )
             }
@@ -233,61 +320,25 @@ impl NmstateInterface for Interface {
             Interface::WifiPhy,
             Interface::WifiCfg,
             Interface::Dummy,
+            Interface::Vlan,
             Interface::Unknown,
         )
     }
 
-    fn include_diff_context_iface_specific(
-        &mut self,
-        desired: &Self,
-        current: &Self,
-    ) {
-        match (self, desired, current) {
-            (
-                Self::Ethernet(i),
-                Self::Ethernet(desired),
-                Self::Ethernet(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (
-                Self::OvsBridge(i),
-                Self::OvsBridge(desired),
-                Self::OvsBridge(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (
-                Self::OvsInterface(i),
-                Self::OvsInterface(desired),
-                Self::OvsInterface(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (
-                Self::Loopback(i),
-                Self::Loopback(desired),
-                Self::Loopback(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (
-                Self::WifiPhy(i),
-                Self::WifiPhy(desired),
-                Self::WifiPhy(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (
-                Self::WifiCfg(i),
-                Self::WifiCfg(desired),
-                Self::WifiCfg(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            (Self::Dummy(i), Self::Dummy(desired), Self::Dummy(current)) => {
-                i.include_diff_context_iface_specific(desired, current)
-            }
-            (
-                Self::Unknown(i),
-                Self::Unknown(desired),
-                Self::Unknown(current),
-            ) => i.include_diff_context_iface_specific(desired, current),
-            _ => {
-                log::error!(
-                    "BUG: Interface::include_diff_context_iface_specific() \
-                     Unexpected input desired {desired:?} current {current:?}",
-                );
-            }
-        }
+    fn include_diff_context_iface_specific(&mut self, current: &Self) {
+        gen_include_diff_context_iface_specific!(
+            self,
+            current,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
+            Interface::Dummy,
+            Interface::Vlan,
+            Interface::Unknown,
+        )
     }
 
     fn include_revert_context_iface_specific(
@@ -295,92 +346,55 @@ impl NmstateInterface for Interface {
         desired: &Self,
         pre_apply: &Self,
     ) {
-        match (self, desired, pre_apply) {
-            (
-                Self::Ethernet(i),
-                Self::Ethernet(desired),
-                Self::Ethernet(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (
-                Self::OvsBridge(i),
-                Self::OvsBridge(desired),
-                Self::OvsBridge(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (
-                Self::OvsInterface(i),
-                Self::OvsInterface(desired),
-                Self::OvsInterface(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (
-                Self::Loopback(i),
-                Self::Loopback(desired),
-                Self::Loopback(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (
-                Self::WifiPhy(i),
-                Self::WifiPhy(desired),
-                Self::WifiPhy(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (
-                Self::WifiCfg(i),
-                Self::WifiCfg(desired),
-                Self::WifiCfg(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            (Self::Dummy(i), Self::Dummy(desired), Self::Dummy(pre_apply)) => {
-                i.include_revert_context_iface_specific(desired, pre_apply)
-            }
-            (
-                Self::Unknown(i),
-                Self::Unknown(desired),
-                Self::Unknown(pre_apply),
-            ) => i.include_revert_context_iface_specific(desired, pre_apply),
-            _ => {
-                log::error!(
-                    "BUG: Interface::include_revert_context_iface_specific() \
-                     Unexpected input desired {desired:?} pre_apply \
-                     {pre_apply:?}"
-                );
-            }
-        }
+        gen_include_revert_context_iface_specific!(
+            self,
+            desired,
+            pre_apply,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
+            Interface::Dummy,
+            Interface::Vlan,
+            Interface::Unknown,
+        )
     }
 
     fn post_merge_iface_specific(
         &mut self,
         old_state: &Self,
     ) -> Result<(), NmError> {
-        match (self, old_state) {
-            (Self::Ethernet(i), Self::Ethernet(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::OvsBridge(i), Self::OvsBridge(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::OvsInterface(i), Self::OvsInterface(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::Loopback(i), Self::Loopback(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::WifiPhy(i), Self::WifiPhy(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::WifiCfg(i), Self::WifiCfg(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::Dummy(i), Self::Dummy(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (Self::Unknown(i), Self::Unknown(old_state)) => {
-                i.post_merge_iface_specific(old_state)
-            }
-            (merged, old) => {
-                log::error!(
-                    "BUG: Interface::include_revert_context_iface_specific() \
-                     Unexpected input merged {merged:?} old_state {old:?}"
-                );
-                Ok(())
-            }
-        }
+        gen_post_merge_iface_specific!(
+            self,
+            old_state,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
+            Interface::Dummy,
+            Interface::Vlan,
+            Interface::Unknown,
+        )
+    }
+
+    fn need_delete_before_change(&self, current: &Self) -> bool {
+        gen_need_delete_before_change!(
+            self,
+            current,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
+            Interface::Dummy,
+            Interface::Vlan,
+            Interface::Unknown,
+        )
     }
 }
 
@@ -402,7 +416,7 @@ impl From<BaseInterface> for Interface {
                 Interface::OvsInterface(Default::default())
             }
             InterfaceType::Veth => todo!(),
-            InterfaceType::Vlan => todo!(),
+            InterfaceType::Vlan => Interface::Vlan(Default::default()),
             InterfaceType::Vrf => todo!(),
             InterfaceType::Vxlan => todo!(),
             InterfaceType::InfiniBand => todo!(),

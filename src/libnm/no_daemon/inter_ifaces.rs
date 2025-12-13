@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    iface::apply_iface_link_changes, ip::apply_iface_ip_changes,
+    iface::{apply_iface_link_changes, nmstate_iface_type_to_nispor},
+    ip::apply_iface_ip_changes,
     wifi::NmWpaConn,
 };
 use crate::{
@@ -12,10 +13,55 @@ use crate::{
 pub(crate) async fn apply_ifaces(
     merged_ifaces: &MergedInterfaces,
 ) -> Result<(), NmError> {
+    delete_ifaces_before_apply(merged_ifaces).await?;
+
     apply_ifaces_link_changes(merged_ifaces).await?;
 
     apply_ifaces_ip_changes(merged_ifaces).await?;
 
+    Ok(())
+}
+
+async fn delete_ifaces_before_apply(
+    merged_ifaces: &MergedInterfaces,
+) -> Result<(), NmError> {
+    let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
+    for merged_iface in merged_ifaces.kernel_ifaces.values().filter(|m| {
+        m.merged.is_up() && m.for_apply.is_some() && m.current.is_some()
+    }) {
+        if let Some(for_apply) = merged_iface.for_apply.as_ref()
+            && let Some(current) = merged_iface.current.as_ref()
+            && for_apply.need_delete_before_change(current)
+        {
+            log::debug!(
+                "Need to delete interface {}/{} before making changes",
+                for_apply.name(),
+                for_apply.iface_type()
+            );
+            let mut np_iface = nispor::IfaceConf::default();
+            np_iface.name = for_apply.name().to_string();
+            np_iface.iface_type =
+                Some(nmstate_iface_type_to_nispor(for_apply.iface_type()));
+            np_iface.state = nispor::IfaceState::Absent;
+            np_ifaces.push(np_iface)
+        }
+    }
+    if !np_ifaces.is_empty() {
+        let mut net_conf = nispor::NetConf::default();
+        net_conf.ifaces = Some(np_ifaces);
+
+        log::debug!(
+            "Pending nispor changes {}",
+            serde_json::to_string(&net_conf).unwrap_or_default()
+        );
+
+        if let Err(e) = net_conf.apply_async().await {
+            return Err(NmError::new(
+                ErrorKind::Bug,
+                format!("Failed to delete interfaces: {e}"),
+            ));
+        }
+    }
     Ok(())
 }
 

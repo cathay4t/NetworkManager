@@ -47,8 +47,12 @@ fn np_iface_state_to_nmstate(
     // Check also the Running flag with, according to [1], means operational
     // state Up or Unknown.
     // [1] https://www.kernel.org/doc/Documentation/networking/operstates.txt
+    //
+    // For nmstate the `state: up` also means administratively up, hence
+    // `IfaceFlag::Up` also means `state: up`
     if *state == nispor::IfaceState::Up
         || flags.contains(&nispor::IfaceFlag::Running)
+        || flags.contains(&nispor::IfaceFlag::Up)
     {
         InterfaceState::Up
     } else if *state == nispor::IfaceState::Down {

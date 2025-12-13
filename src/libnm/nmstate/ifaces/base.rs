@@ -121,6 +121,7 @@ impl BaseInterface {
     }
 
     pub fn sanitize_current_for_verify(&mut self) {
+        self.up_priority = 0;
         if let Some(ipv4) = self.ipv4.as_mut() {
             ipv4.sanitize_current_for_verify();
         }
@@ -130,6 +131,7 @@ impl BaseInterface {
     }
 
     pub fn sanitize_desired_for_verify(&mut self) {
+        self.up_priority = 0;
         if let Some(ipv4) = self.ipv4.as_mut() {
             ipv4.sanitize_desired_for_verify();
         }

@@ -7,7 +7,7 @@ use super::{
 use crate::{
     DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
     LoopbackInterface, NetworkState, NmError, NmNoDaemon, NmstateQueryOption,
-    UnknownInterface, WifiPhyInterface,
+    UnknownInterface, VlanInterface, WifiPhyInterface,
 };
 
 impl NmNoDaemon {
@@ -74,6 +74,9 @@ impl NmNoDaemon {
                         base: base_iface,
                     }))
                 }
+                InterfaceType::Vlan => Interface::Vlan(Box::new(
+                    VlanInterface::new_from_nispor(base_iface, np_iface),
+                )),
                 _ => {
                     log::trace!(
                         "Got unsupported interface {} type {:?}",

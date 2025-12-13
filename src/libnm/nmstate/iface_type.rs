@@ -139,6 +139,7 @@ impl InterfaceType {
                 | InterfaceType::Veth
                 | InterfaceType::Loopback
                 | InterfaceType::Dummy
+                | InterfaceType::Vlan
                 | InterfaceType::WifiPhy
         )
     }

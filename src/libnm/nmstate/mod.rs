@@ -29,8 +29,9 @@ pub use self::{
         BaseInterface, DummyInterface, EthernetConfig, EthernetDuplex,
         EthernetInterface, Interfaces, LoopbackInterface, OvsBridgeConfig,
         OvsBridgeInterface, OvsBridgePortConfig, OvsInterface,
-        UnknownInterface, VethConfig, WifiAuthType, WifiCfgInterface,
-        WifiConfig, WifiPhyInterface, WifiState,
+        UnknownInterface, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
+        VlanQosMapping, VlanRegistrationProtocol, WifiAuthType,
+        WifiCfgInterface, WifiConfig, WifiPhyInterface, WifiState,
     },
     ip::{DhcpState, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6},
     merged::{

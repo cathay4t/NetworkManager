@@ -93,14 +93,10 @@ impl NmstateInterface for WifiPhyInterface {
         }
     }
 
-    fn include_diff_context_iface_specific(
-        &mut self,
-        desired: &Self,
-        _current: &Self,
-    ) {
-        if let Some(ssid) = desired.wifi.as_ref().map(|w| w.ssid.as_str()) {
+    fn include_diff_context_iface_specific(&mut self, current: &Self) {
+        if let Some(ssid) = self.wifi.as_ref().map(|w| w.ssid.as_str()) {
             if !ssid.is_empty() {
-                self.wifi = desired.wifi.clone();
+                self.wifi = current.wifi.clone();
             }
         }
     }

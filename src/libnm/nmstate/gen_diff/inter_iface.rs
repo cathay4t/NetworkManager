@@ -37,7 +37,7 @@ impl MergedInterfaces {
             {
                 let mut new_iface = des_iface.clone_name_type_only();
                 new_iface.base_iface_mut().state = des_iface.base_iface().state;
-                new_iface.include_diff_context(des_iface, &cur_iface);
+                new_iface.include_diff_context(&cur_iface);
                 let mut new_iface_value = serde_json::to_value(&new_iface)?;
                 copy_undefined_value(&mut new_iface_value, &diff_value);
                 let new_iface =

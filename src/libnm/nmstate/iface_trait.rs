@@ -152,18 +152,13 @@ pub trait NmstateInterface:
     /// This function will invoke `include_diff_context()` against
     /// `BaseInterface`. For any interface specific task, please implement
     /// `include_diff_context_iface_specific()` instead.
-    fn include_diff_context(&mut self, desired: &Self, current: &Self) {
+    fn include_diff_context(&mut self, current: &Self) {
         self.base_iface_mut()
-            .include_diff_context(desired.base_iface(), current.base_iface());
-        self.include_diff_context_iface_specific(desired, current)
+            .include_diff_context(current.base_iface());
+        self.include_diff_context_iface_specific(current)
     }
 
-    fn include_diff_context_iface_specific(
-        &mut self,
-        _desired: &Self,
-        _current: &Self,
-    ) {
-    }
+    fn include_diff_context_iface_specific(&mut self, _current: &Self) {}
 
     fn from_base(base_iface: BaseInterface) -> Self {
         let mut new = Self::default();
@@ -202,5 +197,11 @@ pub trait NmstateInterface:
     /// Return parent interface name, None means not desired or no parent
     fn parent(&self) -> Option<&str> {
         None
+    }
+
+    /// Whether desired changes need to delete the interface first.
+    /// Default implementation is false
+    fn need_delete_before_change(&self, _current: &Self) -> bool {
+        false
     }
 }

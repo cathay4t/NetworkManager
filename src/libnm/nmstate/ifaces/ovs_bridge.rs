@@ -64,11 +64,7 @@ impl NmstateInterface for OvsBridgeInterface {
         Ok(())
     }
 
-    fn include_diff_context_iface_specific(
-        &mut self,
-        _desired: &Self,
-        _current: &Self,
-    ) {
+    fn include_diff_context_iface_specific(&mut self, _current: &Self) {
         // TODO(Gris Ge): Include full port config if any changed
     }
 

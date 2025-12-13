@@ -9,6 +9,7 @@ mod ip;
 mod ovs;
 mod query;
 mod route;
+mod vlan;
 mod watcher;
 mod wifi;
 

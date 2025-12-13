@@ -90,13 +90,6 @@ impl NmstateInterface for EthernetInterface {
         Ok(())
     }
 
-    fn include_diff_context_iface_specific(
-        &mut self,
-        _desired: &Self,
-        _current: &Self,
-    ) {
-    }
-
     fn include_revert_context_iface_specific(
         &mut self,
         _desired: &Self,

@@ -3,11 +3,7 @@
 use crate::BaseInterface;
 
 impl BaseInterface {
-    pub(crate) fn include_diff_context(
-        &mut self,
-        _desired: &Self,
-        _current: &Self,
-    ) {
+    pub(crate) fn include_diff_context(&mut self, _current: &Self) {
         /*
         if self.identifier == Some(InterfaceIdentifier::MacAddress)
             && self.mac_address.is_none()
