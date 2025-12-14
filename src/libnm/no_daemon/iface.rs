@@ -81,6 +81,7 @@ pub(crate) fn apply_iface_link_changes(
     if np_iface != init_np_iface
         || cur_iface.is_none()
         || apply_iface.is_absent()
+        || apply_iface.is_down()
     {
         ret.insert(0, np_iface);
     }
