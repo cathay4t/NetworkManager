@@ -11,6 +11,7 @@ mod monitor;
 mod plugin;
 mod query;
 mod task;
+mod udev;
 
 pub(crate) use self::task::{TaskManager, TaskWorker};
 

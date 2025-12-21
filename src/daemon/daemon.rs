@@ -35,12 +35,17 @@ impl NmDaemon {
             )
         })?;
 
-        let mut commander = NmCommander::new().await?;
-        if let Err(e) = commander.load_saved_state().await {
-            log::error!(
-                "Failed to load saved state: {e}, starting with empty state"
-            );
-        }
+        let commander = NmCommander::new().await?;
+        // Start a thread to load saved state instead of hanging
+        let mut new_commander = commander.clone();
+        tokio::spawn(async move {
+            if let Err(e) = new_commander.load_saved_state().await {
+                log::error!(
+                    "Failed to load saved state: {e}, starting with empty \
+                     state"
+                );
+            }
+        });
 
         Ok(Self { api_ipc, commander })
     }

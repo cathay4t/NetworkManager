@@ -68,6 +68,15 @@ pub struct Routes {
 }
 
 impl Routes {
+    /// Whether configured routes is empty or undefined.
+    pub fn is_empty(&self) -> bool {
+        if let Some(rts) = self.config.as_ref() {
+            rts.is_empty()
+        } else {
+            true
+        }
+    }
+
     pub(crate) fn validate(&self) -> Result<(), NmError> {
         // All desire non-absent route should have next hop interface except
         // for route with route type `Blackhole`, `Unreachable`, `Prohibit`.

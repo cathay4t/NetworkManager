@@ -1,0 +1,10 @@
+[Unit]
+Description=Network Manager
+Documentation=man:NetworkManager(8)
+Wants=network.target
+After=network-pre.target
+Before=network.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/NetworkManager

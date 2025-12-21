@@ -51,7 +51,7 @@ impl NetworkState {
         self == &Self {
             version: self.version,
             ..Default::default()
-        }
+        } || (self.ifaces.is_empty() && self.routes.is_empty())
     }
 
     pub fn new() -> Self {
