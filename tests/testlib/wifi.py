@@ -49,9 +49,7 @@ def wifi_env():
     exec_cmd(f"ip netns add {TEST_NET_NS}".split())
 
     exec_cmd("modprobe mac80211_hwsim radios=2".split())
-    assert retry_till_true_or_timeout(
-        TIMEOUT_SECS_SIM_WIFI_NICS, has_sim_wifi_nics
-    )
+    assert retry_till_true_or_timeout(TIMEOUT_SECS_SIM_WIFI_NICS, has_sim_wifi_nics)
 
     state = libnm.show()
     wlan1 = get_nic_name_by_perm_mac(state, HWSIM0_PERM_MAC)
@@ -99,9 +97,7 @@ def start_hostapd():
     assert phy_id
     # Move phy2 to namespace with hostpad
     exec_cmd(f"iw phy#{phy_id} set netns name {TEST_NET_NS}".split())
-    exec_cmd(
-        f"ip netns exec {TEST_NET_NS} ip link set {DHCP_SRV_NIC} up".split()
-    )
+    exec_cmd(f"ip netns exec {TEST_NET_NS} ip link set {DHCP_SRV_NIC} up".split())
     with open(HOSTAPD_CONF_PATH, "w") as fd:
         fd.write(HOSTAPD_CONF)
 
@@ -113,6 +109,7 @@ def start_hostapd():
     retry_till_true_or_timeout(2, hostapd_is_up)
 
     start_dhcp_server(TEST_NET_NS)
+
 
 def hostapd_is_up():
     output = exec_cmd(f"iw {WIFI_TEST_NIC} scan".split())[1]

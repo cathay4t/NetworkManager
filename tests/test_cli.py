@@ -18,25 +18,16 @@ def veth1_down():
 def test_cli_wait_carrier_up(veth1_down):
     cli = nmc_path()
     # Should get timeout on waiting veth1 up because both ends are down
-    assert (
-        exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0]
-        != 0
-    )
+    assert exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0] != 0
 
     exec_cmd(f"ip link set veth1ep up".split())
     # Should get timeout on waiting veth1 up because other end is down
-    assert (
-        exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0]
-        != 0
-    )
+    assert exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0] != 0
 
     exec_cmd(f"ip link set veth1ep down".split())
     exec_cmd(f"ip link set veth1 up".split())
     # Should get timeout on waiting veth1 up because local end is down
-    assert (
-        exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0]
-        != 0
-    )
+    assert exec_cmd(f"{cli} wait veth1 up --timeout 1".split(), check=False)[0] != 0
 
     exec_cmd(f"ip link set veth1ep up".split())
     exec_cmd(f"ip link set veth1 up".split())

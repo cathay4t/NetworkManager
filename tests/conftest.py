@@ -26,9 +26,7 @@ def test_env_setup(run_daemon):
 
 @pytest.fixture(scope="session")
 def run_daemon():
-    bin_path = pathlib.Path(
-        f"{project_dir}/target/debug/NetworkManager"
-    ).resolve()
+    bin_path = pathlib.Path(f"{project_dir}/target/debug/NetworkManager").resolve()
     process = subprocess.Popen(
         bin_path, stdout=sys.stdout, stderr=open(DAEMON_LOG, "w")
     )

@@ -38,9 +38,7 @@ def ping_peer():
     return True
 
 
-@pytest.mark.skipif(
-    not is_fedora(), reason=("Only fedora has mac80211_hwsim module ")
-)
+@pytest.mark.skipif(not is_fedora(), reason=("Only fedora has mac80211_hwsim module "))
 class TestWifi:
     def test_wifi_iface_static_ip(self, wifi_env, clean_up):
         libnm.apply(
