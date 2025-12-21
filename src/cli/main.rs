@@ -49,6 +49,7 @@ async fn main() -> Result<(), CliError> {
         0 => (vec!["nm", "nmstate"], log::LevelFilter::Info),
         1 => (vec!["nm", "nmstate"], log::LevelFilter::Debug),
         2 => (vec!["nm", "nmstate"], log::LevelFilter::Trace),
+        3 => (vec!["nm", "nmstate", "nispor"], log::LevelFilter::Trace),
         _ => (vec![""], log::LevelFilter::Trace),
     };
 

@@ -43,7 +43,7 @@ def check_daemon_connection():
         client = NmClient()
         return client.ping() == "pong"
     except:
-        return false
+        return False
 
 
 REPORT_HEADER = """OS: {osname}

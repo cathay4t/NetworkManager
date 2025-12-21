@@ -140,5 +140,9 @@ pub(crate) fn apply_base_iface_link_changes(
     // 2. Verification process will complains if overflow a u32 for special
     //    interface which support MTU bigger than u32::MAX.
     np_iface.mtu = apply_iface.mtu.map(|mtu| mtu as u32);
+
+    if apply_iface.iface_type != InterfaceType::OvsInterface {
+        np_iface.controller = apply_iface.controller.clone();
+    }
     Ok(())
 }

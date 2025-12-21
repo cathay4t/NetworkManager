@@ -141,6 +141,12 @@ impl InterfaceType {
                 | InterfaceType::Dummy
                 | InterfaceType::Vlan
                 | InterfaceType::WifiPhy
+                | InterfaceType::Bond
         )
+    }
+
+    /// OVS interface cannot live without controller.
+    pub(crate) fn need_controller(&self) -> bool {
+        self == &InterfaceType::OvsInterface
     }
 }

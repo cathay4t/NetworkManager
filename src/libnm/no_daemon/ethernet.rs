@@ -6,11 +6,10 @@ use crate::{
 };
 
 pub(crate) fn apply_ethernet_conf(
-    np_iface: &mut nispor::IfaceConf,
+    mut np_iface: nispor::IfaceConf,
     apply_iface: &EthernetInterface,
     cur_iface: Option<&Interface>,
-) -> Result<Option<nispor::IfaceConf>, NmError> {
-    // TODO(Gris Ge): Change veth peer
+) -> Result<Vec<nispor::IfaceConf>, NmError> {
     if apply_iface.is_up()
         && cur_iface.is_none()
         && let Some(peer) =
@@ -29,9 +28,9 @@ pub(crate) fn apply_ethernet_conf(
         let mut np_veth_conf = nispor::VethConf::default();
         np_veth_conf.peer = apply_iface.name().to_string();
         peer_np_iface.veth = Some(np_veth_conf);
-        Ok(Some(peer_np_iface))
+        Ok(vec![np_iface, peer_np_iface])
     } else {
-        Ok(None)
+        Ok(vec![np_iface])
     }
 }
 

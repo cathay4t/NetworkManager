@@ -5,9 +5,10 @@ use super::{
     wifi::NmWpaConn,
 };
 use crate::{
-    DummyInterface, ErrorKind, EthernetInterface, Interface, InterfaceType,
-    LoopbackInterface, NetworkState, NmError, NmNoDaemon, NmstateQueryOption,
-    UnknownInterface, VlanInterface, WifiPhyInterface,
+    BondInterface, DummyInterface, ErrorKind, EthernetInterface, Interface,
+    InterfaceType, LoopbackInterface, NetworkState, NmError, NmNoDaemon,
+    NmstateInterface, NmstateQueryOption, UnknownInterface, VlanInterface,
+    WifiPhyInterface,
 };
 
 impl NmNoDaemon {
@@ -77,6 +78,19 @@ impl NmNoDaemon {
                 InterfaceType::Vlan => Interface::Vlan(Box::new(
                     VlanInterface::new_from_nispor(base_iface, np_iface),
                 )),
+                InterfaceType::Bond => {
+                    let mut bond_iface =
+                        BondInterface::new_from_nispor(base_iface, np_iface);
+                    let mut port_np_ifaces = Vec::new();
+                    for port_name in bond_iface.ports().unwrap_or_default() {
+                        if let Some(p) = np_state.ifaces.get(port_name) {
+                            port_np_ifaces.push(p);
+                        }
+                    }
+                    bond_iface.append_bond_port_config(port_np_ifaces);
+
+                    Interface::Bond(Box::new(bond_iface))
+                }
                 _ => {
                     log::trace!(
                         "Got unsupported interface {} type {:?}",

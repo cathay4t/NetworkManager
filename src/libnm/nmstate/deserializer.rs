@@ -8,7 +8,10 @@
 
 use std::{marker::PhantomData, str::FromStr};
 
-use serde::{Deserializer, de, de::Visitor};
+use serde::{
+    Deserialize, Deserializer, de,
+    de::{IntoDeserializer, Visitor},
+};
 
 pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
@@ -344,4 +347,46 @@ where
             Err(de::Error::custom("Required filed undefined"))
         }
     })
+}
+
+pub(crate) fn option_enum_string_or_integer<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    struct IntegerOrString<T>(PhantomData<fn() -> Option<T>>);
+
+    impl<'de, T> Visitor<'de> for IntegerOrString<T>
+    where
+        T: Deserialize<'de>,
+    {
+        type Value = Option<T>;
+
+        fn expecting(
+            &self,
+            formatter: &mut std::fmt::Formatter,
+        ) -> std::fmt::Result {
+            formatter.write_str("unsigned integer or string")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Option<T>, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(T::deserialize(value.into_deserializer())?))
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Option<T>, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(T::deserialize(
+                format!("{}", value).into_deserializer(),
+            )?))
+        }
+    }
+
+    deserializer.deserialize_any(IntegerOrString(PhantomData))
 }

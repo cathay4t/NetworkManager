@@ -26,6 +26,17 @@ impl OvsInterface {
     pub fn new(base: BaseInterface) -> Self {
         Self { base }
     }
+
+    pub(crate) fn new_with_name_and_ctrl(name: &str, ctrl_name: &str) -> Self {
+        let base = BaseInterface {
+            name: name.to_string(),
+            iface_type: InterfaceType::OvsInterface,
+            controller: Some(ctrl_name.to_string()),
+            controller_type: Some(InterfaceType::OvsBridge),
+            ..Default::default()
+        };
+        Self { base }
+    }
 }
 
 impl Default for OvsInterface {

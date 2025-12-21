@@ -111,6 +111,19 @@ impl NmstateInterface for EthernetInterface {
         }
          */
     }
+
+    /// Should be deleted when changing veth peer
+    fn need_delete_before_change(&self, current: &Self) -> bool {
+        if let Some(des_peer) = self.veth.as_ref().map(|v| v.peer.as_str())
+            && let Some(cur_peer) =
+                current.veth.as_ref().map(|v| v.peer.as_str())
+            && des_peer != cur_peer
+        {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(

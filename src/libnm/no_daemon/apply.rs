@@ -18,13 +18,23 @@ impl NmNoDaemon {
         let current_state =
             Self::query_network_state(Default::default()).await?;
 
-        log::trace!("Current state {current_state}");
         log::trace!("Applying {desired_state} with option {option}");
         let merged_state = MergedNetworkState::new(
             desired_state.clone(),
             current_state.clone(),
             option.clone(),
         )?;
+
+        for iface in
+            merged_state.ifaces.iter().filter(|i| i.for_apply.is_some())
+        {
+            if let Some(cur_iface) = iface.current.as_ref() {
+                log::trace!("Current interface {cur_iface}");
+            }
+            if let Some(apply_iface) = iface.for_apply.as_ref() {
+                log::trace!("Applying interface changes: {apply_iface}");
+            }
+        }
 
         // TODO(Gris Ge): Special sanitize for NoDaemon mode:
         //  * DHCP not supported

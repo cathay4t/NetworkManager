@@ -38,9 +38,6 @@ pub struct BaseInterface {
     /// Controller interface name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller: Option<String>,
-    /// Controller interface type.
-    /// Optional to define when applying.
-    /// Serialize and deserialize to/from `controller-type`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller_type: Option<InterfaceType>,
     /// MAC address in the format: upper case hex string separated by `:` on
@@ -179,6 +176,17 @@ impl BaseInterface {
 
     pub(crate) fn is_ipv6_enabled(&self) -> bool {
         self.ipv6.as_ref().map(|i| i.is_enabled()) == Some(true)
+    }
+
+    pub(crate) fn need_controller(&self) -> bool {
+        self.iface_type.need_controller()
+    }
+
+    /// Whether this interface can hold IP information or not.
+    pub(crate) fn can_have_ip(&self) -> bool {
+        (!self.has_controller())
+            || self.iface_type == InterfaceType::OvsInterface
+            || self.controller_type == Some(InterfaceType::Vrf)
     }
 }
 

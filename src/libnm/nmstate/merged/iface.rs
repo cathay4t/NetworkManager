@@ -10,7 +10,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Interface, JsonDisplay, NmError, NmstateInterface};
+use crate::{
+    ErrorKind, Interface, InterfaceState, InterfaceType, JsonDisplay, NmError,
+    NmstateInterface,
+};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
@@ -86,5 +89,95 @@ impl MergedInterface {
         self.for_apply = self.current.as_ref().map(|iface| {
             Interface::from(iface.base_iface().clone_name_type_only())
         });
+    }
+
+    pub(crate) fn apply_ctrller_change(
+        &mut self,
+        ctrl_name: String,
+        ctrl_type: InterfaceType,
+        ctrl_state: InterfaceState,
+    ) -> Result<(), NmError> {
+        if self.merged.base_iface().need_controller() && ctrl_name.is_empty() {
+            if let Some(org_ctrl) = self
+                .current
+                .as_ref()
+                .and_then(|c| c.base_iface().controller.as_ref())
+            {
+                if Some(true) == self.for_apply.as_ref().map(|i| i.is_up()) {
+                    return Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot live without controller, but \
+                             it is detached from original controller \
+                             {org_ctrl}, cannot apply desired `state:up`",
+                            self.merged.name()
+                        ),
+                    ));
+                }
+            }
+        }
+
+        if !self.is_desired() {
+            self.mark_as_changed();
+            if ctrl_state == InterfaceState::Up {
+                self.merged.base_iface_mut().state = InterfaceState::Up;
+                if let Some(apply_iface) = self.for_apply.as_mut() {
+                    apply_iface.base_iface_mut().state = InterfaceState::Up;
+                }
+            }
+            log::info!(
+                "Include interface {} to edit as its controller required so",
+                self.merged.name()
+            );
+        }
+        let Some(apply_iface) = self.for_apply.as_mut() else {
+            return Err(NmError::new(
+                ErrorKind::Bug,
+                format!(
+                    "Reached unreachable code: apply_ctrller_change() \
+                     self.for_apply still None: {self:?}"
+                ),
+            ));
+        };
+
+        // Some interface cannot live without controller
+        if self.merged.base_iface().need_controller() && ctrl_name.is_empty() {
+            if let Some(org_ctrl) = self
+                .current
+                .as_ref()
+                .and_then(|c| c.base_iface().controller.as_ref())
+            {
+                log::info!(
+                    "Interface {} cannot live without controller, marking as \
+                     absent as it has been detached from its original \
+                     controller {org_ctrl}",
+                    self.merged.name(),
+                );
+            }
+            self.merged.base_iface_mut().state = InterfaceState::Absent;
+            apply_iface.base_iface_mut().state = InterfaceState::Absent;
+            if let Some(verify_iface) = self.for_verify.as_mut() {
+                verify_iface.base_iface_mut().state = InterfaceState::Absent;
+            }
+        } else {
+            log::info!(
+                "Changing controller of interface {}/{} to: {}/{}",
+                apply_iface.name(),
+                apply_iface.iface_type(),
+                ctrl_name,
+                ctrl_type
+            );
+            apply_iface.base_iface_mut().controller =
+                Some(ctrl_name.to_string());
+            apply_iface.base_iface_mut().controller_type =
+                Some(ctrl_type.clone());
+            self.merged.base_iface_mut().controller = Some(ctrl_name);
+            self.merged.base_iface_mut().controller_type = Some(ctrl_type);
+            if !self.merged.base_iface().can_have_ip() {
+                self.merged.base_iface_mut().ipv4 = None;
+                self.merged.base_iface_mut().ipv6 = None;
+            }
+        }
+        Ok(())
     }
 }

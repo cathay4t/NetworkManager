@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod base;
+mod bond;
 mod dummy;
 mod ethernet;
 mod inter_ifaces;
@@ -13,6 +14,11 @@ mod wifi;
 
 pub use self::{
     base::BaseInterface,
+    bond::{
+        BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
+        BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
+        BondOptions, BondPortConfig, BondPrimaryReselect, BondXmitHashPolicy,
+    },
     dummy::DummyInterface,
     ethernet::{EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig},
     inter_ifaces::Interfaces,

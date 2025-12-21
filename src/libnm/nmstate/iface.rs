@@ -13,7 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use super::value::get_json_value_difference;
 use crate::{
-    BaseInterface, DummyInterface, ErrorKind, EthernetInterface,
+    BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
     InterfaceState, InterfaceType, JsonDisplayHideSecrets, LoopbackInterface,
     NmError, NmstateInterface, OvsBridgeInterface, OvsInterface,
     UnknownInterface, VlanInterface, WifiCfgInterface, WifiPhyInterface,
@@ -40,6 +40,8 @@ pub enum Interface {
     Dummy(Box<DummyInterface>),
     /// VLAN Interface
     Vlan(Box<VlanInterface>),
+    /// Bond Interface
+    Bond(Box<BondInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -120,6 +122,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = VlanInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Vlan(Box::new(inner)))
+            }
+            Some(InterfaceType::Bond) => {
+                let inner = BondInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Bond(Box::new(inner)))
             }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
@@ -261,6 +268,7 @@ macro_rules! gen_iface_trait_impl {
                     Self::WifiCfg,
                     Self::Dummy,
                     Self::Vlan,
+                    Self::Bond,
                     Self::Unknown,
                 )
             }
@@ -283,6 +291,7 @@ macro_rules! gen_iface_trait_impl_mut {
                     Self::WifiCfg,
                     Self::Dummy,
                     Self::Vlan,
+                    Self::Bond,
                     Self::Unknown,
                 )
             }
@@ -321,6 +330,7 @@ impl NmstateInterface for Interface {
             Interface::WifiCfg,
             Interface::Dummy,
             Interface::Vlan,
+            Interface::Bond,
             Interface::Unknown,
         )
     }
@@ -337,6 +347,7 @@ impl NmstateInterface for Interface {
             Interface::WifiCfg,
             Interface::Dummy,
             Interface::Vlan,
+            Interface::Bond,
             Interface::Unknown,
         )
     }
@@ -358,6 +369,7 @@ impl NmstateInterface for Interface {
             Interface::WifiCfg,
             Interface::Dummy,
             Interface::Vlan,
+            Interface::Bond,
             Interface::Unknown,
         )
     }
@@ -377,6 +389,7 @@ impl NmstateInterface for Interface {
             Interface::WifiCfg,
             Interface::Dummy,
             Interface::Vlan,
+            Interface::Bond,
             Interface::Unknown,
         )
     }
@@ -393,6 +406,7 @@ impl NmstateInterface for Interface {
             Interface::WifiCfg,
             Interface::Dummy,
             Interface::Vlan,
+            Interface::Bond,
             Interface::Unknown,
         )
     }
@@ -403,7 +417,7 @@ impl From<BaseInterface> for Interface {
         let mut iface = match &base_iface.iface_type {
             InterfaceType::Ethernet => Interface::Ethernet(Default::default()),
             InterfaceType::Hsr => todo!(),
-            InterfaceType::Bond => todo!(),
+            InterfaceType::Bond => Interface::Bond(Default::default()),
             InterfaceType::LinuxBridge => todo!(),
             InterfaceType::Dummy => Interface::Dummy(Default::default()),
             InterfaceType::Loopback => Interface::Loopback(Default::default()),

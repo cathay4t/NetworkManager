@@ -50,6 +50,8 @@ impl MergedInterfaces {
         desired.unify_veth_and_ethernet();
         current.unify_veth_and_ethernet();
 
+        desired.auto_managed_controller_ports(&current);
+
         let mut kernel_ifaces: HashMap<String, MergedInterface> =
             HashMap::new();
         let mut user_ifaces: HashMap<(String, InterfaceType), MergedInterface> =
@@ -249,6 +251,7 @@ impl MergedInterfaces {
 
         self.post_merge_sanitize_veth();
         self.post_merge_sanitize_wifi();
+        self.post_merge_sanitize_controller_and_port()?;
 
         Ok(())
     }

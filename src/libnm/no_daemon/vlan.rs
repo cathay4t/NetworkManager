@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BaseInterface, VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,
-    VlanRegistrationProtocol,
+    BaseInterface, ErrorKind, NmError, VlanConfig, VlanInterface, VlanProtocol,
+    VlanQosMapping, VlanRegistrationProtocol,
 };
 
 impl From<&VlanQosMapping> for nispor::VlanQosMapping {
@@ -103,19 +103,23 @@ impl From<&nispor::VlanInfo> for VlanConfig {
 }
 
 pub(crate) fn apply_vlan_conf(
-    np_iface: &mut nispor::IfaceConf,
+    mut np_iface: nispor::IfaceConf,
     iface: &VlanInterface,
-) {
+) -> Result<Vec<nispor::IfaceConf>, NmError> {
     if let Some(vlan_conf) = iface.vlan.as_ref() {
         if vlan_conf.id.is_some() && vlan_conf.base_iface.as_ref().is_some() {
             np_iface.vlan = Some(vlan_conf.into());
         } else {
-            log::warn!(
-                "BUG: apply_vlan_conf() got VLAN without ID or base-iface: \
-                 {iface:?}"
-            );
+            return Err(NmError::new(
+                ErrorKind::Bug,
+                format!(
+                    "apply_vlan_conf() got VLAN without ID or base-iface: \
+                     {iface:?}"
+                ),
+            ));
         }
     }
+    Ok(vec![np_iface])
 }
 
 impl VlanInterface {
