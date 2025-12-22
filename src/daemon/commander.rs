@@ -62,7 +62,7 @@ impl NmCommander {
 
                 if !nic_ready_state.is_empty() {
                     for iface in nic_ready_state.ifaces.iter() {
-                        log::info!(
+                        log::debug!(
                             "Applying saved state for interface {}/{}",
                             iface.name(),
                             iface.iface_type()
@@ -75,7 +75,7 @@ impl NmCommander {
                         Default::default(),
                     )
                     .await?;
-                    log::info!("Remaining saved state: {saved_state}");
+                    log::debug!("Remaining saved state: {saved_state}");
                 }
                 if saved_state.is_empty() {
                     log::info!("All saved state applied successfully");
