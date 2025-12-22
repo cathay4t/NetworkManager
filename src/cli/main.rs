@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod apply;
+mod diff;
 mod error;
 mod merge;
 mod show;
@@ -12,8 +13,8 @@ use nm::NmClient;
 
 pub(crate) use self::error::CliError;
 use self::{
-    apply::CommandApply, merge::CommandMerge, show::CommandShow,
-    wait::CommandWait, wifi::CommandWifi,
+    apply::CommandApply, diff::CommandDiff, merge::CommandMerge,
+    show::CommandShow, wait::CommandWait, wifi::CommandWifi,
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -41,6 +42,7 @@ async fn main() -> Result<(), CliError> {
         .subcommand(CommandShow::new_cmd())
         .subcommand(CommandApply::new_cmd())
         .subcommand(CommandWifi::new_cmd())
+        .subcommand(CommandDiff::new_cmd())
         .subcommand(CommandMerge::new_cmd());
 
     let matches = cli_cmd.get_matches_mut();
@@ -96,6 +98,9 @@ async fn call_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Ok(())
     } else if let Some(matches) = matches.subcommand_matches(CommandWifi::CMD) {
         CommandWifi::handle(matches).await?;
+        Ok(())
+    } else if let Some(matches) = matches.subcommand_matches(CommandDiff::CMD) {
+        CommandDiff::handle(matches).await?;
         Ok(())
     } else {
         Err(CliError::from("Unknown command"))

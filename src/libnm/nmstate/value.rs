@@ -142,6 +142,24 @@ pub(crate) fn gen_diff_json_value(
                 Some(desired.clone())
             }
         }
+        Value::Array(des) => {
+            if let Some(cur) = current.as_array() {
+                if des.len() != cur.len() {
+                    return Some(desired.clone());
+                }
+                for (index, des_element) in des.iter().enumerate() {
+                    let cur_element = &cur[index];
+                    if let Some(difference) =
+                        gen_diff_json_value(des_element, cur_element)
+                    {
+                        return Some(difference);
+                    }
+                }
+                None
+            } else {
+                Some(desired.clone())
+            }
+        }
         _ => {
             if desired != current {
                 Some(desired.clone())

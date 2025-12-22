@@ -39,6 +39,8 @@ type FromManager = (NmConfCmd, Sender<Result<NmConfReply, NmError>>);
 const INTERNAL_STATE_DIR: &str = "/etc/NetworkManager/states/internal";
 const APPLIED_STATE_PATH: &str =
     "/etc/NetworkManager/states/internal/applied.yml";
+const APPLIED_SECRETS_PATH: &str =
+    "/etc/NetworkManager/states/internal/applied.secrets.yml";
 
 #[derive(Debug)]
 pub(crate) struct NmConfWorker {
@@ -97,35 +99,74 @@ fn read_state_from_file() -> Result<NetworkState, NmError> {
         log::debug!("Saved state file {APPLIED_STATE_PATH} does not exist");
         return Ok(NetworkState::default());
     };
-
-    match serde_yaml::from_str::<NetworkState>(&content) {
-        Ok(s) => Ok(s),
+    let mut state = match serde_yaml::from_str::<NetworkState>(&content) {
+        Ok(s) => s,
         Err(e) => {
             log::debug!(
                 "Deleting corrupted saved state file {APPLIED_STATE_PATH}: {e}"
             );
             std::fs::remove_file(APPLIED_STATE_PATH).ok();
-            Ok(NetworkState::default())
+            NetworkState::default()
+        }
+    };
+
+    if std::path::Path::new(APPLIED_SECRETS_PATH).exists() {
+        if let Ok(secrets) = std::fs::read_to_string(APPLIED_SECRETS_PATH) {
+            match serde_yaml::from_str::<NetworkState>(&secrets) {
+                Ok(s) => {
+                    if let Err(e) = state.merge(&s) {
+                        log::warn!(
+                            "Failed to merge saved secrets into saved state, \
+                             using empty state: {e}"
+                        );
+                        state = NetworkState::default();
+                    }
+                }
+                Err(e) => {
+                    log::debug!(
+                        "Deleting corrupted saved secrets file \
+                         {APPLIED_SECRETS_PATH}: {e}"
+                    );
+                    std::fs::remove_file(APPLIED_SECRETS_PATH).ok();
+                }
+            };
         }
     }
+
+    Ok(state)
 }
 
 async fn save_state_to_file(net_state: &NetworkState) -> Result<(), NmError> {
     create_instal_state_dir()?;
     log::trace!("Saving state {net_state}");
 
-    let yaml_str = serde_yaml::to_string(&net_state).map_err(|e| {
+    let mut state = net_state.clone();
+    let secret_state = state.hide_secrets();
+
+    let state_yaml_str = serde_yaml::to_string(&state).map_err(|e| {
         NmError::new(
             ErrorKind::Bug,
-            format!("Failed to generate YAML for {net_state}: {e}"),
+            format!("Failed to generate YAML for {state}: {e}"),
         )
     })?;
-    // We should remove the file first to make sure newly created
-    // `APPLIED_STATE_PATH` is own by daemon uid.
-    std::fs::remove_file(APPLIED_STATE_PATH).ok();
+    let secret_yaml_str =
+        serde_yaml::to_string(&secret_state).map_err(|e| {
+            NmError::new(
+                ErrorKind::Bug,
+                format!("Failed to generate YAML for {secret_state}: {e}"),
+            )
+        })?;
+
     let mut fd = File::create(APPLIED_STATE_PATH).await?;
+    fd.set_permissions(PermissionsExt::from_mode(0o644)).await?;
+    fd.write_all(state_yaml_str.as_bytes()).await?;
+
+    // We should remove the file first to make sure newly created
+    // `APPLIED_SECRETS_PATH` is own by daemon uid.
+    std::fs::remove_file(APPLIED_SECRETS_PATH).ok();
+    let mut fd = File::create(APPLIED_SECRETS_PATH).await?;
     fd.set_permissions(PermissionsExt::from_mode(0o600)).await?;
-    fd.write_all(yaml_str.as_bytes()).await?;
+    fd.write_all(secret_yaml_str.as_bytes()).await?;
 
     Ok(())
 }

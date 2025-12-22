@@ -43,8 +43,12 @@ impl NetworkState {
     /// Nmstate cannot retrieve password
     pub const UNKNOWN_PASSWRD_STR: &str = "<_password_unknown_to_nmstate>";
 
-    pub fn hide_secrets(&mut self) {
+    /// Return a network state with secrets only leaving self without any
+    /// secrets.
+    pub fn hide_secrets(&mut self) -> Self {
+        let old = self.clone();
         self.ifaces.hide_secrets();
+        old.gen_diff_no_sanitize(self.clone()).unwrap_or_default()
     }
 
     pub fn is_empty(&self) -> bool {
