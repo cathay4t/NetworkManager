@@ -8,3 +8,6 @@ Before=network.target
 [Service]
 Type=exec
 ExecStart=/usr/bin/NetworkManager
+
+[Install]
+WantedBy=multi-user.target
