@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::{
-    SinkExt, StreamExt,
-    channel::{
-        mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
-        oneshot::{Sender, channel},
-    },
+use futures_channel::{
+    mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
+    oneshot::{Sender, channel},
 };
+use futures_util::{SinkExt, StreamExt};
 use nm::{ErrorKind, NmError};
 
 pub(crate) trait TaskWorker: Sized + Send {

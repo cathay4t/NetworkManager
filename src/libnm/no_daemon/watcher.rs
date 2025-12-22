@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::stream::{StreamExt, TryStreamExt};
+use futures_util::stream::{StreamExt, TryStreamExt};
 use rtnetlink::{
     MulticastGroup, new_multicast_connection,
     packet_core::NetlinkPayload,

@@ -2,7 +2,7 @@
 
 use std::os::unix::fs::PermissionsExt;
 
-use futures::channel::{mpsc::UnboundedReceiver, oneshot::Sender};
+use futures_channel::{mpsc::UnboundedReceiver, oneshot::Sender};
 use nm::{ErrorKind, InterfaceType, NetworkState, NmError, NmstateInterface};
 use tokio::{fs::File, io::AsyncWriteExt};
 

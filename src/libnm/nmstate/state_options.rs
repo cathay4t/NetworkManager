@@ -70,6 +70,9 @@ pub enum NmstateStateKind {
 pub struct NmstateApplyOption {
     /// Do not verify whether post applied state matches with desired state.
     pub no_verify: bool,
+    /// When set to true, the desire state will not be persistent after OS
+    /// reboot. Default to false.
+    pub memory_only: bool,
 }
 
 impl NmstateApplyOption {
@@ -79,6 +82,11 @@ impl NmstateApplyOption {
 
     pub fn no_verify(mut self) -> Self {
         self.no_verify = true;
+        self
+    }
+
+    pub fn memory_only(mut self) -> Self {
+        self.memory_only = true;
         self
     }
 }

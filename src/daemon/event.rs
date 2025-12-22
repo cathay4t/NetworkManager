@@ -1,19 +1,56 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nm::{
-    ErrorKind, Interface, InterfaceState, LinkEvent, MergedNetworkState,
+    ErrorKind, Interface, InterfaceState, InterfaceType, MergedNetworkState,
     NetworkState, NmError, NmNoDaemon, NmstateApplyOption, NmstateInterface,
     NmstateQueryOption, WifiPhyInterface,
 };
 
 use super::commander::NmCommander;
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct NmLinkEvent {
+    pub iface_name: String,
+    pub iface_type: InterfaceType,
+    pub event_type: NmLinkEventType,
+}
+
+impl NmLinkEvent {
+    pub(crate) fn new(
+        iface_name: String,
+        iface_type: InterfaceType,
+        event_type: NmLinkEventType,
+    ) -> Self {
+        Self {
+            iface_name,
+            iface_type,
+            event_type,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NmLinkEventType {
+    CarrierUp,
+    CarrierDown,
+}
+
+impl NmLinkEvent {
+    pub(crate) fn is_carrier_up(&self) -> bool {
+        self.event_type == NmLinkEventType::CarrierUp
+    }
+
+    pub(crate) fn is_carrier_down(&self) -> bool {
+        self.event_type == NmLinkEventType::CarrierDown
+    }
+}
+
 impl NmCommander {
     pub(crate) async fn handle_link_event(
         &mut self,
-        event: LinkEvent,
+        event: NmLinkEvent,
     ) -> Result<(), NmError> {
-        let iface_name = event.iface_name();
+        let iface_name = event.iface_name.as_str();
         let saved_state = self.conf_manager.query_state().await?;
         let cur_state =
             NmNoDaemon::query_network_state(NmstateQueryOption::running())
@@ -44,7 +81,7 @@ impl NmCommander {
 
     async fn handle_wifi_phy_iface(
         &mut self,
-        event: &LinkEvent,
+        event: &NmLinkEvent,
         cur_iface: &WifiPhyInterface,
         saved_state: &NetworkState,
         cur_state: &NetworkState,
@@ -67,16 +104,16 @@ impl NmCommander {
             {
                 let mut new_iface = cur_iface.clone();
                 new_iface.base_iface_mut().state = InterfaceState::Up;
-                if event.is_link_up() {
+                if event.is_carrier_up() {
                     new_iface.base.ipv4 = wifi_cfg_iface.base.ipv4.clone();
                     new_iface.base.ipv6 = wifi_cfg_iface.base.ipv6.clone();
-                } else if event.is_link_down() {
+                } else if event.is_carrier_down() {
                     new_iface.base.ipv4 = Some(Default::default());
                     new_iface.base.ipv6 = Some(Default::default());
                 } else {
                     return Err(NmError::new(
                         ErrorKind::Bug,
-                        format!("Unsupported link event {event}"),
+                        format!("Unsupported link event {event:?}"),
                     ));
                 }
                 new_iface.wifi = None;
@@ -87,13 +124,42 @@ impl NmCommander {
                 let merged_state = MergedNetworkState::new(
                     new_state,
                     cur_state.clone(),
-                    NmstateApplyOption::new().no_verify(),
+                    NmstateApplyOption::new().no_verify().memory_only(),
                 )?;
 
                 NmNoDaemon::apply_merged_state(&merged_state).await?;
                 self.dhcpv4_manager
                     .apply_dhcp_config(None, &merged_state)
                     .await?;
+            }
+        } else {
+            // New wifi NIC found
+            let mut new_state = NetworkState::default();
+            for wifi_cfg_iface in
+                saved_state.ifaces.user_ifaces.values().filter_map(|i| {
+                    if let Interface::WifiCfg(wifi_cfg_iface) = i {
+                        Some(wifi_cfg_iface)
+                    } else {
+                        None
+                    }
+                })
+            {
+                if wifi_cfg_iface.parent().is_none()
+                    || wifi_cfg_iface.parent() == Some(&event.iface_name)
+                {
+                    new_state.ifaces.push(Interface::WifiCfg(Box::new(
+                        *wifi_cfg_iface.clone(),
+                    )));
+                }
+            }
+            if !new_state.is_empty() {
+                let merged_state = MergedNetworkState::new(
+                    new_state,
+                    cur_state.clone(),
+                    NmstateApplyOption::new().no_verify().memory_only(),
+                )?;
+
+                NmNoDaemon::apply_merged_state(&merged_state).await?;
             }
         }
         Ok(())

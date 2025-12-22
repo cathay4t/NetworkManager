@@ -2,14 +2,24 @@
 
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
+use futures_channel::mpsc::{UnboundedReceiver, unbounded};
+use futures_util::stream::StreamExt;
 use nm::{ErrorKind, NmClient, NmError, NmIpcConnection};
 use nm_plugin::NmIpcListener;
 
-use super::{api::process_api_connection, commander::NmCommander};
+use super::{
+    api::process_api_connection, commander::NmCommander, event::NmLinkEvent,
+};
+
+#[derive(Debug, Clone)]
+pub(crate) enum NmManagerCmd {
+    LinkEvent(Box<NmLinkEvent>),
+}
 
 #[derive(Debug)]
 pub(crate) struct NmDaemon {
     api_ipc: NmIpcListener,
+    managers_ipc: UnboundedReceiver<NmManagerCmd>,
     // Daemon will fork(tokio is controlling maximum threads) new thread for
     // each client connection, this commander will be cloned and move to all
     // forked threads.
@@ -35,7 +45,9 @@ impl NmDaemon {
             )
         })?;
 
-        let commander = NmCommander::new().await?;
+        let (sender, receiver) = unbounded::<NmManagerCmd>();
+
+        let commander = NmCommander::new(sender).await?;
         // Start a thread to load saved state instead of hanging
         let mut new_commander = commander.clone();
         tokio::spawn(async move {
@@ -47,7 +59,11 @@ impl NmDaemon {
             }
         });
 
-        Ok(Self { api_ipc, commander })
+        Ok(Self {
+            api_ipc,
+            commander,
+            managers_ipc: receiver,
+        })
     }
 
     /// Please run this function in a thread
@@ -56,6 +72,14 @@ impl NmDaemon {
             tokio::select! {
                 result = self.api_ipc.accept() => {
                     self.handle_api_connection(result).await;
+                },
+                cmd = self.managers_ipc.next() => {
+                    if let Some(cmd) = cmd {
+                        log::trace!("Got command from manager {cmd:?}");
+                        if let Err(e) = self.handle_manager_cmd(cmd).await {
+                            log::error!("{e}");
+                        }
+                    }
                 },
                 // TODO(Gris Ge): Handle TERM signal here:
                 //  * Request plugin to quit
@@ -79,5 +103,17 @@ impl NmDaemon {
                 log::info!("Ignoring failure of accepting API connection: {e}");
             }
         }
+    }
+
+    async fn handle_manager_cmd(
+        &mut self,
+        cmd: NmManagerCmd,
+    ) -> Result<(), NmError> {
+        match cmd {
+            NmManagerCmd::LinkEvent(event) => {
+                self.commander.handle_link_event(*event).await?
+            }
+        }
+        Ok(())
     }
 }

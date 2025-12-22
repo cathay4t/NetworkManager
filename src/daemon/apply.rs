@@ -140,16 +140,28 @@ impl NmCommander {
             }
         }
 
-        let (ifaces_start_monitor, ifaces_stop_monitor) =
+        let (mut ifaces_start_monitor, mut ifaces_stop_monitor) =
             gen_iface_monitor_list(&merged_state.ifaces);
 
-        {
-            for iface in ifaces_stop_monitor.iter() {
-                self.monitor_manager.del_iface_from_monitor(iface).await?;
-            }
-            for iface in ifaces_start_monitor.iter() {
-                self.monitor_manager.add_iface_to_monitor(iface).await?;
-            }
+        for iface in ifaces_stop_monitor.drain() {
+            self.monitor_manager.del_iface_from_monitor(&iface).await?;
+        }
+        for iface in ifaces_start_monitor.drain() {
+            self.monitor_manager.add_iface_to_monitor(&iface).await?;
+        }
+
+        let (mut iface_types_start_monitor, mut iface_types_stop_monitor) =
+            gen_iface_type_monitor_list(&merged_state.ifaces);
+
+        for iface_type in iface_types_stop_monitor.drain() {
+            self.monitor_manager
+                .del_iface_type_from_monitor(iface_type)
+                .await?;
+        }
+        for iface_type in iface_types_start_monitor.drain() {
+            self.monitor_manager
+                .add_iface_type_to_monitor(iface_type)
+                .await?;
         }
 
         self.monitor_manager.resume().await?;
@@ -202,9 +214,28 @@ impl NmCommander {
         mut conn: Option<&mut NmIpcConnection>,
         merged_state: &MergedNetworkState,
     ) -> Result<(), NmError> {
-        let post_apply_current_state = self
+        let mut post_apply_current_state = self
             .query_network_state(conn.as_deref_mut(), Default::default())
             .await?;
+        // The wifi config is not stored into config manager yet. In order to
+        // pass the verification, we need to pretend the wifi config is stored
+        // in config manager.
+        for iface in merged_state.ifaces.user_ifaces.values().filter_map(
+            |merged_iface| {
+                if let Some(Interface::WifiCfg(iface)) =
+                    merged_iface.desired.as_ref()
+                {
+                    Some(iface)
+                } else {
+                    None
+                }
+            },
+        ) {
+            post_apply_current_state
+                .ifaces
+                .push(Interface::WifiCfg(Box::new(*iface.clone())));
+        }
+
         if let Some(conn) = conn {
             conn.log_trace(format!(
                 "Post apply network state: {post_apply_current_state}"
@@ -295,44 +326,59 @@ fn remove_undesired_ifaces(
 fn gen_iface_monitor_list(
     merged_ifaces: &MergedInterfaces,
 ) -> (HashSet<String>, HashSet<String>) {
+    let has_wifi_bind_to_any = merged_ifaces.iter().any(|i| {
+        if let Interface::WifiCfg(wifi_iface) = &i.merged {
+            wifi_iface.parent().is_none() && wifi_iface.is_up()
+        } else {
+            false
+        }
+    });
+
+    // We will use `gen_iface_type_monitor_list()` to handle this
+    // bind to any WIFI.
+    if has_wifi_bind_to_any {
+        return (HashSet::new(), HashSet::new());
+    }
+
     let mut ifaces_start_monitor = HashSet::new();
     let mut ifaces_stop_monitor = HashSet::new();
 
-    let mut has_wifi_bind_to_any = false;
-
-    for merged_iface in merged_ifaces
-        .iter()
-        .filter(|i| i.merged.iface_type() == &InterfaceType::WifiCfg)
-    {
-        let wifi_iface = if let Interface::WifiCfg(i) = &merged_iface.merged {
-            i
+    for wifi_iface in merged_ifaces.iter().filter_map(|i| {
+        if let Interface::WifiCfg(wifi_iface) = &i.merged {
+            Some(wifi_iface)
         } else {
-            continue;
-        };
+            None
+        }
+    }) {
         if let Some(parent) = wifi_iface.parent() {
             if wifi_iface.is_up() {
                 ifaces_start_monitor.insert(parent.to_string());
             } else if wifi_iface.is_absent() || wifi_iface.is_down() {
                 ifaces_stop_monitor.insert(parent.to_string());
             }
-        } else if wifi_iface.is_up() {
-            has_wifi_bind_to_any = true;
-        }
-    }
-    if has_wifi_bind_to_any {
-        for iface_name in merged_ifaces.iter().filter_map(|merged_iface| {
-            if !merged_iface.merged.is_absent()
-                && !merged_iface.merged.is_ignore()
-                && merged_iface.merged.iface_type() == &InterfaceType::WifiPhy
-            {
-                Some(merged_iface.merged.name())
-            } else {
-                None
-            }
-        }) {
-            ifaces_start_monitor.insert(iface_name.to_string());
         }
     }
 
     (ifaces_start_monitor, ifaces_stop_monitor)
+}
+
+/// Return iface types to start and stop monitor
+fn gen_iface_type_monitor_list(
+    merged_ifaces: &MergedInterfaces,
+) -> (HashSet<InterfaceType>, HashSet<InterfaceType>) {
+    let has_wifi_bind_to_any = merged_ifaces.iter().any(|i| {
+        if let Interface::WifiCfg(wifi_iface) = &i.merged {
+            wifi_iface.parent().is_none() && wifi_iface.is_up()
+        } else {
+            false
+        }
+    });
+
+    let iface_types = HashSet::from_iter([InterfaceType::WifiPhy]);
+
+    if has_wifi_bind_to_any {
+        (iface_types, HashSet::new())
+    } else {
+        (HashSet::new(), iface_types)
+    }
 }

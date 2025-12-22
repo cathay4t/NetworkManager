@@ -15,7 +15,8 @@ log = { workspace = true }
 serde_yaml = { workspace = true }
 tokio = { workspace = true }
 nm = { path = "../libnm" }
-futures = { workspace = true }
+futures-util = { workspace = true }
+futures-channel = { workspace = true }
 uuid = { workspace = true }
 clap = { workspace = true }
 

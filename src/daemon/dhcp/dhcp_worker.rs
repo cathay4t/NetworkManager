@@ -5,13 +5,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use futures::{
-    StreamExt,
-    channel::{
-        mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
-        oneshot::Sender,
-    },
+use futures_channel::{
+    mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
+    oneshot::Sender,
 };
+use futures_util::StreamExt;
 use mozim::{DhcpV4Client, DhcpV4Config, DhcpV4Lease, DhcpV4State};
 use nm::{
     BaseInterface, DhcpState, ErrorKind, Interface, InterfaceIpAddr,

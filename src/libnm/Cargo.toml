@@ -19,7 +19,7 @@ tokio = { workspace = true }
 uuid = { workspace = true }
 nispor = { workspace = true }
 rtnetlink = { workspace = true }
-futures = { workspace = true }
+futures-util = { workspace = true }
 zbus = { workspace = true }
 zvariant = { workspace = true }
 wl-nl80211 = { workspace = true }

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use futures::StreamExt;
+use futures_util::StreamExt;
 use zvariant::{ObjectPath, OwnedObjectPath};
 
 use super::{
@@ -412,11 +412,10 @@ impl NmWpaSupDbus<'_> {
         iface_obj_path: &str,
     ) -> Result<(), NmError> {
         log::trace!("Starting WIFI active scan on {iface_obj_path}",);
-        let obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
             WPA_SUP_DBUS_IFACE_ROOT,
-            obj_path.as_str(),
+            iface_obj_path,
             WPA_SUP_DBUS_IFACE_IFACE,
         )
         .await
@@ -437,11 +436,10 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<bool, NmError> {
-        let obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
             WPA_SUP_DBUS_IFACE_ROOT,
-            obj_path.as_str(),
+            iface_obj_path,
             WPA_SUP_DBUS_IFACE_IFACE,
         )
         .await
@@ -456,11 +454,10 @@ impl NmWpaSupDbus<'_> {
         &self,
         iface_obj_path: &str,
     ) -> Result<(), NmError> {
-        let obj_path = str_to_obj_path(iface_obj_path)?;
         let proxy = zbus::Proxy::new(
             &self.connection,
             WPA_SUP_DBUS_IFACE_ROOT,
-            obj_path.as_str(),
+            iface_obj_path,
             WPA_SUP_DBUS_IFACE_IFACE,
         )
         .await
@@ -471,6 +468,26 @@ impl NmWpaSupDbus<'_> {
             .map_err(map_zbus_err)?;
         stream.next().await;
         Ok(())
+    }
+
+    pub(crate) async fn abort_scan(
+        &self,
+        iface_obj_path: &str,
+    ) -> Result<(), NmError> {
+        log::trace!("Aborting WIFI scan on {iface_obj_path}",);
+        let proxy = zbus::Proxy::new(
+            &self.connection,
+            WPA_SUP_DBUS_IFACE_ROOT,
+            iface_obj_path,
+            WPA_SUP_DBUS_IFACE_IFACE,
+        )
+        .await
+        .map_err(map_zbus_err)?;
+
+        proxy
+            .call::<&str, (), ()>("AbortScan", &())
+            .await
+            .map_err(map_zbus_err)
     }
 }
 

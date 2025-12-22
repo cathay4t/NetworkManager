@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use nm::{
-    ErrorKind, NetworkState, NmError, NmIpcConnection, NmNoDaemon,
-    NmstateQueryOption, NmstateStateKind,
+    ErrorKind, InterfaceType, NetworkState, NmError, NmIpcConnection,
+    NmNoDaemon, NmstateInterface, NmstateQueryOption, NmstateStateKind,
 };
 
 use super::commander::NmCommander;
@@ -32,6 +32,15 @@ impl NmCommander {
                 for plugins_net_state in plugins_net_states {
                     net_state.merge(&plugins_net_state)?;
                 }
+
+                // Use WIFI config stored in conf_manager
+                let mut saved_state = self.conf_manager.query_state().await?;
+                for (_, iface) in saved_state.ifaces.user_ifaces.drain() {
+                    if iface.iface_type() == &InterfaceType::WifiCfg {
+                        net_state.ifaces.push(iface);
+                    }
+                }
+
                 self.dhcpv4_manager.fill_dhcp_states(&mut net_state).await?;
 
                 if !opt.include_secrets {

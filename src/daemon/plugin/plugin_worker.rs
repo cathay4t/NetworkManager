@@ -6,11 +6,8 @@ use std::{
     os::unix::fs::{FileTypeExt, PermissionsExt},
 };
 
-use futures::{
-    StreamExt,
-    channel::{mpsc::UnboundedReceiver, oneshot::Sender},
-    stream::FuturesUnordered,
-};
+use futures_channel::{mpsc::UnboundedReceiver, oneshot::Sender};
+use futures_util::{StreamExt, stream::FuturesUnordered};
 use nm::{NetworkState, NmError, NmstateApplyOption, NmstateQueryOption};
 use nm_plugin::NmPluginClient;
 

@@ -40,9 +40,6 @@ pub(crate) async fn process_api_connection(
                     .await;
                 conn.send(result).await?;
             }
-            NmClientCmd::NotifyLinkEvent(event) => {
-                commander.handle_link_event(*event).await?;
-            }
             _ => {
                 conn.send::<Result<NetworkState, NmError>>(Err(NmError::new(
                     ErrorKind::NoSupport,

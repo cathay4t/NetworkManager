@@ -2,14 +2,16 @@
 
 use std::collections::HashSet;
 
+use futures_channel::mpsc::UnboundedSender;
 use nm::{
     InterfaceType, NetworkState, NmError, NmNoDaemon, NmstateInterface,
     NmstateQueryOption,
 };
 
 use super::{
-    conf::NmConfManager, dhcp::NmDhcpV4Manager, monitor::NmMonitorManager,
-    plugin::NmPluginManager, udev::udev_net_device_is_initialized,
+    conf::NmConfManager, daemon::NmManagerCmd, dhcp::NmDhcpV4Manager,
+    monitor::NmMonitorManager, plugin::NmPluginManager,
+    udev::udev_net_device_is_initialized,
 };
 
 const BOOTUP_NIC_CHECK_MAX_COUNT: u64 = 30;
@@ -30,10 +32,12 @@ pub(crate) struct NmCommander {
 }
 
 impl NmCommander {
-    pub(crate) async fn new() -> Result<Self, NmError> {
+    pub(crate) async fn new(
+        sender: UnboundedSender<NmManagerCmd>,
+    ) -> Result<Self, NmError> {
         Ok(Self {
             dhcpv4_manager: NmDhcpV4Manager::new().await?,
-            monitor_manager: NmMonitorManager::new().await?,
+            monitor_manager: NmMonitorManager::new(sender.clone()).await?,
             conf_manager: NmConfManager::new().await?,
             plugin_manager: NmPluginManager::new().await?,
         })
