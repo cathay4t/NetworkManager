@@ -14,10 +14,9 @@ use super::{
 
 const BOOTUP_NIC_CHECK_MAX_COUNT: u64 = 30;
 const BOOTUP_NIC_CHECK_MAX_QUICK: u64 = 10;
-// We retry every second for the first 10 seconds. So we have quick start
-// for most uses.
-const BOOTUP_NIC_CHECK_INTERVAL_SEC_QUICK: u64 = 1;
-// After 10 seconds, we only retry every 10 seconds for slow NICs.
+// During quick retry, we retry every 0.5 second.
+const BOOTUP_NIC_CHECK_INTERVAL_MS_QUICK: u64 = 500;
+// After quick retry, we only retry every 10 seconds.
 const BOOTUP_NIC_CHECK_INTERVAL_SEC_SLOW: u64 = 10;
 
 /// Commander manages all the task managers.
@@ -72,7 +71,7 @@ impl NmCommander {
                         Default::default(),
                     )
                     .await?;
-                    log::warn!("Remaining state: {saved_state}");
+                    log::info!("Remaining saved state: {saved_state}");
                 }
                 if saved_state.is_empty() {
                     log::info!("All saved state applied successfully");
@@ -80,8 +79,8 @@ impl NmCommander {
                 }
 
                 if retry_count < BOOTUP_NIC_CHECK_MAX_QUICK {
-                    tokio::time::sleep(std::time::Duration::from_secs(
-                        BOOTUP_NIC_CHECK_INTERVAL_SEC_QUICK,
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        BOOTUP_NIC_CHECK_INTERVAL_MS_QUICK,
                     ))
                     .await;
                 } else {
@@ -133,48 +132,48 @@ fn remove_ready_state(
 ) -> NetworkState {
     let mut ret = NetworkState::default();
     // HashSet of `(iface_name, iface_type)`.
-    let mut pending_ifaces: HashSet<(String, InterfaceType)> = HashSet::new();
+    let mut pending_ifaces: HashSet<(String, Option<InterfaceType>)> =
+        HashSet::new();
     for iface_name in ready_iface_names {
         if let Some(iface) = state.ifaces.get(iface_name.as_str(), None) {
-            if let Some(ctrl) = iface.base_iface().controller.as_ref()
-                && let Some(ctrl_type) =
-                    iface.base_iface().controller_type.as_ref()
-            {
-                // We only include controller after all its ports are ready.
-                if let Some(ctrl_iface) =
-                    state.ifaces.get(ctrl, Some(ctrl_type))
-                    && let Some(ports) = ctrl_iface.ports()
-                    && ports
-                        .iter()
-                        .all(|p| ready_iface_names.contains(&p.to_string()))
-                {
-                    pending_ifaces.insert((
-                        ctrl_iface.name().to_string(),
-                        ctrl_iface.iface_type().clone(),
-                    ));
-                    pending_ifaces.insert((
-                        iface.name().to_string(),
-                        iface.iface_type().clone(),
-                    ));
-                }
-            } else {
-                // No controller
-                pending_ifaces.insert((
-                    iface.name().to_string(),
-                    iface.iface_type().clone(),
-                ));
+            if iface.base_iface().controller.is_none() {
+                pending_ifaces.insert((iface.name().to_string(), None));
             }
         }
     }
 
+    // Include all virtual interface if not controller or controller has all
+    // ports ready
+    for iface in state.ifaces.iter().filter(|i| i.is_virtual()) {
+        if iface.is_controller() {
+            if let Some(ports) = iface.ports()
+                && is_all_virtual_or_ready(&ports, ready_iface_names, state)
+            {
+                pending_ifaces.insert((
+                    iface.name().to_string(),
+                    Some(iface.iface_type().clone()),
+                ));
+                for port in ports {
+                    pending_ifaces.insert((port.to_string(), None));
+                }
+            }
+        } else {
+            pending_ifaces.insert((
+                iface.name().to_string(),
+                Some(iface.iface_type().clone()),
+            ));
+        }
+    }
+
     for (iface_name, iface_type) in pending_ifaces.drain() {
-        if let Some(iface) =
-            state.ifaces.remove(iface_name.as_str(), Some(&iface_type))
+        if let Some(iface) = state
+            .ifaces
+            .remove(iface_name.as_str(), iface_type.as_ref())
         {
             ret.ifaces.push(iface);
         }
 
-        if !iface_type.is_userspace() {
+        if iface_type.map(|i| i.is_userspace()) != Some(true) {
             ret.routes = state.routes.clone();
             if let Some(routes) = ret.routes.config.as_mut() {
                 routes.retain(|r| {
@@ -191,4 +190,25 @@ fn remove_ready_state(
         }
     }
     ret
+}
+
+fn is_all_virtual_or_ready(
+    ports: &[&str],
+    ready_iface_names: &[String],
+    saved_state: &NetworkState,
+) -> bool {
+    for port in ports {
+        let port = port.to_string();
+        if !ready_iface_names.contains(&port)
+            && saved_state
+                .ifaces
+                .kernel_ifaces
+                .get(&port)
+                .map(|i| i.is_virtual())
+                != Some(true)
+        {
+            return false;
+        }
+    }
+    true
 }
