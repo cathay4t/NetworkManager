@@ -14,9 +14,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::value::get_json_value_difference;
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    InterfaceState, InterfaceType, JsonDisplayHideSecrets, LoopbackInterface,
-    NmError, NmstateInterface, OvsBridgeInterface, OvsInterface,
-    UnknownInterface, VlanInterface, WifiCfgInterface, WifiPhyInterface,
+    InterfaceState, InterfaceType, JsonDisplayHideSecrets,
+    LinuxBridgeInterface, LoopbackInterface, NmError, NmstateInterface,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
+    WifiCfgInterface, WifiPhyInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonDisplayHideSecrets)]
@@ -42,6 +43,8 @@ pub enum Interface {
     Vlan(Box<VlanInterface>),
     /// Bond Interface
     Bond(Box<BondInterface>),
+    /// Linux Bridge Interface
+    LinuxBridge(Box<LinuxBridgeInterface>),
     /// Unknown interface.
     Unknown(Box<UnknownInterface>),
 }
@@ -127,6 +130,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = BondInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Bond(Box::new(inner)))
+            }
+            Some(InterfaceType::LinuxBridge) => {
+                let inner = LinuxBridgeInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::LinuxBridge(Box::new(inner)))
             }
             _ => {
                 let inner = UnknownInterface::deserialize(v)
@@ -269,6 +277,7 @@ macro_rules! gen_iface_trait_impl {
                     Self::Dummy,
                     Self::Vlan,
                     Self::Bond,
+                    Self::LinuxBridge,
                     Self::Unknown,
                 )
             }
@@ -292,6 +301,7 @@ macro_rules! gen_iface_trait_impl_mut {
                     Self::Dummy,
                     Self::Vlan,
                     Self::Bond,
+                    Self::LinuxBridge,
                     Self::Unknown,
                 )
             }
@@ -331,6 +341,7 @@ impl NmstateInterface for Interface {
             Interface::Dummy,
             Interface::Vlan,
             Interface::Bond,
+            Interface::LinuxBridge,
             Interface::Unknown,
         )
     }
@@ -348,6 +359,7 @@ impl NmstateInterface for Interface {
             Interface::Dummy,
             Interface::Vlan,
             Interface::Bond,
+            Interface::LinuxBridge,
             Interface::Unknown,
         )
     }
@@ -370,6 +382,7 @@ impl NmstateInterface for Interface {
             Interface::Dummy,
             Interface::Vlan,
             Interface::Bond,
+            Interface::LinuxBridge,
             Interface::Unknown,
         )
     }
@@ -390,6 +403,7 @@ impl NmstateInterface for Interface {
             Interface::Dummy,
             Interface::Vlan,
             Interface::Bond,
+            Interface::LinuxBridge,
             Interface::Unknown,
         )
     }
@@ -407,6 +421,7 @@ impl NmstateInterface for Interface {
             Interface::Dummy,
             Interface::Vlan,
             Interface::Bond,
+            Interface::LinuxBridge,
             Interface::Unknown,
         )
     }
@@ -418,7 +433,9 @@ impl From<BaseInterface> for Interface {
             InterfaceType::Ethernet => Interface::Ethernet(Default::default()),
             InterfaceType::Hsr => todo!(),
             InterfaceType::Bond => Interface::Bond(Default::default()),
-            InterfaceType::LinuxBridge => todo!(),
+            InterfaceType::LinuxBridge => {
+                Interface::LinuxBridge(Default::default())
+            }
             InterfaceType::Dummy => Interface::Dummy(Default::default()),
             InterfaceType::Loopback => Interface::Loopback(Default::default()),
             InterfaceType::MacVlan => todo!(),

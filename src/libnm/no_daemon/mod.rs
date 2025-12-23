@@ -7,6 +7,8 @@ mod ethernet;
 mod iface;
 mod inter_ifaces;
 mod ip;
+mod linux_bridge;
+mod linux_bridge_port_vlan;
 mod ovs;
 mod query;
 mod route;

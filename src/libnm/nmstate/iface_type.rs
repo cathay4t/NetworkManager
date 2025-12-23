@@ -134,6 +134,7 @@ impl InterfaceType {
         matches!(
             self,
             InterfaceType::Ethernet
+                | InterfaceType::LinuxBridge
                 | InterfaceType::OvsBridge
                 | InterfaceType::OvsInterface
                 | InterfaceType::Veth

@@ -2,7 +2,8 @@
 
 use super::{
     base_iface::apply_base_iface_link_changes, bond::apply_bond_conf,
-    ethernet::apply_ethernet_conf, vlan::apply_vlan_conf,
+    ethernet::apply_ethernet_conf, linux_bridge::apply_bridge_conf,
+    vlan::apply_vlan_conf,
 };
 use crate::{
     BaseInterface, Interface, InterfaceState, InterfaceType, MergedInterfaces,
@@ -80,6 +81,16 @@ pub(crate) fn apply_iface_link_changes(
                 None
             },
             merged_ifaces,
+        )
+    } else if let Interface::LinuxBridge(apply_iface) = apply_iface {
+        apply_bridge_conf(
+            np_iface,
+            apply_iface,
+            if let Some(Interface::LinuxBridge(cur_iface)) = cur_iface {
+                Some(cur_iface)
+            } else {
+                None
+            },
         )
     } else {
         Ok(vec![np_iface])

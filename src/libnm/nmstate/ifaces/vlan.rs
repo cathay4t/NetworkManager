@@ -231,6 +231,8 @@ pub enum VlanProtocol {
     #[serde(rename = "802.1ad")]
     /// Deserialize and serialize from/to `802.1ad`.
     Ieee8021Ad,
+    /// Unknown VLAN protocol
+    Unknown,
 }
 
 impl std::fmt::Display for VlanProtocol {
@@ -241,6 +243,7 @@ impl std::fmt::Display for VlanProtocol {
             match self {
                 Self::Ieee8021Q => "802.1q",
                 Self::Ieee8021Ad => "802.1ad",
+                Self::Unknown => "unknown",
             }
         )
     }

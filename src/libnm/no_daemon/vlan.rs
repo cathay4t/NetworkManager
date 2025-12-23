@@ -5,6 +5,19 @@ use crate::{
     VlanQosMapping, VlanRegistrationProtocol,
 };
 
+impl From<nispor::VlanProtocol> for VlanProtocol {
+    fn from(v: nispor::VlanProtocol) -> Self {
+        match v {
+            nispor::VlanProtocol::Ieee8021Q => VlanProtocol::Ieee8021Q,
+            nispor::VlanProtocol::Ieee8021AD => VlanProtocol::Ieee8021Ad,
+            p => {
+                log::debug!("Got unknown VLAN protocol {p:?}");
+                VlanProtocol::Unknown
+            }
+        }
+    }
+}
+
 impl From<&VlanQosMapping> for nispor::VlanQosMapping {
     fn from(v: &VlanQosMapping) -> Self {
         Self {
@@ -27,6 +40,7 @@ impl From<&VlanConfig> for nispor::VlanConf {
                 VlanProtocol::Ieee8021Ad => {
                     np_vlan.protocol = Some(nispor::VlanProtocol::Ieee8021AD)
                 }
+                VlanProtocol::Unknown => (),
             }
         }
         if let Some(protocol) = v.registration_protocol {
@@ -72,18 +86,7 @@ impl From<&nispor::VlanInfo> for VlanConfig {
         VlanConfig {
             id: Some(np_vlan_conf.vlan_id),
             base_iface: Some(np_vlan_conf.base_iface.clone()),
-            protocol: match &np_vlan_conf.protocol {
-                nispor::VlanProtocol::Ieee8021Q => {
-                    Some(VlanProtocol::Ieee8021Q)
-                }
-                nispor::VlanProtocol::Ieee8021AD => {
-                    Some(VlanProtocol::Ieee8021Ad)
-                }
-                p => {
-                    log::warn!("Got unknown VLAN protocol {p:?}",);
-                    None
-                }
-            },
+            protocol: Some(np_vlan_conf.protocol.into()),
             reorder_headers: Some(np_vlan_conf.is_reorder_hdr),
             loose_binding: Some(np_vlan_conf.is_loose_binding),
             bridge_binding: Some(np_vlan_conf.is_bridge_binding),

@@ -6,9 +6,9 @@ use super::{
 };
 use crate::{
     BondInterface, DummyInterface, ErrorKind, EthernetInterface, Interface,
-    InterfaceType, LoopbackInterface, NetworkState, NmError, NmNoDaemon,
-    NmstateInterface, NmstateQueryOption, UnknownInterface, VlanInterface,
-    WifiPhyInterface,
+    InterfaceType, LinuxBridgeInterface, LoopbackInterface, NetworkState,
+    NmError, NmNoDaemon, NmstateInterface, NmstateQueryOption,
+    UnknownInterface, VlanInterface, WifiPhyInterface,
 };
 
 impl NmNoDaemon {
@@ -90,6 +90,19 @@ impl NmNoDaemon {
                     bond_iface.append_bond_port_config(port_np_ifaces);
 
                     Interface::Bond(Box::new(bond_iface))
+                }
+                InterfaceType::LinuxBridge => {
+                    let mut br_iface = LinuxBridgeInterface::new_from_nispor(
+                        base_iface, np_iface,
+                    );
+                    let mut port_np_ifaces = Vec::new();
+                    for port_name in br_iface.ports().unwrap_or_default() {
+                        if let Some(p) = np_state.ifaces.get(port_name) {
+                            port_np_ifaces.push(p);
+                        }
+                    }
+                    br_iface.append_br_port_config(port_np_ifaces);
+                    Interface::LinuxBridge(Box::new(br_iface))
                 }
                 _ => {
                     log::trace!(
