@@ -19,6 +19,7 @@ futures-util = { workspace = true }
 futures-channel = { workspace = true }
 uuid = { workspace = true }
 clap = { workspace = true }
+nix = { workspace = true, features = ["term"] }
 
 [[bin]]
 name = "nmc"
