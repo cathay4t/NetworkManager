@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::time::SystemTime;
+
 use nm::{
     ErrorKind, Interface, InterfaceState, InterfaceType, MergedNetworkState,
     NetworkState, NmError, NmNoDaemon, NmstateApplyOption, NmstateInterface,
@@ -13,6 +15,7 @@ pub(crate) struct NmLinkEvent {
     pub iface_name: String,
     pub iface_type: InterfaceType,
     pub event_type: NmLinkEventType,
+    pub time_stamp: SystemTime,
 }
 
 impl NmLinkEvent {
@@ -25,6 +28,7 @@ impl NmLinkEvent {
             iface_name,
             iface_type,
             event_type,
+            time_stamp: SystemTime::now(),
         }
     }
 }

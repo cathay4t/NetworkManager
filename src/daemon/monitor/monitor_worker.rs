@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::HashSet, io::Read};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Read,
+};
 
 use futures_channel::{
     mpsc::{UnboundedReceiver, UnboundedSender},
@@ -26,6 +29,10 @@ use super::super::{
     event::{NmLinkEvent, NmLinkEventType},
     task::TaskWorker,
 };
+
+// When the same event happens, how long should consider previous event expired
+// and OK to emit the same event again.
+const EVENT_EXPIRE_TIME_SEC: u64 = 30;
 
 #[derive(Debug, Clone)]
 pub(crate) enum NmMonitorCmd {
@@ -93,6 +100,7 @@ pub(crate) struct NmMonitorWorker {
     iface_type_monitor_list: HashSet<InterfaceType>,
     msg_to_commander: Option<UnboundedSender<NmManagerCmd>>,
     manual_paused: bool,
+    emited: HashMap<String, NmLinkEvent>,
 }
 
 impl TaskWorker for NmMonitorWorker {
@@ -110,6 +118,7 @@ impl TaskWorker for NmMonitorWorker {
             netlink_msg_receiver: None,
             manual_paused: false,
             msg_to_commander: None,
+            emited: HashMap::new(),
         })
     }
 
@@ -217,9 +226,10 @@ impl NmMonitorWorker {
         self.netlink_msg_receiver = None;
     }
 
-    async fn notify(&mut self, cmd: NmManagerCmd) -> Result<(), NmError> {
-        log::trace!("NmMonitorWorker sending out {cmd:?}");
+    async fn notify(&mut self, event: NmLinkEvent) -> Result<(), NmError> {
+        log::trace!("NmMonitorWorker sending out {event:?}");
         if let Some(sender) = self.msg_to_commander.as_mut() {
+            let cmd = NmManagerCmd::LinkEvent(Box::new(event.clone()));
             sender.send(cmd).await.map_err(|e| {
                 NmError::new(
                     ErrorKind::Bug,
@@ -227,7 +237,9 @@ impl NmMonitorWorker {
                         "NmMonitorWorker: Failed to send to commander: {e}"
                     ),
                 )
-            })
+            })?;
+            self.emited.insert(event.iface_name.to_string(), event);
+            Ok(())
         } else {
             Err(NmError::new(
                 ErrorKind::Bug,
@@ -256,8 +268,7 @@ impl NmMonitorWorker {
             if let Some(event) = parse_link_msg(&link_msg)
                 && self.should_emit(&event)
             {
-                self.notify(NmManagerCmd::LinkEvent(Box::new(event)))
-                    .await?;
+                self.notify(event).await?;
             }
         }
 
@@ -273,15 +284,27 @@ impl NmMonitorWorker {
         if let Some(event) = parse_route_netlink_msg(nl_msg)
             && self.should_emit(&event)
         {
-            self.notify(NmManagerCmd::LinkEvent(Box::new(event)))
-                .await?;
+            self.notify(event).await?;
         }
         Ok(())
     }
 
+    fn is_previous_event_expired(&self, event: &NmLinkEvent) -> bool {
+        if let Some(previous_event) = self.emited.get(event.iface_name.as_str())
+            && let Ok(elapsed) = previous_event.time_stamp.elapsed()
+        {
+            previous_event.event_type == event.event_type
+                && elapsed
+                    > std::time::Duration::from_secs(EVENT_EXPIRE_TIME_SEC)
+        } else {
+            true
+        }
+    }
+
     fn should_emit(&self, event: &NmLinkEvent) -> bool {
-        self.iface_monitor_list.contains(&event.iface_name)
-            || self.iface_type_monitor_list.contains(&event.iface_type)
+        self.is_previous_event_expired(event)
+            && (self.iface_monitor_list.contains(&event.iface_name)
+                || self.iface_type_monitor_list.contains(&event.iface_type))
     }
 }
 
