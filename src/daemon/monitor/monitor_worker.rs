@@ -293,8 +293,8 @@ impl NmMonitorWorker {
         if let Some(previous_event) = self.emited.get(event.iface_name.as_str())
             && let Ok(elapsed) = previous_event.time_stamp.elapsed()
         {
-            previous_event.event_type == event.event_type
-                && elapsed
+            previous_event.event_type != event.event_type
+                || elapsed
                     > std::time::Duration::from_secs(EVENT_EXPIRE_TIME_SEC)
         } else {
             true

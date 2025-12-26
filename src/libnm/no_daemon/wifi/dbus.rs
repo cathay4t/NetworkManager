@@ -469,26 +469,6 @@ impl NmWpaSupDbus<'_> {
         stream.next().await;
         Ok(())
     }
-
-    pub(crate) async fn abort_scan(
-        &self,
-        iface_obj_path: &str,
-    ) -> Result<(), NmError> {
-        log::trace!("Aborting WIFI scan on {iface_obj_path}",);
-        let proxy = zbus::Proxy::new(
-            &self.connection,
-            WPA_SUP_DBUS_IFACE_ROOT,
-            iface_obj_path,
-            WPA_SUP_DBUS_IFACE_IFACE,
-        )
-        .await
-        .map_err(map_zbus_err)?;
-
-        proxy
-            .call::<&str, (), ()>("AbortScan", &())
-            .await
-            .map_err(map_zbus_err)
-    }
 }
 
 fn obj_path_to_string(obj_path: OwnedObjectPath) -> String {

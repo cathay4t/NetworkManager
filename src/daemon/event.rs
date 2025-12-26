@@ -10,6 +10,8 @@ use nm::{
 
 use super::commander::NmCommander;
 
+const MAX_SCAN_RETRY: usize = 5;
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct NmLinkEvent {
     pub iface_name: String,
@@ -137,7 +139,18 @@ impl NmCommander {
                     .await?;
             }
         } else {
-            // New wifi NIC found
+            // New wifi NIC found, we should wait wpa_supplicant to finish its
+            // work on it by waiting its initial scan to finish in this
+            // interface.
+            for _ in 0..MAX_SCAN_RETRY {
+                if NmNoDaemon::wifi_scan(Some(event.iface_name.as_str()))
+                    .await
+                    .is_ok()
+                {
+                    break;
+                }
+            }
+
             let mut new_state = NetworkState::default();
             for wifi_cfg_iface in
                 saved_state.ifaces.user_ifaces.values().filter_map(|i| {
@@ -151,9 +164,15 @@ impl NmCommander {
                 if wifi_cfg_iface.parent().is_none()
                     || wifi_cfg_iface.parent() == Some(&event.iface_name)
                 {
-                    new_state.ifaces.push(Interface::WifiCfg(Box::new(
-                        *wifi_cfg_iface.clone(),
-                    )));
+                    let mut wifi_cfg_iface = *wifi_cfg_iface.clone();
+                    if let Some(wifi_cfg) = wifi_cfg_iface.wifi.as_mut() {
+                        wifi_cfg.base_iface =
+                            Some(event.iface_name.to_string());
+                    }
+
+                    new_state
+                        .ifaces
+                        .push(Interface::WifiCfg(Box::new(wifi_cfg_iface)));
                 }
             }
             if !new_state.is_empty() {

@@ -164,7 +164,7 @@ impl InterfaceIpv4 {
             if let Some(addrs) = self.addresses.as_ref() {
                 for addr in addrs.iter().filter(|a| !a.is_auto()) {
                     log::info!(
-                        "Static addresses {addr} defined when dynamic IP is \
+                        "Static address {addr} defined when dynamic IP is \
                          enabled"
                     );
                 }
@@ -209,15 +209,25 @@ impl InterfaceIpv4 {
         Ok(())
     }
 
-    /// * Remove `valid_life_time` and `preferred_life_time` because there might
+    /// * Sync `valid_life_time` and `preferred_life_time` because there might
     ///   be latency after applied and query back.
     /// * Set current DHCP none to false.
     /// * Set current address none to empty array.
     pub(crate) fn sanitize_before_verify(&mut self, current: &mut Self) {
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs {
-                addr.valid_life_time = None;
-                addr.preferred_life_time = None;
+                if let Some(cur_addr) =
+                    current.addresses.as_ref().and_then(|cur_addrs| {
+                        cur_addrs.iter().find(|cur_addr| {
+                            cur_addr.ip == addr.ip
+                                && cur_addr.prefix_length == addr.prefix_length
+                        })
+                    })
+                {
+                    addr.valid_life_time = cur_addr.valid_life_time.clone();
+                    addr.preferred_life_time =
+                        cur_addr.preferred_life_time.clone();
+                }
             }
         }
         if current.dhcp.is_none() {
@@ -391,15 +401,25 @@ impl InterfaceIpv6 {
         Ok(())
     }
 
-    /// * Remove `valid_life_time` and `preferred_life_time` because there might
+    /// * Sync `valid_life_time` and `preferred_life_time` because there might
     ///   be latency after applied and query back.
     /// * Set current DHCP none to false.
     /// * Set current address none to empty array.
     pub(crate) fn sanitize_before_verify(&mut self, current: &mut Self) {
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs {
-                addr.valid_life_time = None;
-                addr.preferred_life_time = None;
+                if let Some(cur_addr) =
+                    current.addresses.as_ref().and_then(|cur_addrs| {
+                        cur_addrs.iter().find(|cur_addr| {
+                            cur_addr.ip == addr.ip
+                                && cur_addr.prefix_length == addr.prefix_length
+                        })
+                    })
+                {
+                    addr.valid_life_time = cur_addr.valid_life_time.clone();
+                    addr.preferred_life_time =
+                        cur_addr.preferred_life_time.clone();
+                }
             }
         }
         if current.dhcp.is_none() {
