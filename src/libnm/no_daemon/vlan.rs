@@ -18,6 +18,19 @@ impl From<nispor::VlanProtocol> for VlanProtocol {
     }
 }
 
+impl From<VlanProtocol> for nispor::VlanProtocol {
+    fn from(v: VlanProtocol) -> Self {
+        match v {
+            VlanProtocol::Ieee8021Q => Self::Ieee8021Q,
+            VlanProtocol::Ieee8021Ad => Self::Ieee8021AD,
+            VlanProtocol::Unknown => {
+                log::debug!("Unknown VLAN protocol {v}, treating as 802.1q");
+                Self::Ieee8021Q
+            }
+        }
+    }
+}
+
 impl From<&VlanQosMapping> for nispor::VlanQosMapping {
     fn from(v: &VlanQosMapping) -> Self {
         Self {
@@ -32,17 +45,7 @@ impl From<&VlanConfig> for nispor::VlanConf {
         let mut np_vlan = nispor::VlanConf::default();
         np_vlan.vlan_id = v.id;
         np_vlan.base_iface = v.base_iface.clone();
-        if let Some(protocol) = v.protocol {
-            match protocol {
-                VlanProtocol::Ieee8021Q => {
-                    np_vlan.protocol = Some(nispor::VlanProtocol::Ieee8021Q)
-                }
-                VlanProtocol::Ieee8021Ad => {
-                    np_vlan.protocol = Some(nispor::VlanProtocol::Ieee8021AD)
-                }
-                VlanProtocol::Unknown => (),
-            }
-        }
+        np_vlan.protocol = v.protocol.map(|v| v.into());
         if let Some(protocol) = v.registration_protocol {
             match protocol {
                 VlanRegistrationProtocol::Gvrp => {

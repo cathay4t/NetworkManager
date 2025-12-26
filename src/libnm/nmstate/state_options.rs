@@ -63,15 +63,18 @@ pub enum NmstateStateKind {
     SavedNetworkState,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonDisplay)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Serialize, Deserialize, JsonDisplay,
+)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
-#[derive(Default)]
 pub struct NmstateApplyOption {
     /// Do not verify whether post applied state matches with desired state.
+    #[serde(default)]
     pub no_verify: bool,
     /// When set to true, the desire state will not be persistent after OS
     /// reboot. Default to false.
+    #[serde(default)]
     pub memory_only: bool,
 }
 

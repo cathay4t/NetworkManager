@@ -7,10 +7,9 @@ impl NetworkState {
     /// to `old_state`.
     pub fn gen_diff(&self, old: &Self) -> Result<Self, NmError> {
         let mut old = old.clone();
-        old.ifaces.sanitize_for_diff();
 
         let mut desired = self.clone();
-        desired.ifaces.sanitize_for_diff();
+        desired.ifaces.sanitize_for_diff(&mut old.ifaces);
 
         desired.gen_diff_no_sanitize(old)
     }

@@ -50,10 +50,13 @@ impl MergedInterfaces {
 }
 
 impl Interfaces {
-    pub(crate) fn sanitize_for_diff(&mut self) {
-        // Just use sanitize_current_for_verify() is enough
+    pub(crate) fn sanitize_for_diff(&mut self, current: &mut Self) {
         for iface in self.iter_mut() {
-            iface.sanitize_current_for_verify();
+            if let Some(cur_iface) =
+                current.get_mut(iface.name(), Some(iface.iface_type()))
+            {
+                iface.sanitize_before_verify(cur_iface);
+            }
         }
     }
 }

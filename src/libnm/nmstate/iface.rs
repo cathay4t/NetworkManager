@@ -173,6 +173,20 @@ macro_rules! gen_sanitize_iface_specfic {
     };
 }
 
+macro_rules! gen_sanitize_before_verify_iface_specfic {
+    ( $desired:ident, $current:ident, $($variant:path,)+ ) => {
+        match $desired {
+            $(
+                $variant(i) => {
+                    if let $variant(cur_iface) = $current {
+                        i.sanitize_before_verify_iface_specfic(cur_iface);
+                    };
+                }
+            )+
+        }
+    };
+}
+
 macro_rules! gen_include_diff_context_iface_specific {
     ( $diff:ident, $current:ident, $($variant:path,)+ ) => {
         match ($diff, $current) {
@@ -321,8 +335,6 @@ impl NmstateInterface for Interface {
     gen_iface_trait_impl_mut!(
         (base_iface_mut, &mut BaseInterface),
         (hide_secrets_iface_specific, ()),
-        (sanitize_current_for_verify_iface_specfic, ()),
-        (sanitize_desired_for_verify_iface_specfic, ()),
     );
 
     fn sanitize_iface_specfic(
@@ -344,6 +356,24 @@ impl NmstateInterface for Interface {
             Interface::LinuxBridge,
             Interface::Unknown,
         )
+    }
+
+    fn sanitize_before_verify_iface_specfic(&mut self, current: &mut Self) {
+        gen_sanitize_before_verify_iface_specfic!(
+            self,
+            current,
+            Interface::Ethernet,
+            Interface::OvsBridge,
+            Interface::OvsInterface,
+            Interface::Loopback,
+            Interface::WifiPhy,
+            Interface::WifiCfg,
+            Interface::Dummy,
+            Interface::Vlan,
+            Interface::Bond,
+            Interface::LinuxBridge,
+            Interface::Unknown,
+        );
     }
 
     fn include_diff_context_iface_specific(&mut self, current: &Self) {

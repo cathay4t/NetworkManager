@@ -60,7 +60,7 @@ use crate::{
 ///         max-age: 20
 ///         priority: 32768
 ///       vlan-protocol: 802.1q
-///     port:
+///     ports:
 ///     - name: eth1
 ///       stp-hairpin-mode: false
 ///       stp-path-cost: 100
@@ -186,8 +186,12 @@ impl NmstateInterface for LinuxBridgeInterface {
         }
     }
 
-    fn sanitize_current_for_verify_iface_specfic(&mut self) {
+    /// * Sort ports
+    /// * Fix round up issue
+    fn sanitize_before_verify_iface_specfic(&mut self, current: &mut Self) {
         self.sort_ports();
+        current.sort_ports();
+        fix_round_up(self, current);
     }
 }
 
@@ -278,6 +282,46 @@ impl LinuxBridgeInterface {
     }
 }
 
+macro_rules! _fix_round_up {
+    ( $des_opts:ident, $cur_opts:ident, $($prop_name:ident,)+ ) => {
+        $(
+            if let Some(des_value) = $des_opts.$prop_name.as_mut() &&
+               let Some(cur_value) = $cur_opts.$prop_name.as_mut() &&
+               des_value > cur_value &&
+               *des_value - *cur_value == 1 {
+                   *cur_value += 1;
+            }
+        )+
+    }
+}
+
+/// * For kernel using CONFIG_HZ 250(e.g. Ubuntu) or 300(e.g. ArchLinux), there
+///   will be round up issue causing outcome value 1 smaller than desired value.
+///   For CONFIG_HZ using multiples of USER_HZ (e.g. RHEL is using 1000 HZ) ,
+///   they don't have this problem. We modify the current to pass the
+///   verification.
+fn fix_round_up(
+    desired: &mut LinuxBridgeInterface,
+    current: &mut LinuxBridgeInterface,
+) {
+    if let Some(des_opts) =
+        desired.bridge.as_mut().and_then(|b| b.options.as_mut())
+        && let Some(cur_opts) =
+            current.bridge.as_mut().and_then(|b| b.options.as_mut())
+    {
+        _fix_round_up!(
+            des_opts,
+            cur_opts,
+            multicast_last_member_interval,
+            multicast_membership_interval,
+            multicast_querier_interval,
+            multicast_query_interval,
+            multicast_query_response_interval,
+            multicast_startup_query_interval,
+        );
+    }
+}
+
 #[derive(
     Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonDisplay,
 )]
@@ -285,17 +329,18 @@ impl LinuxBridgeInterface {
 #[non_exhaustive]
 /// Linux bridge specific configuration.
 pub struct LinuxBridgeConfig {
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Linux bridge options. When applying, existing options will merged into
     /// desired.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<LinuxBridgeOptions>,
+    /// Linux bridge ports. When applying, desired port list will __override__
+    /// current port list.
     #[serde(
         skip_serializing_if = "Option::is_none",
+        alias = "ports",
         alias = "port",
         rename = "port"
     )]
-    /// Linux bridge ports. When applying, desired port list will __override__
-    /// current port list.
     pub ports: Option<Vec<LinuxBridgePortConfig>>,
 }
 
@@ -344,13 +389,13 @@ pub struct LinuxBridgeOptions {
     pub gc_timer: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_addr: Option<String>,
+    /// Alias of [LinuxBridgeOptions.group_fwd_mask], not preferred, please
+    /// use [LinuxBridgeOptions.group_fwd_mask] instead.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
-    /// Alias of [LinuxBridgeOptions.group_fwd_mask], not preferred, please
-    /// use [LinuxBridgeOptions.group_fwd_mask] instead.
     pub group_forward_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -448,7 +493,11 @@ pub struct LinuxBridgeOptions {
     pub stp: Option<LinuxBridgeStpOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vlan_protocol: Option<VlanProtocol>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub vlan_default_pvid: Option<u16>,
 }
 

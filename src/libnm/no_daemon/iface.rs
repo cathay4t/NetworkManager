@@ -21,6 +21,7 @@ pub(crate) fn nmstate_iface_type_to_nispor(
         InterfaceType::Dummy => nispor::IfaceType::Dummy,
         InterfaceType::Vlan => nispor::IfaceType::Vlan,
         InterfaceType::Bond => nispor::IfaceType::Bond,
+        InterfaceType::LinuxBridge => nispor::IfaceType::Bridge,
         _ => {
             log::warn!(
                 "BUG: Requesting unsupported interface type {iface_type}"
@@ -83,15 +84,7 @@ pub(crate) fn apply_iface_link_changes(
             merged_ifaces,
         )
     } else if let Interface::LinuxBridge(apply_iface) = apply_iface {
-        apply_bridge_conf(
-            np_iface,
-            apply_iface,
-            if let Some(Interface::LinuxBridge(cur_iface)) = cur_iface {
-                Some(cur_iface)
-            } else {
-                None
-            },
-        )
+        apply_bridge_conf(np_iface, apply_iface)
     } else {
         Ok(vec![np_iface])
     }

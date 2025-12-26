@@ -9,41 +9,47 @@
 
 use super::linux_bridge_port_vlan::parse_port_vlan_conf;
 use crate::{
-    BaseInterface, LinuxBridgeConfig, LinuxBridgeInterface,
+    BaseInterface, ErrorKind, LinuxBridgeConfig, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
-    LinuxBridgeStpOptions, NmError, VlanProtocol,
+    LinuxBridgeStpOptions, NmError,
 };
 
-impl From<&nispor::BridgeVlanProtocol> for VlanProtocol {
-    fn from(v: &nispor::BridgeVlanProtocol) -> Self {
-        match v {
-            nispor::BridgeVlanProtocol::Ieee8021Q => VlanProtocol::Ieee8021Q,
-            nispor::BridgeVlanProtocol::Ieee8021AD => VlanProtocol::Ieee8021Ad,
-            _ => {
-                log::debug!("Unsupported linux bridge vlan protocol {v:?}");
-                VlanProtocol::Unknown
-            }
-        }
-    }
-}
-
-impl From<&nispor::BridgePortMulticastRouterType>
+impl From<nispor::BridgeMulticastRouterType>
     for LinuxBridgeMulticastRouterType
 {
-    fn from(v: &nispor::BridgePortMulticastRouterType) -> Self {
+    fn from(v: nispor::BridgeMulticastRouterType) -> Self {
         match v {
-            nispor::BridgePortMulticastRouterType::Disabled => {
+            nispor::BridgeMulticastRouterType::Disabled => {
                 LinuxBridgeMulticastRouterType::Disabled
             }
-            nispor::BridgePortMulticastRouterType::TempQuery => {
+            nispor::BridgeMulticastRouterType::TempQuery => {
                 LinuxBridgeMulticastRouterType::Auto
             }
-            nispor::BridgePortMulticastRouterType::Perm => {
+            nispor::BridgeMulticastRouterType::Perm => {
                 LinuxBridgeMulticastRouterType::Enabled
             }
             _ => {
                 log::debug!("Unsupported linux bridge multicast router {v:?}");
                 LinuxBridgeMulticastRouterType::Unknown
+            }
+        }
+    }
+}
+
+impl From<LinuxBridgeMulticastRouterType>
+    for nispor::BridgeMulticastRouterType
+{
+    fn from(v: LinuxBridgeMulticastRouterType) -> Self {
+        match v {
+            LinuxBridgeMulticastRouterType::Disabled => Self::Disabled,
+            LinuxBridgeMulticastRouterType::Auto => Self::TempQuery,
+            LinuxBridgeMulticastRouterType::Enabled => Self::Perm,
+            _ => {
+                log::debug!(
+                    "Unsupported linux bridge multicast router type {v:?}, \
+                     treating as auto"
+                );
+                Self::TempQuery
             }
         }
     }
@@ -80,7 +86,7 @@ impl From<&nispor::BridgeInfo> for LinuxBridgeConfig {
                 multicast_router: np_bridge
                     .multicast_router
                     .as_ref()
-                    .map(|r| r.into()),
+                    .map(|r| r.clone().into()),
                 multicast_snooping: np_bridge.multicast_snooping,
                 multicast_startup_query_count: np_bridge
                     .multicast_startup_query_count,
@@ -90,7 +96,7 @@ impl From<&nispor::BridgeInfo> for LinuxBridgeConfig {
                 vlan_protocol: np_bridge
                     .vlan_protocol
                     .as_ref()
-                    .map(|p| p.into()),
+                    .map(|p| (*p).into()),
                 vlan_default_pvid: np_bridge.default_pvid,
             }),
             ports: Some(
@@ -109,11 +115,92 @@ impl From<&nispor::BridgeInfo> for LinuxBridgeConfig {
 }
 
 pub(crate) fn apply_bridge_conf(
-    _np_iface: nispor::IfaceConf,
-    _iface: &LinuxBridgeInterface,
-    _cur_iface: Option<&LinuxBridgeInterface>,
+    mut np_iface: nispor::IfaceConf,
+    iface: &LinuxBridgeInterface,
 ) -> Result<Vec<nispor::IfaceConf>, NmError> {
-    todo!()
+    if let Some(br_opts) =
+        iface.bridge.as_ref().and_then(|b| b.options.as_ref())
+    {
+        let mut np_br = nispor::BridgeConf::default();
+
+        if let Some(v) = br_opts.group_addr.as_ref() {
+            np_br.group_address = Some(parse_eth_mac(v.as_str())?);
+        }
+        if let Some(v) = br_opts.group_forward_mask.as_ref() {
+            np_br.group_fwd_mask = Some(*v);
+        }
+        if let Some(v) = br_opts.group_fwd_mask.as_ref() {
+            np_br.group_fwd_mask = Some(*v);
+        }
+        if let Some(v) = br_opts.hash_max.as_ref() {
+            np_br.mcast_hash_max = Some(*v);
+        }
+        if let Some(v) = br_opts.mac_ageing_time.as_ref() {
+            np_br.ageing_time = Some(*v * get_user_hz());
+        }
+        if let Some(v) = br_opts.multicast_last_member_count.as_ref() {
+            np_br.mcast_last_member_count = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_last_member_interval.as_ref() {
+            np_br.mcast_last_member_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_membership_interval.as_ref() {
+            np_br.mcast_membership_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_querier.as_ref() {
+            np_br.mcast_querier = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_querier_interval.as_ref() {
+            np_br.mcast_querier_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_query_interval.as_ref() {
+            np_br.mcast_query_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_query_response_interval.as_ref() {
+            np_br.mcast_query_response_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_query_use_ifaddr.as_ref() {
+            np_br.mcast_query_use_ifaddr = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_router.as_ref() {
+            np_br.mcast_router = Some(v.clone().into());
+        }
+        if let Some(v) = br_opts.multicast_snooping.as_ref() {
+            np_br.mcast_snooping = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_startup_query_count.as_ref() {
+            np_br.mcast_startup_query_count = Some(*v);
+        }
+        if let Some(v) = br_opts.multicast_startup_query_interval.as_ref() {
+            np_br.mcast_startup_query_interval = Some(*v);
+        }
+        if let Some(v) = br_opts.vlan_protocol.as_ref() {
+            np_br.vlan_protocol = Some((*v).into());
+        }
+        if let Some(v) = br_opts.vlan_default_pvid.as_ref() {
+            np_br.vlan_default_pvid = Some(*v);
+        }
+        if let Some(stp) = br_opts.stp.as_ref() {
+            np_br.stp_state = stp.enabled.map(|enabled| {
+                if enabled {
+                    nispor::BridgeStpState::KernelStp
+                } else {
+                    nispor::BridgeStpState::Disabled
+                }
+            });
+
+            np_br.forward_delay =
+                stp.forward_delay.map(|v| v as u32 * get_user_hz());
+
+            np_br.hello_time = stp.hello_time.map(|v| v as u32 * get_user_hz());
+            np_br.max_age = stp.max_age.map(|v| v as u32 * get_user_hz());
+            np_br.priority = stp.priority;
+        }
+        // TODO: bridge port VLAN
+
+        np_iface.bridge = Some(np_br);
+    }
+    Ok(vec![np_iface])
 }
 
 impl LinuxBridgeInterface {
@@ -187,14 +274,23 @@ const DEFAULT_USER_HZ: u32 = 100;
 //   * ageing_time
 //   * hello_time
 //   * max_age
+//
+// When kernel CONFIG_HZ is not multiple times of USER_HZ, we will noticed 1
+// different between desired value and active value. For example, Archlinux has
+// CONFIG_HZ=300 which causing ageing_time requested 600 got 599 in return.
+// To fix the verification error, we add 1 for this trivial difference.
 fn devide_by_user_hz(v: u32) -> u32 {
+    (v + 1) / get_user_hz()
+}
+
+fn get_user_hz() -> u32 {
     if let Ok(Some(user_hz)) =
         nix::unistd::sysconf(nix::unistd::SysconfVar::CLK_TCK)
         && user_hz > 0
     {
-        v / user_hz as u32
+        user_hz as u32
     } else {
-        v / DEFAULT_USER_HZ
+        DEFAULT_USER_HZ
     }
 }
 
@@ -222,4 +318,28 @@ fn get_stp_options(np_bridge: &nispor::BridgeInfo) -> LinuxBridgeStpOptions {
         }),
         priority: np_bridge.priority,
     }
+}
+
+fn parse_eth_mac(mac_str: &str) -> Result<[u8; 6], NmError> {
+    let mut mac_vec: Vec<u8> = Vec::new();
+    for byte in mac_str.split(':') {
+        mac_vec.push(u8::from_str_radix(byte, 16).map_err(|_| {
+            NmError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid MAC address {mac_str}, expecting format like: \
+                     02:69:4c:41:42:cd"
+                ),
+            )
+        })?);
+    }
+    mac_vec.try_into().map_err(|_| {
+        NmError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Invalid MAC address {mac_str}, expecting format like: \
+                 02:69:4c:41:42:cd"
+            ),
+        )
+    })
 }

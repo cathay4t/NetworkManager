@@ -195,9 +195,6 @@ impl MergedInterfaces {
         let mut current = current.clone();
 
         current.unify_veth_and_ethernet();
-
-        current.sanitize_current_for_verify();
-
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
             let iface = if let Some(i) = des_iface.for_verify.as_mut() {
                 i
@@ -205,7 +202,7 @@ impl MergedInterfaces {
                 continue;
             };
             iface.hide_secrets();
-            iface.sanitize_desired_for_verify();
+
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get(iface.name(), Some(iface.iface_type()))
@@ -215,8 +212,9 @@ impl MergedInterfaces {
                     )?;
                 }
             } else if let Some(cur_iface) =
-                current.get(iface.name(), Some(iface.iface_type()))
+                current.get_mut(iface.name(), Some(iface.iface_type()))
             {
+                iface.sanitize_before_verify(cur_iface);
                 // Do not verify physical interface with state:down
                 if iface.is_up() {
                     iface.verify(cur_iface)?;
@@ -412,12 +410,6 @@ impl Interfaces {
             .filter(|i| i.iface_type() == &InterfaceType::Veth)
         {
             iface.base_iface_mut().iface_type = InterfaceType::Ethernet;
-        }
-    }
-
-    pub(crate) fn sanitize_current_for_verify(&mut self) {
-        for iface in self.iter_mut() {
-            iface.sanitize_current_for_verify();
         }
     }
 

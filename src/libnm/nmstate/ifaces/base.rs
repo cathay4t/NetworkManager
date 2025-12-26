@@ -117,24 +117,17 @@ impl BaseInterface {
         Ok(())
     }
 
-    pub fn sanitize_current_for_verify(&mut self) {
+    pub(crate) fn sanitize_before_verify(&mut self, current: &mut Self) {
         self.up_priority = 0;
-        if let Some(ipv4) = self.ipv4.as_mut() {
-            ipv4.sanitize_current_for_verify();
+        if let Some(des_ipv4) = self.ipv4.as_mut()
+            && let Some(cur_ipv4) = current.ipv4.as_mut()
+        {
+            des_ipv4.sanitize_before_verify(cur_ipv4);
         }
-        if let Some(ipv6) = self.ipv6.as_mut() {
-            ipv6.sanitize_current_for_verify();
-        }
-    }
-
-    pub fn sanitize_desired_for_verify(&mut self) {
-        self.up_priority = 0;
-        self.controller_type = None;
-        if let Some(ipv4) = self.ipv4.as_mut() {
-            ipv4.sanitize_desired_for_verify();
-        }
-        if let Some(ipv6) = self.ipv6.as_mut() {
-            ipv6.sanitize_desired_for_verify();
+        if let Some(des_ipv6) = self.ipv6.as_mut()
+            && let Some(cur_ipv6) = current.ipv6.as_mut()
+        {
+            des_ipv6.sanitize_before_verify(cur_ipv6);
         }
     }
 

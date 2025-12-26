@@ -113,21 +113,16 @@ pub trait NmstateInterface:
     }
 
     /// Invoke sanitize current for verify on the [BaseInterface] and
-    /// `sanitize_iface_specfic()`
-    fn sanitize_current_for_verify(&mut self) {
-        self.base_iface_mut().sanitize_current_for_verify();
-        self.sanitize_current_for_verify_iface_specfic();
-    }
-
-    /// Invoke sanitize desired for verify on the [BaseInterface] and
-    /// `sanitize_iface_specfic()`
-    fn sanitize_desired_for_verify(&mut self) {
-        self.base_iface_mut().sanitize_desired_for_verify();
-        self.sanitize_desired_for_verify_iface_specfic();
+    /// `sanitize_before_verify_iface_specfic()`
+    fn sanitize_before_verify(&mut self, current: &mut Self) {
+        self.base_iface_mut()
+            .sanitize_before_verify(current.base_iface_mut());
+        self.sanitize_before_verify_iface_specfic(current);
     }
 
     /// Please implement this function if special sanitize action required
-    /// for certain interface type. Do not include action for [BaseInterface].
+    /// for certain interface type.
+    /// Do not include action for [BaseInterface].
     fn sanitize_iface_specfic(
         &mut self,
         _current: Option<&Self>,
@@ -136,14 +131,9 @@ pub trait NmstateInterface:
     }
 
     /// Please implement this function if special sanitize action required
-    /// for certain interface type during verification. Do not include action
-    /// for [BaseInterface]. Default implementation is empty.
-    fn sanitize_current_for_verify_iface_specfic(&mut self) {}
-
-    /// Please implement this function if special sanitize action required
-    /// for certain interface type during verification. Do not include action
-    /// for [BaseInterface]. Default implementation is empty.
-    fn sanitize_desired_for_verify_iface_specfic(&mut self) {}
+    /// for certain interface type before verification.
+    /// Do not include action for [BaseInterface].
+    fn sanitize_before_verify_iface_specfic(&mut self, _current: &mut Self) {}
 
     /// When generating difference between desired and current, certain value
     /// should be included as context in the output. For example, when

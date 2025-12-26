@@ -209,23 +209,22 @@ impl InterfaceIpv4 {
         Ok(())
     }
 
-    pub fn sanitize_current_for_verify(&mut self) {
-        if self.dhcp.is_none() {
-            self.dhcp = Some(false);
-        }
-        if self.addresses.is_none() {
-            self.addresses = Some(Vec::new());
-        }
-    }
-
-    /// Remove `valid_life_time` and `preferred_life_time` because there might
-    /// be latency after applied and query back.
-    pub fn sanitize_desired_for_verify(&mut self) {
+    /// * Remove `valid_life_time` and `preferred_life_time` because there might
+    ///   be latency after applied and query back.
+    /// * Set current DHCP none to false.
+    /// * Set current address none to empty array.
+    pub(crate) fn sanitize_before_verify(&mut self, current: &mut Self) {
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs {
                 addr.valid_life_time = None;
                 addr.preferred_life_time = None;
             }
+        }
+        if current.dhcp.is_none() {
+            current.dhcp = Some(false);
+        }
+        if current.addresses.is_none() {
+            current.addresses = Some(Vec::new());
         }
     }
 }
@@ -392,23 +391,22 @@ impl InterfaceIpv6 {
         Ok(())
     }
 
-    pub fn sanitize_current_for_verify(&mut self) {
-        if self.dhcp.is_none() {
-            self.dhcp = Some(false);
-        }
-        if self.addresses.is_none() {
-            self.addresses = Some(Vec::new());
-        }
-    }
-
-    /// Remove `valid_life_time` and `preferred_life_time` because there might
-    /// be latency after applied and query back.
-    pub fn sanitize_desired_for_verify(&mut self) {
+    /// * Remove `valid_life_time` and `preferred_life_time` because there might
+    ///   be latency after applied and query back.
+    /// * Set current DHCP none to false.
+    /// * Set current address none to empty array.
+    pub(crate) fn sanitize_before_verify(&mut self, current: &mut Self) {
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs {
                 addr.valid_life_time = None;
                 addr.preferred_life_time = None;
             }
+        }
+        if current.dhcp.is_none() {
+            current.dhcp = Some(false);
+        }
+        if current.addresses.is_none() {
+            current.addresses = Some(Vec::new());
         }
     }
 }

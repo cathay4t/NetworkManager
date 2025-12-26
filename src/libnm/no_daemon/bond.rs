@@ -105,7 +105,7 @@ impl From<BondXmitHashPolicy> for nispor::BondXmitHashPolicy {
     }
 }
 
-impl From<BondAllPortsActive> for nispor::BondAllSubordinatesActive {
+impl From<BondAllPortsActive> for nispor::BondAllPortsActive {
     fn from(v: BondAllPortsActive) -> Self {
         match v {
             BondAllPortsActive::Dropped => Self::Dropped,
@@ -140,7 +140,7 @@ impl From<&nispor::BondInfo> for BondConfig {
             options: Some(np_bond_options_to_nmstate(np_bond)),
             port: Some(
                 np_bond
-                    .subordinates
+                    .ports
                     .as_slice()
                     .iter()
                     .map(|iface_name| iface_name.to_string())
@@ -148,7 +148,7 @@ impl From<&nispor::BondInfo> for BondConfig {
             ),
             ports_config: Some(
                 np_bond
-                    .subordinates
+                    .ports
                     .as_slice()
                     .iter()
                     .map(|iface_name| BondPortConfig {
@@ -267,11 +267,11 @@ pub(crate) fn apply_bond_conf(
                 bond_opts.xmit_hash_policy.map(BondXmitHashPolicy::into);
             np_bond_conf.resend_igmp = bond_opts.resend_igmp;
             np_bond_conf.num_unsol_na = bond_opts.num_unsol_na;
-            np_bond_conf.all_subordinates_active =
+            np_bond_conf.all_ports_active =
                 bond_opts.all_ports_active.map(BondAllPortsActive::into);
             np_bond_conf.min_links = bond_opts.min_links;
             np_bond_conf.lp_interval = bond_opts.lp_interval;
-            np_bond_conf.packets_per_subordinate = bond_opts.packets_per_port;
+            np_bond_conf.packets_per_port = bond_opts.packets_per_port;
             np_bond_conf.lacp_rate =
                 bond_opts.lacp_rate.map(BondLacpRate::into);
             np_bond_conf.ad_select =
@@ -336,14 +336,8 @@ impl BondInterface {
         for port_np_iface in port_np_ifaces {
             port_confs.push(BondPortConfig {
                 name: port_np_iface.name.to_string(),
-                priority: port_np_iface
-                    .bond_subordinate
-                    .as_ref()
-                    .map(|p| p.prio),
-                queue_id: port_np_iface
-                    .bond_subordinate
-                    .as_ref()
-                    .map(|p| p.queue_id),
+                priority: port_np_iface.bond_port.as_ref().map(|p| p.prio),
+                queue_id: port_np_iface.bond_port.as_ref().map(|p| p.queue_id),
             })
         }
 
@@ -367,12 +361,12 @@ fn np_bond_options_to_nmstate(np_bond: &nispor::BondInfo) -> BondOptions {
             }
         }),
         ad_user_port_key: np_bond.ad_user_port_key,
-        all_ports_active: np_bond.all_subordinates_active.as_ref().and_then(
+        all_ports_active: np_bond.all_ports_active.as_ref().and_then(
             |r| match r {
-                nispor::BondAllSubordinatesActive::Dropped => {
+                nispor::BondAllPortsActive::Dropped => {
                     Some(BondAllPortsActive::Dropped)
                 }
-                nispor::BondAllSubordinatesActive::Delivered => {
+                nispor::BondAllPortsActive::Delivered => {
                     Some(BondAllPortsActive::Delivered)
                 }
                 _ => {
@@ -438,7 +432,7 @@ fn np_bond_options_to_nmstate(np_bond: &nispor::BondInfo) -> BondOptions {
         min_links: np_bond.min_links,
         num_unsol_na: np_bond.num_grat_arp,
         num_grat_arp: np_bond.num_grat_arp,
-        packets_per_port: np_bond.packets_per_subordinate,
+        packets_per_port: np_bond.packets_per_port,
         primary: np_bond.primary.clone(),
         primary_reselect: np_bond.primary_reselect.as_ref().and_then(
             |r| match r {

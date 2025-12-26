@@ -268,11 +268,7 @@ impl NmstateInterface for WifiCfgInterface {
         }
     }
 
-    fn sanitize_current_for_verify_iface_specfic(&mut self) {
-        self.hide_secrets_iface_specific()
-    }
-
-    fn sanitize_desired_for_verify_iface_specfic(&mut self) {
+    fn sanitize_before_verify_iface_specfic(&mut self, current: &mut Self) {
         // The IP stack and WIFI password is for daemon storage only and cannot
         // be query during applying(only stored after apply succeeded), hence
         // we remove ipv4 and ipv6 for `wifi-cfg` interface.
@@ -281,6 +277,7 @@ impl NmstateInterface for WifiCfgInterface {
         if let Some(wifi_cfg) = self.wifi.as_mut() {
             wifi_cfg.remove_secrets();
         }
+        current.hide_secrets_iface_specific()
     }
 
     fn post_merge_iface_specific(&mut self, old: &Self) -> Result<(), NmError> {

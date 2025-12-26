@@ -152,8 +152,8 @@ impl NmstateInterface for VlanInterface {
         }
     }
 
-    fn sanitize_current_for_verify_iface_specfic(&mut self) {
-        if let Some(vlan_conf) = self.vlan.as_mut() {
+    fn sanitize_before_verify_iface_specfic(&mut self, current: &mut Self) {
+        if let Some(vlan_conf) = current.vlan.as_mut() {
             if vlan_conf.ingress_qos_map.is_none() {
                 vlan_conf.ingress_qos_map = Some(Vec::new());
             }
