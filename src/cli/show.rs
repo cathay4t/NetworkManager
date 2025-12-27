@@ -23,7 +23,9 @@ impl CommandShow {
             .arg(
                 clap::Arg::new("NO_DAEMON")
                     .long("no-daemon")
+                    .visible_alias("kernel")
                     .short('n')
+                    .short('k')
                     .action(clap::ArgAction::SetTrue)
                     .help("Do not connect to NetworkManager daemon"),
             )
@@ -41,9 +43,9 @@ impl CommandShow {
     ) -> Result<(), CliError> {
         let net_state = if matches.get_flag("NO_DAEMON") {
             if matches.get_flag("SAVED") {
-                return Err(
-                    "--no-daemon cannot be used with --saved argument".into()
-                );
+                return Err("--no-daemon or --kernel cannot be used with \
+                            --saved argument"
+                    .into());
             }
             NmNoDaemon::query_network_state(Default::default()).await?
         } else {

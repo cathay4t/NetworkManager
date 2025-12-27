@@ -6,7 +6,6 @@ mod error;
 mod merge;
 mod show;
 mod state;
-mod wait;
 mod wifi;
 
 use nm::NmClient;
@@ -14,7 +13,7 @@ use nm::NmClient;
 pub(crate) use self::error::CliError;
 use self::{
     apply::CommandApply, diff::CommandDiff, merge::CommandMerge,
-    show::CommandShow, wait::CommandWait, wifi::CommandWifi,
+    show::CommandShow, wifi::CommandWifi,
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -38,7 +37,6 @@ async fn main() -> Result<(), CliError> {
                 .global(true),
         )
         .subcommand(clap::Command::new("ping").about("Check daemon connection"))
-        .subcommand(CommandWait::new_cmd())
         .subcommand(CommandShow::new_cmd())
         .subcommand(CommandApply::new_cmd())
         .subcommand(CommandWifi::new_cmd())
@@ -81,9 +79,6 @@ async fn call_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     if matches.subcommand_matches("ping").is_some() {
         let mut cli = NmClient::new().await?;
         println!("{}", cli.ping().await?);
-        Ok(())
-    } else if let Some(matches) = matches.subcommand_matches(CommandWait::CMD) {
-        CommandWait::handle(matches).await?;
         Ok(())
     } else if let Some(matches) = matches.subcommand_matches(CommandShow::CMD) {
         CommandShow::handle(matches).await?;
