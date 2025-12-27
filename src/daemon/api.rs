@@ -21,6 +21,9 @@ pub(crate) async fn process_api_connection(
                 }
             }
             Err(e) => {
+                if e.kind == ErrorKind::IpcClosed {
+                    break Ok(());
+                }
                 conn.send::<Result<(), NmError>>(Err(e)).await?;
                 continue;
             }
@@ -28,7 +31,6 @@ pub(crate) async fn process_api_connection(
         match cmd {
             NmClientCmd::Ping => conn.send(Ok("pong".to_string())).await?,
             NmClientCmd::QueryNetworkState(opt) => {
-                // TODO(Gris Ge): Forbid non-root user to query secrets
                 let result =
                     commander.query_network_state(Some(&mut conn), *opt).await;
                 conn.send(result).await?;

@@ -377,7 +377,7 @@ impl InterfaceIpv6 {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
                     if ip_addr.is_unicast_link_local() {
-                        log::warn!(
+                        log::info!(
                             "Ignoring IPv6 link local address {}/{}",
                             &addr.ip,
                             addr.prefix_length
