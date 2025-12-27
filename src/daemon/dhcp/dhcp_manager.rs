@@ -6,7 +6,7 @@ use nm::{
 };
 
 use super::{NmDhcpCmd, NmDhcpReply, NmDhcpV4Worker};
-use crate::TaskManager;
+use crate::{TaskManager, log_debug};
 
 #[derive(Debug, Clone)]
 pub(crate) struct NmDhcpV4Manager {
@@ -97,36 +97,26 @@ impl NmDhcpV4Manager {
                     apply_iface.base_iface().ipv4.as_ref().map(|i| i.is_auto())
                 {
                     if dhcp_enabled {
-                        if let Some(conn) = conn.as_mut() {
-                            conn.log_debug(format!(
+                        log_debug(
+                            conn.as_deref_mut(),
+                            format!(
                                 "Starting DHCPv4 on interface {}({})",
                                 apply_iface.name(),
                                 apply_iface.iface_type()
-                            ))
-                            .await;
-                        } else {
-                            log::debug!(
-                                "Starting DHCPv4 on interface {}({})",
-                                apply_iface.name(),
-                                apply_iface.iface_type()
-                            );
-                        }
+                            ),
+                        )
+                        .await;
                         self.start_iface_dhcp(apply_iface.base_iface()).await?;
                     } else {
-                        if let Some(conn) = conn.as_mut() {
-                            conn.log_debug(format!(
+                        log_debug(
+                            conn.as_deref_mut(),
+                            format!(
                                 "Stopping DHCPv4 on interface {}({})",
                                 apply_iface.name(),
                                 apply_iface.iface_type()
-                            ))
-                            .await;
-                        } else {
-                            log::debug!(
-                                "Stopping DHCPv4 on interface {}({})",
-                                apply_iface.name(),
-                                apply_iface.iface_type()
-                            );
-                        }
+                            ),
+                        )
+                        .await;
                         self.stop_iface_dhcp(apply_iface.name()).await?;
                     }
                 }

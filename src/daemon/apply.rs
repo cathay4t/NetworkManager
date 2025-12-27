@@ -9,6 +9,7 @@ use nm::{
 };
 
 use super::commander::NmCommander;
+use crate::{log_debug, log_error, log_info, log_trace, log_warn};
 
 const RETRY_COUNT: usize = 10;
 const RETRY_INTERVAL_MS: u64 = 500;
@@ -21,21 +22,17 @@ impl NmCommander {
         opt: NmstateApplyOption,
     ) -> Result<NetworkState, NmError> {
         if desired_state.is_empty() {
-            if let Some(conn) = conn.as_deref_mut() {
-                conn.log_info(
-                    "Desired state is empty, no action required".to_string(),
-                )
-                .await;
-            } else {
-                log::info!("Desired state is empty, no action required");
-            }
+            log_info(
+                conn.as_deref_mut(),
+                "Desired state is empty, no action required".to_string(),
+            )
+            .await;
         }
-        if let Some(conn) = conn.as_deref_mut() {
-            conn.log_trace(format!("Apply {desired_state} with option {opt}"))
-                .await;
-        } else {
-            log::trace!("Apply {desired_state} with option {opt}");
-        }
+        log_trace(
+            conn.as_deref_mut(),
+            format!("Apply {desired_state} with option {opt}"),
+        )
+        .await;
 
         desired_state.ifaces.unify_veth_and_ethernet();
 
@@ -44,32 +41,25 @@ impl NmCommander {
         state_to_apply.merge(&desired_state)?;
         remove_undesired_ifaces(&mut state_to_apply, &desired_state);
 
-        if let Some(ref mut conn) = conn {
-            conn.log_info(format!(
+        log_info(
+            conn.as_deref_mut(),
+            format!(
                 "Merged desired with previous saved state, state to apply \
                  {state_to_apply}"
-            ))
-            .await;
-        } else {
-            log::info!(
-                "Merged desired with previous saved state, state to apply \
-                 {state_to_apply}"
-            );
-        }
+            ),
+        )
+        .await;
         let mut pre_apply_current_state = self
             .query_network_state(conn.as_deref_mut(), Default::default())
             .await?;
 
         pre_apply_current_state.ifaces.unify_veth_and_ethernet();
 
-        if let Some(conn) = conn.as_deref_mut() {
-            conn.log_debug(format!(
-                "Pre-apply current state {pre_apply_current_state}"
-            ))
-            .await;
-        } else {
-            log::debug!("Pre-apply current state {pre_apply_current_state}");
-        }
+        log_debug(
+            conn.as_deref_mut(),
+            format!("Pre-apply current state {pre_apply_current_state}"),
+        )
+        .await;
 
         let merged_state = MergedNetworkState::new(
             state_to_apply,
@@ -92,33 +82,34 @@ impl NmCommander {
             .apply_merged_state(conn.as_deref_mut(), &merged_state, &opt)
             .await
         {
-            if let Some(conn) = conn.as_deref_mut() {
-                conn.log_warn(format!("Failed to apply desired state: {e}"))
-                    .await;
-                conn.log_warn(format!(
-                    "Failed to apply merged state: {merged_state}"
-                ))
-                .await;
-                conn.log_warn("Rollback to state before apply".to_string())
-                    .await;
-                conn.log_trace(format!(
-                    "Rollback to state before apply {revert_state}"
-                ))
-                .await;
-            } else {
-                log::warn!("Failed to apply desired state: {e}");
-                log::warn!("Failed to apply merged state: {merged_state}");
-                log::warn!("Rollback to state before apply");
-                log::trace!("Rollback to state before apply {revert_state}");
-            }
+            log_warn(
+                conn.as_deref_mut(),
+                format!("Failed to apply desired state: {e}"),
+            )
+            .await;
+            log_warn(
+                conn.as_deref_mut(),
+                format!("Failed to apply merged state: {merged_state}"),
+            )
+            .await;
+            log_warn(
+                conn.as_deref_mut(),
+                "Rollback to state before apply".to_string(),
+            )
+            .await;
+            log_trace(
+                conn.as_deref_mut(),
+                format!("Rollback to state before apply {revert_state}"),
+            )
+            .await;
             if let Err(e) =
                 self.rollback(conn.as_deref_mut(), revert_state).await
             {
-                if let Some(conn) = conn.as_deref_mut() {
-                    conn.log_error(format!("Failed to rollback: {e}")).await;
-                } else {
-                    log::error!("Failed to rollback: {e}");
-                }
+                log_error(
+                    conn.as_deref_mut(),
+                    format!("Failed to rollback: {e}"),
+                )
+                .await;
             }
             return Err(e);
         }
@@ -126,18 +117,14 @@ impl NmCommander {
         if let Err(e) =
             self.conf_manager.save_state(state_to_save.clone()).await
         {
-            if let Some(conn) = conn {
-                conn.log_warn(format!(
+            log_warn(
+                conn.as_deref_mut(),
+                format!(
                     "BUG: Failed to persistent desired state {state_to_save}: \
                      {e}"
-                ))
-                .await;
-            } else {
-                log::warn!(
-                    "BUG: Failed to persistent desired state {state_to_save}: \
-                     {e}"
-                );
-            }
+                ),
+            )
+            .await;
         }
 
         let (mut ifaces_start_monitor, mut ifaces_stop_monitor) =
@@ -172,7 +159,11 @@ impl NmCommander {
         {
             Ok(s) => s,
             Err(e) => {
-                log::warn!("Returning full state instead of diff state: {e}");
+                log_warn(
+                    conn.as_deref_mut(),
+                    format!("Returning full state instead of diff state: {e}"),
+                )
+                .await;
                 merged_state.gen_state_for_apply()
             }
         };
@@ -203,7 +194,7 @@ impl NmCommander {
             .await?;
 
         self.dhcpv4_manager
-            .apply_dhcp_config(conn, &merged_state)
+            .apply_dhcp_config(conn.as_deref_mut(), &merged_state)
             .await?;
 
         Ok(())
@@ -236,14 +227,11 @@ impl NmCommander {
                 .push(Interface::WifiCfg(Box::new(*iface.clone())));
         }
 
-        if let Some(conn) = conn {
-            conn.log_trace(format!(
-                "Post apply network state: {post_apply_current_state}"
-            ))
-            .await;
-        } else {
-            log::trace!("Post apply network state: {post_apply_current_state}");
-        }
+        log_trace(
+            conn.as_deref_mut(),
+            format!("Post apply network state: {post_apply_current_state}"),
+        )
+        .await;
         merged_state.verify(&post_apply_current_state)?;
         Ok(())
     }
@@ -256,11 +244,8 @@ impl NmCommander {
     ) -> Result<(), NmError> {
         let apply_state = merged_state.gen_state_for_apply();
 
-        if let Some(conn) = conn.as_deref_mut() {
-            conn.log_trace(format!("apply_state {apply_state}")).await;
-        } else {
-            log::trace!("apply_state {apply_state}");
-        }
+        log_trace(conn.as_deref_mut(), format!("apply_state {apply_state}"))
+            .await;
 
         NmNoDaemon::apply_merged_state(merged_state).await?;
         self.plugin_manager
@@ -276,18 +261,14 @@ impl NmCommander {
             for cur_retry_count in 1..(RETRY_COUNT + 1) {
                 result = self.verify(conn.as_deref_mut(), merged_state).await;
                 if let Err(e) = &result {
-                    if let Some(conn) = conn.as_deref_mut() {
-                        conn.log_info(format!(
+                    log_info(
+                        conn.as_deref_mut(),
+                        format!(
                             "Retrying({cur_retry_count}/{RETRY_COUNT}) on \
                              verification error: {e}"
-                        ))
-                        .await;
-                    } else {
-                        log::info!(
-                            "Retrying({cur_retry_count}/{RETRY_COUNT}) on \
-                             verification error: {e}"
-                        );
-                    }
+                        ),
+                    )
+                    .await;
                     tokio::time::sleep(std::time::Duration::from_millis(
                         RETRY_INTERVAL_MS,
                     ))

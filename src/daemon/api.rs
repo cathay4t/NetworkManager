@@ -2,13 +2,19 @@
 
 use nm::{ErrorKind, NetworkState, NmClientCmd, NmError, NmIpcConnection};
 
-use super::commander::NmCommander;
+use crate::{commander::NmCommander, lock::NmLockManager, log_debug, log_info};
 
 pub(crate) async fn process_api_connection(
     mut conn: NmIpcConnection,
     mut commander: NmCommander,
 ) -> Result<(), NmError> {
-    let peer_uid = get_peer_uid(&conn)?;
+    let (peer_uid, peer_pid) = get_peer_info(&conn)?;
+
+    log_debug(
+        Some(&mut conn),
+        format!("Got connection from PID {peer_pid} UID {peer_uid}"),
+    )
+    .await;
 
     loop {
         let cmd = match conn.recv::<NmClientCmd>().await {
@@ -36,10 +42,40 @@ pub(crate) async fn process_api_connection(
                 conn.send(result).await?;
             }
             NmClientCmd::ApplyNetworkState(opt) => {
+                log_info(
+                    Some(&mut conn),
+                    format!(
+                        "Client process {peer_pid} acquiring lock before \
+                         apply state"
+                    ),
+                )
+                .await;
+                if let Some(cur_locker) = NmLockManager::cur_locker_pid() {
+                    log_info(
+                        Some(&mut conn),
+                        format!(
+                            "Waiting on-going transaction by PID {cur_locker}"
+                        ),
+                    )
+                    .await;
+                }
+
+                let lock = NmLockManager::lock(peer_pid).await;
+                log_info(
+                    Some(&mut conn),
+                    format!("Client process {peer_pid} acquired lock"),
+                )
+                .await;
                 let (desired_state, opt) = *opt;
                 let result = commander
                     .apply_network_state(Some(&mut conn), desired_state, opt)
                     .await;
+                log_info(
+                    Some(&mut conn),
+                    format!("Client process {peer_pid} released lock"),
+                )
+                .await;
+                drop(lock);
                 conn.send(result).await?;
             }
             _ => {
@@ -55,7 +91,9 @@ pub(crate) async fn process_api_connection(
 
 // Once https://github.com/rust-lang/rust/issues/76915 goes stable and shipped
 // to most distributions, we should use `std::os::unix::net::SocketCred`
-fn get_peer_uid(conn: &NmIpcConnection) -> Result<u32, NmError> {
+//
+// Return (uid, pid)
+fn get_peer_info(conn: &NmIpcConnection) -> Result<(u32, i32), NmError> {
     let credential = nix::sys::socket::getsockopt(
         conn,
         nix::sys::socket::sockopt::PeerCredentials,
@@ -67,7 +105,7 @@ fn get_peer_uid(conn: &NmIpcConnection) -> Result<u32, NmError> {
         )
     })?;
 
-    Ok(credential.uid())
+    Ok((credential.uid(), credential.pid()))
 }
 
 fn permission_check(

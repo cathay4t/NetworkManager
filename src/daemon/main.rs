@@ -7,13 +7,18 @@ mod conf;
 mod daemon;
 mod dhcp;
 mod event;
+mod lock;
+mod logger;
 mod monitor;
 mod plugin;
 mod query;
 mod task;
 mod udev;
 
-pub(crate) use self::task::{TaskManager, TaskWorker};
+pub(crate) use self::{
+    logger::{log_debug, log_error, log_info, log_trace, log_warn},
+    task::{TaskManager, TaskWorker},
+};
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
 async fn main() -> Result<(), nm::NmError> {
