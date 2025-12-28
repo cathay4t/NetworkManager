@@ -160,7 +160,7 @@ impl NmCommander {
             Ok(s) => s,
             Err(e) => {
                 log_warn(
-                    conn.as_deref_mut(),
+                    conn,
                     format!("Returning full state instead of diff state: {e}"),
                 )
                 .await;
@@ -194,7 +194,7 @@ impl NmCommander {
             .await?;
 
         self.dhcpv4_manager
-            .apply_dhcp_config(conn.as_deref_mut(), &merged_state)
+            .apply_dhcp_config(conn, &merged_state)
             .await?;
 
         Ok(())
@@ -228,7 +228,7 @@ impl NmCommander {
         }
 
         log_trace(
-            conn.as_deref_mut(),
+            conn,
             format!("Post apply network state: {post_apply_current_state}"),
         )
         .await;

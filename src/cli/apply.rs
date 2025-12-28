@@ -58,6 +58,7 @@ impl CommandApply {
         };
 
         let mut diff_net_state = if matches.get_flag("NO_DAEMON") {
+            opt.dhcp_in_no_daemon = true;
             NmNoDaemon::apply_network_state(desired_state, opt).await?
         } else {
             let mut cli = NmClient::new().await?;

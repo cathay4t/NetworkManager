@@ -24,6 +24,7 @@ zbus = { workspace = true }
 zvariant = { workspace = true }
 wl-nl80211 = { workspace = true }
 nix = { workspace = true }
+mozim = { workspace = true, features = ["netlink"] }
 
 [lib]
 name = "nm"

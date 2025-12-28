@@ -1,9 +1,8 @@
- * DHCP to static
  * Introduce `nmstatectl`
+ * OVS bridge
  * Bond port
  * Bridge Port
  * Bridge VLAN
- * OVS bridge
  * VxLAN
  * VRF
  * MacSec

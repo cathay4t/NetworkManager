@@ -76,6 +76,9 @@ pub struct NmstateApplyOption {
     /// reboot. Default to false.
     #[serde(default)]
     pub memory_only: bool,
+    /// Whether to invoke DHCP in no-daemon mode. Default to false.
+    /// This option makes no effect in daemon mode(via NmClient).
+    pub dhcp_in_no_daemon: bool,
 }
 
 impl NmstateApplyOption {
@@ -89,6 +92,11 @@ impl NmstateApplyOption {
     }
 
     pub fn memory_only(mut self) -> Self {
+        self.memory_only = true;
+        self
+    }
+
+    pub fn dhcp_in_no_daemon(mut self) -> Self {
         self.memory_only = true;
         self
     }

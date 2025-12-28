@@ -3,6 +3,7 @@
 mod apply;
 mod base_iface;
 mod bond;
+mod dhcp;
 mod ethernet;
 mod iface;
 mod inter_ifaces;

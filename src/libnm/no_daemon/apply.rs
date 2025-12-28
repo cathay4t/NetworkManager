@@ -41,6 +41,9 @@ impl NmNoDaemon {
         //  * controller and IP setting for `wifi-cfg` interface
 
         Self::apply_merged_state(&merged_state).await?;
+        if option.dhcp_in_no_daemon {
+            Self::run_dhcp_once(&merged_state.ifaces).await?;
+        }
 
         let max_retry_count = get_max_retry_count(&merged_state);
 
@@ -55,6 +58,9 @@ impl NmNoDaemon {
                 if cur_retry_count == max_retry_count / 2 {
                     log::info!("Apply the desired state again");
                     Self::apply_merged_state(&merged_state).await?;
+                    if option.dhcp_in_no_daemon {
+                        Self::run_dhcp_once(&merged_state.ifaces).await?;
+                    }
                 }
                 result = merged_state.verify(&post_apply_current_state);
                 if let Err(e) = &result {
