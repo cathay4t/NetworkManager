@@ -78,6 +78,7 @@ pub struct NmstateApplyOption {
     pub memory_only: bool,
     /// Whether to invoke DHCP in no-daemon mode. Default to false.
     /// This option makes no effect in daemon mode(via NmClient).
+    #[serde(default)]
     pub dhcp_in_no_daemon: bool,
 }
 

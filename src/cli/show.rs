@@ -25,7 +25,7 @@ impl CommandShow {
                     .long("no-daemon")
                     .visible_alias("kernel")
                     .short('n')
-                    .short('k')
+                    .visible_short_alias('k')
                     .action(clap::ArgAction::SetTrue)
                     .help("Do not connect to NetworkManager daemon"),
             )

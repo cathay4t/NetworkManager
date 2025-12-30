@@ -161,6 +161,15 @@ impl From<&nispor::BondInfo> for BondConfig {
     }
 }
 
+impl From<&BondPortConfig> for nispor::BondPortConf {
+    fn from(port_conf: &BondPortConfig) -> Self {
+        let mut ret = Self::default();
+        ret.queue_id = port_conf.queue_id;
+        ret.prio = port_conf.priority;
+        ret
+    }
+}
+
 /// Special cases:
 ///  * Change bond mode need to detach all ports and in down state.
 pub(crate) fn apply_bond_conf(
@@ -344,6 +353,22 @@ impl BondInterface {
         if let Some(bond_conf) = self.bond.as_mut() {
             bond_conf.ports_config = Some(port_confs);
         }
+    }
+
+    pub(crate) fn apply_bond_port_configs(&self) -> Vec<nispor::IfaceConf> {
+        let mut ret: Vec<nispor::IfaceConf> = Vec::new();
+        if let Some(ports_conf) =
+            self.bond.as_ref().and_then(|b| b.ports_config.as_ref())
+        {
+            for port_conf in ports_conf.iter().filter(|p| !p.is_name_only()) {
+                let np_bond_port_conf: nispor::BondPortConf = port_conf.into();
+                let mut port_np_iface = nispor::IfaceConf::default();
+                port_np_iface.name = port_conf.name.to_string();
+                port_np_iface.bond_port = Some(np_bond_port_conf);
+                ret.push(port_np_iface);
+            }
+        }
+        ret
     }
 }
 

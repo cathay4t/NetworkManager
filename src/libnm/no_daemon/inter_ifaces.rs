@@ -86,7 +86,7 @@ async fn apply_ifaces_link_changes(
 
     let mut changed_wifi_ifaces: Vec<&Interface> = Vec::new();
 
-    for merged_iface in sorted_changed_mergd_ifaces {
+    for merged_iface in sorted_changed_mergd_ifaces.as_slice() {
         let apply_iface = if let Some(i) = merged_iface.for_apply.as_ref() {
             i
         } else {
@@ -107,6 +107,40 @@ async fn apply_ifaces_link_changes(
             )? {
                 np_ifaces.push(np_iface);
             }
+        }
+    }
+
+    // When port config changed in controller, the `apply_ifaces` above
+    // will not have port. And we cannot touch ports when processing controller
+    // because port might be virtual interface which is about to created.
+    // Hence we handle port config in this separate loop.
+    for merged_iface in
+        sorted_changed_mergd_ifaces
+            .as_slice()
+            .iter()
+            .filter(|merged_iface| {
+                merged_iface.merged.is_controller()
+                    && merged_iface.is_desired()
+                    && merged_iface.merged.is_up()
+            })
+    {
+        let apply_iface = if let Some(i) = merged_iface.for_apply.as_ref() {
+            i
+        } else {
+            continue;
+        };
+        match apply_iface {
+            Interface::Bond(bond_iface) => {
+                np_ifaces
+                    .extend(bond_iface.apply_bond_port_configs().into_iter());
+            }
+            Interface::LinuxBridge(_) => {
+                // Place holder
+            }
+            Interface::OvsBridge(_) => {
+                // Place holder
+            }
+            _ => (),
         }
     }
 

@@ -747,6 +747,19 @@ impl std::fmt::Display for BondPortConfig {
     }
 }
 
+impl BondPortConfig {
+    pub(crate) fn is_name_only(&self) -> bool {
+        matches!(
+            self,
+            &Self {
+                name: _,
+                priority: None,
+                queue_id: None
+            }
+        )
+    }
+}
+
 /// Specifies the 802.3ad aggregation selection logic to use.
 #[derive(
     Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, JsonDisplay,

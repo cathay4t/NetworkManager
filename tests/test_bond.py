@@ -9,6 +9,7 @@ import libnm
 from .testlib.cmdlib import exec_cmd
 from .testlib.statelib import load_yaml
 from .testlib.statelib import show_only
+from .testlib.statelib import state_match
 
 
 TEST_PORT1 = "dummy1"
@@ -30,6 +31,13 @@ def bond_over_dummy():
                   ports:
                     - {TEST_PORT2}
                     - {TEST_PORT1}
+                  ports-config:
+                  - name: {TEST_PORT1}
+                    queue-id: 1
+                    priority: 1
+                  - name: {TEST_PORT2}
+                    queue-id: 2
+                    priority: 2
               - name: {TEST_PORT1}
                 type: dummy
                 state: up
@@ -82,4 +90,38 @@ def test_bond_change_mode(bond_over_dummy):
     assert bond_iface["link-aggregation"]["port"] == [TEST_PORT1, TEST_PORT2]
 
 
-# TODO: Add test for changing bond options
+def test_bond_change_port_config(bond_over_dummy):
+    state = load_yaml(
+        f"""---
+        interfaces:
+          - name: {TEST_BOND_NIC}
+            type: bond
+            state: up
+            bond:
+              ports-config:
+              - name: {TEST_PORT1}
+                queue-id: 0
+                priority: 10
+              - name: {TEST_PORT2}
+                queue-id: 0
+                priority: 20
+        """
+    )
+    libnm.apply(state)
+    bond_iface = show_only(TEST_BOND_NIC)
+    assert bond_iface["state"] == "up"
+    assert state_match(
+        [
+            {
+                "name": TEST_PORT1,
+                "queue-id": 0,
+                "priority": 10,
+            },
+            {
+                "name": TEST_PORT2,
+                "queue-id": 0,
+                "priority": 20,
+            },
+        ],
+        bond_iface["link-aggregation"]["ports-config"],
+    )
