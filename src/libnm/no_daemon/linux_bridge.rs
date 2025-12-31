@@ -114,6 +114,16 @@ impl From<&nispor::BridgeInfo> for LinuxBridgeConfig {
     }
 }
 
+impl From<&LinuxBridgePortConfig> for nispor::BridgePortConf {
+    fn from(port_conf: &LinuxBridgePortConfig) -> Self {
+        let mut ret = Self::default();
+        ret.hairpin_mode = port_conf.stp_hairpin_mode;
+        ret.stp_priority = port_conf.stp_priority;
+        ret.stp_path_cost = port_conf.stp_path_cost;
+        ret
+    }
+}
+
 pub(crate) fn apply_bridge_conf(
     mut np_iface: nispor::IfaceConf,
     iface: &LinuxBridgeInterface,
@@ -263,6 +273,24 @@ impl LinuxBridgeInterface {
         if let Some(br_conf) = self.bridge.as_mut() {
             br_conf.ports = Some(port_confs);
         }
+    }
+
+    pub(crate) fn apply_linux_bridge_port_configs(
+        &self,
+    ) -> Vec<nispor::IfaceConf> {
+        let mut ret: Vec<nispor::IfaceConf> = Vec::new();
+        if let Some(ports_conf) =
+            self.bridge.as_ref().and_then(|b| b.ports.as_ref())
+        {
+            for port_conf in ports_conf.iter().filter(|p| !p.is_name_only()) {
+                let np_br_port_conf: nispor::BridgePortConf = port_conf.into();
+                let mut port_np_iface = nispor::IfaceConf::default();
+                port_np_iface.name = port_conf.name.to_string();
+                port_np_iface.bridge_port = Some(np_br_port_conf);
+                ret.push(port_np_iface);
+            }
+        }
+        ret
     }
 }
 

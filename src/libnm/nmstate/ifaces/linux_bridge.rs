@@ -348,37 +348,52 @@ pub struct LinuxBridgeConfig {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
-    #[serde(default)]
     /// The kernel interface name of this bridge port.
+    #[serde(default)]
     pub name: String,
+    /// Controls whether traffic may be send back out of the port on which it
+    /// was received.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
-    /// Controls whether traffic may be send back out of the port on which it
-    /// was received.
     pub stp_hairpin_mode: Option<bool>,
+    /// The STP path cost of the specified port.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
-    /// The STP path cost of the specified port.
     pub stp_path_cost: Option<u32>,
+    /// The STP port priority. The priority value is an unsigned 8-bit quantity
+    /// (number between 0 and 255). This metric is used in the designated port
+    /// an droot port selec‐ tion algorithms.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
-    /// The STP port priority. The priority value is an unsigned 8-bit quantity
-    /// (number between 0 and 255). This metric is used in the designated port
-    /// an droot port selec‐ tion algorithms.
     pub stp_priority: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Linux bridge VLAN filtering configure. If not defined, current VLAN
     /// filtering is preserved for the specified port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vlan: Option<BridgePortVlanConfig>,
+}
+
+impl LinuxBridgePortConfig {
+    pub(crate) fn is_name_only(&self) -> bool {
+        matches!(
+            self,
+            &Self {
+                name: _,
+                stp_hairpin_mode: None,
+                stp_path_cost: None,
+                stp_priority: None,
+                vlan: None
+            }
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

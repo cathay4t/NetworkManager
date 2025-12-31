@@ -134,8 +134,10 @@ async fn apply_ifaces_link_changes(
                 np_ifaces
                     .extend(bond_iface.apply_bond_port_configs().into_iter());
             }
-            Interface::LinuxBridge(_) => {
-                // Place holder
+            Interface::LinuxBridge(br_iface) => {
+                np_ifaces.extend(
+                    br_iface.apply_linux_bridge_port_configs().into_iter(),
+                );
             }
             Interface::OvsBridge(_) => {
                 // Place holder

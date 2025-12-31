@@ -1,5 +1,4 @@
  * Introduce `nmstatectl`
- * Bridge Port
  * Bridge VLAN
  * OVS bridge
  * VxLAN

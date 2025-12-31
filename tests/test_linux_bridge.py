@@ -29,7 +29,13 @@ def linux_bridge_over_dummy():
                 bridge:
                   ports:
                     - name: {TEST_PORT2}
+                      stp-hairpin-mode: true
+                      stp-priority: 20
+                      stp-path-cost: 200
                     - name: {TEST_PORT1}
+                      stp-hairpin-mode: true
+                      stp-priority: 10
+                      stp-path-cost: 100
               - name: {TEST_PORT1}
                 type: dummy
                 state: up
@@ -62,8 +68,18 @@ def test_create_and_remove_linux_bridge(linux_bridge_over_dummy):
     linux_bridge_iface = show_only(TEST_BRIDGE_NIC)
     assert state_match(
         [
-            {"name": TEST_PORT1},
-            {"name": TEST_PORT2},
+            {
+                "name": TEST_PORT1,
+                "stp-priority": 10,
+                "stp-path-cost": 100,
+                "stp-hairpin-mode": True,
+            },
+            {
+                "name": TEST_PORT2,
+                "stp-priority": 20,
+                "stp-path-cost": 200,
+                "stp-hairpin-mode": True,
+            },
         ],
         linux_bridge_iface["bridge"]["port"],
     )
@@ -162,4 +178,44 @@ def test_modify_linux_bridge_stp_options(linux_bridge_over_dummy):
             "priority": 10000,
         },
         linux_bridge_iface["bridge"]["options"]["stp"],
+    )
+
+
+def test_modify_linux_bridge_port_options(linux_bridge_over_dummy):
+    libnm.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: {TEST_BRIDGE_NIC}
+                type: linux-bridge
+                bridge:
+                  ports:
+                    - name: {TEST_PORT2}
+                      stp-hairpin-mode: false
+                      stp-priority: 2
+                      stp-path-cost: 20
+                    - name: {TEST_PORT1}
+                      stp-hairpin-mode: false
+                      stp-priority: 1
+                      stp-path-cost: 10
+            """
+        )
+    )
+    linux_bridge_iface = show_only(TEST_BRIDGE_NIC)
+    assert state_match(
+        [
+            {
+                "name": TEST_PORT1,
+                "stp-priority": 1,
+                "stp-path-cost": 10,
+                "stp-hairpin-mode": False,
+            },
+            {
+                "name": TEST_PORT2,
+                "stp-priority": 2,
+                "stp-path-cost": 20,
+                "stp-hairpin-mode": False,
+            },
+        ],
+        linux_bridge_iface["bridge"]["port"],
     )
