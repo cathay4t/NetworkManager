@@ -101,7 +101,7 @@ impl NmNoDaemon {
                             port_np_ifaces.push(p);
                         }
                     }
-                    br_iface.append_br_port_config(port_np_ifaces);
+                    br_iface.append_br_port_config(np_iface, port_np_ifaces);
                     Interface::LinuxBridge(Box::new(br_iface))
                 }
                 _ => {

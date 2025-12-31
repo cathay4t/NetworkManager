@@ -233,6 +233,7 @@ impl LinuxBridgeInterface {
 
     pub(crate) fn append_br_port_config(
         &mut self,
+        np_iface: &nispor::Iface,
         port_np_ifaces: Vec<&nispor::Iface>,
     ) {
         let mut port_confs: Vec<LinuxBridgePortConfig> = Vec::new();
@@ -254,7 +255,8 @@ impl LinuxBridgeInterface {
                 ..Default::default()
             };
 
-            if self.vlan_filtering_is_enabled()
+            if np_iface.bridge.as_ref().and_then(|b| b.vlan_filtering)
+                == Some(true)
                 && let Some(np_port_info) = port_np_iface.bridge_port.as_ref()
             {
                 port_conf.vlan = np_port_info.vlans.as_ref().and_then(|v| {
